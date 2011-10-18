@@ -1,0 +1,30 @@
+<div class='row'>
+	<div class='span12'>
+		<h3>Query</h3>
+		{% if errors %}
+		<ul class='error-list'>
+			{% for err in errors %}
+			<li>{{ err }}</li>
+			{% endfor %}
+		</ul>
+		{% endif %}
+		<form action="" method="post" accept-charset="utf-8">
+			{% csrf_token %}
+			<fieldset>
+			{% for field in form %}
+			{{ field }}
+			{% endfor %}
+			</fieldset>
+			<div class='actions'><input type="submit" class='btn primary submit-button' value="Continue &rarr;"/></div>
+		</form>
+		<style type="text/css" media="screen">
+			div.row form textarea {
+			    font-family: mono;
+			    font-size: 12px;
+			    width: 100%;
+			}
+		</style>
+
+		<div class='sql-container'></div>
+	</div>
+</div>

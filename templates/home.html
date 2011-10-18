@@ -1,0 +1,33 @@
+<div class='row'>
+	<div class='span12'>
+		<h3>Welcome to Tiote!</h3>
+		<p>
+			This applications helps you manage and administer databases in a django application.
+			Presently Tiote only supports PostgreSQL and MySQL databases.
+		</p>
+		
+		<h3>Server Status</h3>
+		<p>
+			You are logged in as {{ variables.user }}@{{variables.host}}.
+			Using {{variables.dialect}} {{variables.version}}, compiled with {{variables.version_compile_os}} on a 
+			{{variables.version_compile_machine}} machine.
+		</p>
+		<h3>Create a new database</h3>
+		<form class='span8' action="" method="post" accept-charset="utf-8">
+			<fieldset>
+				{% csrf_token %}
+						{% for field in form %}
+				<div class="clearfix">
+					{{ field.label_tag}}
+					<div class='input'>
+						{{ field }}
+					</div><!-- {% if field.errors %} <span class='help-inline'>{{field.errors}}</span>{% endif %} -->
+				</div>
+			{% endfor %}
+			</fieldset>
+			<div class='actions'><input type="submit" class='btn primary submit-button' value="Continue &rarr;"/></div>			
+		</form>
+		
+	</div>
+
+</div>

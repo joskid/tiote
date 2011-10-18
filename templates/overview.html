@@ -1,0 +1,41 @@
+<div class='table-placeholder'>
+	<div class='select-controls'>
+		<ul class='select'>
+			<li><a href='' class='select-all'>All</a></li>
+			<li><a href='' class='select-none'>None</li>
+		</ul>
+		<ul class='with-selected'>
+			<li><a class='selected-empty'>Empty</a></li>
+			<li><a class='selected-drop'>Drop</a></li>
+			<li><a class='selected-optimize'>Optimize</a></li>
+		</ul>
+	</div>
+	<div class='table-sql'>
+		
+	</div>
+</div>
+<div class='small-container'>
+	<h3>Options</h3>
+	<a class='drop-db'>Drop the {{ db }} database</a>
+	<br /><br />
+	<h3>Edit Database</h3>
+	<br /><br />
+	<h3>create a new table</h3>
+	{% if errors %}
+	<ul class='error-list'>
+		{% for err in errors %}
+		<li>{{ err }}</li>
+		{% endfor %}
+	</ul>
+	{% endif %}
+	<form action="" method="post" accept-charset="utf-8">
+		{% csrf_token %}
+		{{ tableform.as_p }}
+		<p>Setup the fields for the table below</p>
+		{{ fieldformset.management_form }}
+		<div>
+			{{ form }}
+		</div>
+		<p><input type="submit" value="Continue &rarr;"/></p>
+	</form>
+</div>

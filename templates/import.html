@@ -1,0 +1,20 @@
+<div class='row'>
+	<div class='span8'>
+		<h3>Import</h3>
+		<p>Choose a file written in the sql format.</p>
+		<form action="" method="post" accept-charset="utf-8">
+			{% csrf_token %}
+			<fieldset>
+			{% for field in form %}
+				<div class="clearfix">
+					{{ field.label_tag}}
+					<div class='input'>
+						{{ field }}
+					</div><!-- {% if field.errors %} <span class='help-inline'>{{field.errors}}</span>{% endif %} -->
+				</div>
+			{% endfor %}
+			</fieldset>
+		  <div class='actions'><input type="submit" class='btn primary submit-button' value="Continue &rarr;"/></div>
+		</form>
+	</div>
+</div>

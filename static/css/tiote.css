@@ -1,0 +1,72 @@
+/*---------- display ----------------*/
+.tt-content {
+    float: none;
+    margin-left: 220px;
+    max-width: 1180px;
+    min-width: 700px;
+}
+#tt-content{
+	border-left: 1px solid #ddd;
+}
+#sidebar {
+	overflow-x: hidden;
+	overflow-y: auto;
+}
+/*------------ elements --------------------*/
+h3.rule-bottom {
+	border-bottom: 1px solid #ddd;
+	text-transform: uppercase;
+	
+}
+/*----------- tables -----------------------*/
+table.sql {
+    border: medium none;
+    display: block;
+    overflow: auto;
+}
+table.sql * {
+    border: medium none;
+}
+table.sql thead th {
+    border-bottom: 1px solid #DDDDDD;
+    border-right: 1px solid #DDDDDD;
+    border-top: 1px solid #DDDDDD;
+    cursor: pointer;
+    max-width: 300px;
+    min-width: 200px;
+}
+table.sql tbody td {
+    border-bottom: 1px solid #DDDDDD;
+    border-right: 1px solid #DDDDDD;
+    font-family: mono;
+    font-size: 11px;
+    padding: 6px 6px 5px;
+}
+table.sql tbody tr:first-child td {
+    border-radius: 0 0 0 0;
+}
+table.sql tbody td:first-child, table.sql thead th:first-child {
+    border-left: 1px solid #DDDDDD;
+}
+table.sql thead th:first-child {
+    border-radius: 4px 0 0 0;
+}
+table.sql thead th:last-child {
+    border-radius: 0 4px 0 0;
+}
+th#selector, td#selector {
+    max-width: 25px;
+    min-width: 25px;
+    width: 25px;
+}
+table.sql .table-tr-selected {
+    background: none repeat scroll 0 0 #E1E1E1;
+}
+
+#table-options a {
+    cursor: pointer;
+    padding-left: 5px;
+}
+#table-options span {
+    padding-left: 30px;
+}

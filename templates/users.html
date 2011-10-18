@@ -1,0 +1,29 @@
+<div class='row'>
+	<div class='span12' id='sql-container'></div>
+	<div class='span12'>
+		<div class='small-form-container'>
+			<div id='form_result'></div>
+			
+			<form id='tt_form' action="" method="post" accept-charset="utf-8">
+				{% csrf_token %}
+				{% for field in form %}
+				<div class="clearfix">
+					{{ field.label_tag}}
+					<div class='input'>
+						{{ field }}
+					</div><!-- {% if field.errors %} <span class='help-inline'>{{field.errors}}</span>{% endif %} -->
+				</div>
+				{% endfor %}
+				</fieldset>
+			  <div class='actions'><input type="submit" class='btn primary submit-button' value="Continue &rarr;"/></div>
+			</form>
+		</div>
+		<div id='undisplayed_result' class='hidden' style="display:none;"></div>
+	</div>
+</div>
+
+<script type="text/javascript" ajaxKey="{{ajaxKey}}" charset="utf-8">
+	$$('div.input ul').each(function(item){
+		$(item).addClass('inputs-list');
+	})
+</script>

@@ -1,0 +1,24 @@
+<div class='small-form-container'>
+	<div id='form_result'>
+		
+	</div>
+	<h3>Edit Users</h3>
+	
+	{% for form in formset %}
+	<h4> Edit User </h4>
+	<form id='tt_form' action="" method="post" accept-charset="utf-8">
+		{% csrf_token %}
+		<table class='tabular-form'>
+		{{ form }}
+			
+		</table>
+		<p><input type="submit" value="Submit &rarr;"/></p>
+	</form>
+	<hr />
+	{% endfor %}
+	
+</div>
+<div id='undisplayed_result' class='hidden' style="display:none;">
+	
+</div>
+

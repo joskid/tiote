@@ -1,0 +1,126 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<link rel="stylesheet" href="{{STATIC_URL}}/css/reset.css" type="text/css" media="screen" title="no title" charset="utf-8"/>
+	<link rel="stylesheet" href="{{STATIC_URL}}/css/flex.css" type="text/css" media="screen" title="no title" charset="utf-8"/>
+	
+	<script src="{{STATIC_URL}}/js/mootools-core-1.3-full.js" type="text/javascript" charset="utf-8"></script>
+	<script src="{{STATIC_URL}}/js/mootools-more-1.3-full.js" type='text/javascript' charset='utf-8'></script>
+	<script src="{{STATIC_URL}}/js/navigation.js" type="text/javascript" charset="utf-8"></script>
+	<script src='{{STATIC_URL}}/js/core.js' type='text/javascript' charset='utf-8'></script>
+	<script src="{{STATIC_URL}}/js/helpers.js" type="text/javascript" charset="utf-8"></script>
+	
+	<title>Layout test</title>
+</head>
+<body>
+	{% load webdesign %}
+	<div id='header'>
+		<div id='header-logo'>
+			<h1><a href=''>Tiote</a></h1>
+		</div>
+		<div id='top-menu'>
+			<a href="#" id='0' class='selected'>Home</a>
+			<a href="#" id='1' >Structure</a>
+			<a href="#" id='2'> Insert</a>
+			<a href="#" id='3'>Query</a>
+			<a href="#" id='4'>Export</a>
+		</div>
+	</div>		
+	<div id='leftside'>
+		<h3>Lorem Ipsum</h3>
+		Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+		<div id='side-menu'>
+			<ul>
+				<li><a href="#" id='slink_0' class='selected'>Home</a></li>
+				<li><a href="#" id='slink_1' >Structure</a></li>
+				<li><a href="#" id='slink_2'> Insert</a></li>	
+				<li><a href="#" id='3'>Query<span>(40)</span></a></li>
+				<li><a href="#" id='4'>Export<span>(401)</span></a></li>
+				<li><a href="#" id='5' >Structure<span>(023)</span></a></li>
+				<li><a href="#" id='6'> Insert</a></li>
+				<li><a href="#" id='7'>Query</a></li>
+				<li><a href="#" id='8'>Export</a></li>
+			</ul>
+		</div>
+	</div>
+	<div id='rightside'>
+		<h2>The first second accepted level</h2>
+		<p>
+			Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+			<a href='http://'>get on facebook</a>
+			Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+			<a href='http://get'>hop onto twitter</a>
+			Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
+			Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+		</p>
+		<table class='info' summary='info'>
+			<thead>
+				<tr>
+					<td>Press this key...</td>
+					<td>...and this will happen</td>
+				</tr>
+			</thead>
+			<tbody>
+			<tr>
+				<td>a</td>
+				<td>select all</td>
+			</tr>
+			<tr>
+				<td>n</td>
+				<td>select none</td>
+			</tr>
+			<tr>
+				<td>e</td>
+				<td>edit selected items</td>
+			</tr>
+			<tr>
+				<td>d</td>
+				<td>delete selected items</td>
+			</tr>
+			<tr>
+				<td>r</td>
+				<td>refresh page</td>
+			</tr>
+			<tr>
+				<td>q</td>
+				<td>load the query tab</td>
+			</tr>
+			<tr>
+				<td>f</td>
+				<td>browse tab - go to first page of results</td>
+			</tr>
+			<tr>
+				<td>l</td>
+				<td>browse tab - go to last page of results</td>
+			</tr>
+			<tr>
+				<td>g</td>
+				<td>browse tab - go to previous page of results</td>
+			</tr>
+			<tr>
+				<td>h</td>
+				<td>browse tab - go to next page of results</td>
+			</tr>
+			<tr>
+				<td>o</td>
+				<td>optimize selected tables</td>
+			</tr>
+			</tbody>
+		</table>
+		<h3>The second accepted level</h3>
+		<p>Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+		
+		<br />
+		<div id="sql">
+			<button type="submit" id="submit_button" >submit button</button>
+			<p id="sel"></p>
+		</div>
+		<h4>The third accepted level</h4>
+		<p>Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+	</div>
+
+
+</body>
+</html>

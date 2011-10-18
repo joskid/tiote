@@ -1,0 +1,178 @@
+body {
+    color: #444444;
+    font-family: Arial,sans-serif;
+    font-size: 13px;
+    line-height: 1.25;
+}
+a {
+    color: #336699;
+    text-decoration: none;
+}
+a:hover {
+    color: #333333;
+}
+h2 {
+    font-size: 16px;
+    font-weight: normal;
+    line-height: 1.5;
+    margin: 0 0 5px;
+}
+h2, h3, h4 {
+    color: #878773;
+    font-weight: normal;
+}
+h2, h3 {
+    text-transform: uppercase;
+}
+h3 {
+    border-bottom: 1px solid #D2D2D2;
+    font-size: 14px;
+    line-height: 1.3;
+    margin: 0 0 5px;
+}
+h4 {
+    font-weight: normal;
+    margin: 0 0 5px;
+    text-transform: uppercase;
+}
+#rightside {
+    margin-left: 220px;
+    margin-right: 10px;
+}
+#footer {
+    clear: both;
+}
+
+p {
+    margin-bottom: 5px;
+}
+table.info {
+    border: 1px solid #D2D2D2;
+    font-size: 12px;
+    margin: 10px 0;
+}
+table.info thead th {
+    border: 1px solid #D2D2D2;
+    color: #111111;
+    font-size: 14px;
+    font-weight: normal;
+    padding: 2px 5px;
+}
+table.info td {
+    border: 1px solid #D2D2D2;
+    padding: 1px 5px;
+}
+
+
+table.sql {
+    display: block;
+    font-size: 12px;
+    margin-bottom: 10px;
+    overflow: auto;
+}
+table.sql thead th {
+    border: 1px solid #D2D2D2;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: normal;
+    max-width: 300px;
+    min-width: 200px;
+    padding: 2px 5px;
+    text-align: left;
+}
+table.sql tbody td {
+    border: 1px solid #D2D2D2;
+    font-family: mono;
+    font-size: 11px;
+    padding: 2px 5px;
+}
+table.sql .table-tr-odd {
+    background: none repeat scroll 0 0 #F5FAFA;
+}
+th#selector, td#selector {
+    max-width: 25px;
+    min-width: 25px;
+    width: 25px;
+}
+table.sql .table-th-sort {
+    font-weight: bold;
+}
+table.sql .table-tr-hovered {
+    background: none repeat scroll 0 0 #DDDDDD;
+}
+table.sql .table-tr-selected {
+    background: none repeat scroll 0 0 #E1E1E1;
+}
+
+
+#header {
+    background: none repeat scroll 0 0 #DDDDDD;
+    margin-bottom: 10px;
+    padding: 3px;
+}
+#header-logo {
+    float: left;
+    margin-left: 20px;
+    margin-right: 180px;
+}
+#top-menu a {
+    font-size: 18px;
+    padding: 2px 15px;
+}
+#top-menu a.selected {
+    color: #333333;
+}
+#leftside {
+    float: left;
+    margin-left: 10px;
+    width: 200px;
+}
+#side-menu a span {
+    color: #444444;
+    font-size: 11px;
+}
+#header-load {
+    color: #FFFFCC;
+    display: none;
+    float: right;
+    font-size: 18px;
+    font-style: italic;
+}
+div.info-container {
+    width: 700px;
+}
+div.info-container p {
+    margin-bottom: 10px;
+}
+div.small-form-container {
+    width: 600px;
+}
+.tabular-form tr {
+}
+.tabular-form tr th {
+    font-weight: normal;
+    text-align: left;
+    vertical-align: top;
+}
+.tabular-form tr td {
+    display: block;
+    margin-bottom: 10px;
+}
+.tabular-form tr td.replaced label {
+    display: block;
+    float: left;
+    padding-right: 10px;
+    width: 100px;
+}
+.tabular-form .hidden {
+    display: none;
+}
+.tabular-form #id_selected_databases {
+}
+#table-options a {
+    cursor: pointer;
+    padding-left: 5px;
+}
+#table-options span {
+    padding-left: 30px;
+}
