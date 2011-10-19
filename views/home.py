@@ -14,12 +14,16 @@ def ender(request):
 
 def home(request):
     params = request.GET
+    DbForm = forms.get_dialect_form('DbForm', 
+        functions.get_conn_params(request)['dialect']
+    )
+    template_list = functions.common_query(request, 'template_list')
     if request.method == 'POST':
-        form = forms.NewDbForm(request.POST)
+        form = DbForm(templates=template_list, data=request.POST)
         if form.is_valid():
             pass
     else:
-        form = forms.NewDbForm()
+        form = DbForm(templates=template_list)
         
     c = {'form':form, 'variables':functions.get_home_variables(request)}
     template = functions.skeleton(params['view'])
@@ -28,6 +32,7 @@ def home(request):
     )
     context.update(c)
     return HttpResponse(template.render(context))
+
 
 def users(request):
     def get_conditions(l):
@@ -47,17 +52,6 @@ def users(request):
         l = request.POST.get('whereToEdit').strip().split(';');
         conditions = get_conditions(l)
         return functions.rpr_query(request, 'drop_user', conditions)
-    
-    if request.method == 'POST' and request.GET.get('update') == 'edit':
-        if request.POST.get('whereToEdit'):
-            l = request.POST.get('whereToEdit').strip().split(';');
-            conditions = get_conditions(l)
-            # get users information
-            assert False
-            # begin edit form and edit process
-        else:
-            # begin edit form creation using a formset
-            pass
         
     if request.method == 'POST' and not request.GET.get('sub-view'):
         form = forms.UserForm(db_names,data=request.POST)

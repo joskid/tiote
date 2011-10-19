@@ -15,13 +15,13 @@ Installation
 In the ``settings.py`` of your django project add 'tiote' to the ``INSTALLED_APPS`` settings.
 and run 
 
-		'python manage.py syncdb'
+		python manage.py syncdb
 
 In the ``urls.py`` of your project add the following entry to the url_patterns
 
 		(r'^tiote/', include('tiote.urls')),
 
-Open link ``<your_project>/tiote`` to begin using tiote. Where <your_project> is the top level of your django project.
+Open link ``<your_project>/tiote`` to begin using tiote. Where ``<your_project>`` is the top level of your django project.
 
 
 

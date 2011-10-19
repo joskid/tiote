@@ -70,3 +70,8 @@ table.sql .table-tr-selected {
 #table-options span {
     padding-left: 30px;
 }
+
+input, textarea, select {
+	font-family: mono;
+	font-size: 12px;
+}

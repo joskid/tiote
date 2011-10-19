@@ -4,7 +4,7 @@ from django.template import loader, RequestContext, Template
 from django.views.decorators.http import require_http_methods
 from django.core import serializers
 
-from tiote import forms, functions, views_hm
+from tiote import forms, functions
 
 
 def empty(request):
@@ -82,7 +82,8 @@ def ajax(request):
     
     # short GET request queries
     if request.GET.get('commonQuery'):
-        return HttpResponse( functions.commonQuery(request) ) 
+        return HttpResponse( functions.common_query(request, 
+            request.GET.get('commonQuery')) ) 
     
     # medium GET request queries
     if request.GET.get('query'):
@@ -138,15 +139,15 @@ def home(request):
     '''
     params = request.GET
     if params['view'] == 'users':
-        return views_hm.users(request)
+        return views.home.users(request)
     elif params['view'] == 'query':
-        return views_hm.query(request)
+        return views.home.query(request)
     elif params['view'] == 'export':
-        return views_hm.export(request)
+        return views.home.export(request)
     elif params['view'] == 'import':
-        return views_hm.import_(request)
+        return views.home.import_(request)
     elif params['view'] == 'home':
-        return views_hm.home(request)
+        return views.home.home(request)
         
         
 

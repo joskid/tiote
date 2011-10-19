@@ -1,0 +1,6 @@
+/nbproject/private/
+/nbproject/
+*.pyc
+*.*~
+.project
+.pydevproject
