@@ -5,5 +5,6 @@ urlpatterns = patterns('',
     (r'^$', 'tiote.views.empty'),
     (r'^ajax/$', 'tiote.views.ajax'),
     (r'^bootstrap/$','tiote.views_hm.ender'),
+    (r'^login/$', 'tiote.views.login'),
 )
 

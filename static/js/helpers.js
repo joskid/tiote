@@ -115,7 +115,6 @@ function generate_ajax_url(withAjaxKey,extra_data) {
 // table related functions
 // uses moo
 function create_data_table(thead_rows, tbody_rows, insertion_point) {
-
 	var tbl = new Element('table', {
 		'class': 'sql zebra-striped',
 		'id': 'query_results',
@@ -332,14 +331,14 @@ var updateAssets = function(obj, bool){
 	
 }
 
-function create_diag(title, msg, options){
+function showDialog(title, msg, options){
 	options = options || {};
-	Object.append(options, {
-        title: title, buttons: [{title:'OK', click: 'close'}],
-        content: new Element('p',{'html': msg })
-	});
-	new MUX.Dialog(options);
+	var SM = new SimpleModal(options);
+    SM.show({
+        'title': title, 'contents': msg
+    })
 }
+
 
 function checkLoginState(){
 	return shortXHR({'loginCheck': 'yeah'})

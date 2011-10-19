@@ -1,37 +1,42 @@
-var pg;
-var nav;
+var pg; var nav;
+var pageLoadSpinner; var ajaxSpinner;
 var assets = new Hash({'xhrCount': 0});
 
-window.addEvent('domready', function() {
 
+window.addEvent('domready', function() {
+    // spinners 
+    pageLoadSpinner = new Spinner(document.body, {'message':'Page Loading...'});
+    ajaxSpinner = new Spinner(document.body, {'message': 'loading data...'});
+    
 	nav = new Navigation();
-	loginState = checkLoginState();
+	
 	nav.addEvent('navigationChanged', function(navObject){
 		// do page initialization here
+        loginState = checkLoginState();
 		console.log('navigationChanged event fired');
-		if (checkLoginState()) {
+		if (loginState) {
 			if (Cookie.read('TT_NEXT')){
 				navObject = Cookie.read('TT_NEXT').parseQueryString(false, true);
 				console.log( Cookie.read('TT_NEXT'))
 				location.hash = '#' + Cookie.read('TT_NEXT');
 				Cookie.dispose('TT_NEXT');
 			}
-		} else if (!checkLoginState() && navObject['section'] != 'begin'){
+		} else {
 			console.log('not authenticated!');
 			Cookie.write('TT_NEXT', new Hash(navObject).toQueryString());
 			navObject = new Hash({'section': 'begin', 'view': 'login'});
+            // funny redirect
+            location.href = location.protocol + '//'+ location.host + location.pathname + 'login/'
 		}
 		
 		pg = new Page(navObject);
 		setTopMenuSelect();
 	});
-	
-	if (location.hash) {
-		reloadPage();
-	} else {
-		nav.set({'section': 'home', 'view': 'home'});
-		
-	}
+    
+	if (! location.pathname.contains('login/') ) {
+        if (location.hash) { reloadPage(); } 
+        else { nav.set({'section': 'home', 'view': 'home'}); }
+    }
 	
 });
 
@@ -39,12 +44,14 @@ function clearPage(){
     $('sidebar').getChildren().destroy();
     $('tt-content').getChildren().destroy();
 }
+
 // A single tiote page
 Page = new Class({
 		
 	options: new Hash(),
 	
 	initialize: function(obj) {
+        this.startPageLoad();
 		console.log('new Page() object created');
 		data = obj;
 		this.updateOptions({'navObj': data, 'hash': location.hash});
@@ -59,10 +66,21 @@ Page = new Class({
 		} else {
             clearPage();
             this.generatesidebar(sidebarData);
-			this.getViewData(data);
+			this.getViewData(data); 
 		}
+        this.endPageLoad();
 	},
 	
+    startPageLoad: function() {
+        console.log('startPageLoad()!')
+        pageLoadSpinner.show(true);
+    },
+    
+    endPageLoad: function() {
+        console.log('endPageLoad()!')
+        pageLoadSpinner.hide();
+    },
+    
 	setTitle: function(){
 		title = 'tiote';
 		r = location.hash.replace('#','').parseQueryString();
@@ -240,7 +258,7 @@ Page = new Class({
 	
     loadTable: function(text,xml){
 		console.log('loadTable() called!')
-		
+        self.startPageLoad();
 		if (JSON.validate(text)) {
 			jsan = JSON.decode(text)
             
@@ -248,6 +266,7 @@ Page = new Class({
 		} else {
 			$('sql-container').set('text','!! invalid JSON data !!');
 		}
+        self.endPageLoad();
 	},
     
 	loadTableOptions: function(opt_type){
@@ -283,7 +302,7 @@ Page = new Class({
                 	'onSuccess':function(){
                 		resp = JSON.decode(this.response.text);
                 		if (resp.status == 'failed') {
-                			create_diag('User Deletion failed!', resp.msg, {});
+                			showDialog('User Deletion failed!', resp.msg, {});
                 		} else {
                 			reloadPage();
                 		}
@@ -332,7 +351,6 @@ Page = new Class({
 	
 	completeForm : function(){
 		var form = $('tt_form');
-		var form_result = $('form_result');
 		var undisplayed_result = $('undisplayed_result');
 		//validation
 		new Form.Validator.Inline(form);
@@ -350,7 +368,7 @@ Page = new Class({
                 	var result_holder = $('undisplayed_result');
                 	resp = JSON.decode( result_holder.childNodes[0].nodeValue)
                 	if (resp.status == 'failed') {
-                		create_diag('Error!', resp.msg, {});
+                		showDialog('Error!', resp.msg, {});
                 	} else { reloadPage(); }
                 }
                 
@@ -359,7 +377,6 @@ Page = new Class({
 	}
 	
 });
-
 
 var XHR = new Class({
 
@@ -398,15 +415,18 @@ var XHR = new Class({
 		
 		if (options && options.showLoader != false) {
 			show('header-load');
+            ajaxSpinner.show(true);
 			
 			this.addEvent("onSuccess", function() {
 				hide('header-load');
+                ajaxSpinner.hide();
 			});
 			
 			this.addEvent("onFailure", function(xhr) {
 				var msg = 'An unexpected error was encountered. Please reload the page and try again.';
 				if (xhr.status == 500 && xhr.statusText == "UNKNOWN STATUS CODE") msg = xhr.response;
 				hide('header-load');
+                ajaxSpinner.hide();
                 var SM = new SimpleModal({'draggable':false,'overlayClick':false});
                 SM.show({
                     'title': 'Error!',

@@ -1,15 +1,10 @@
 # Create your views here.
-from django.http import HttpResponse, Http404
+from django.http import HttpResponse, Http404, HttpResponseRedirect
 from django.template import loader, RequestContext, Template
 from django.views.decorators.http import require_http_methods
 from django.core import serializers
 
 from tiote import forms, functions, views_hm
-
-def site_proc(request):
-    return {
-        'ajaxKey': functions.ajaxKey,
-    }
 
 
 def empty(request):
@@ -30,21 +25,40 @@ def empty(request):
                 return begin(request, 'empty')
             else:
                 errors = [ dict_cd['msg'] ] 
-                return begin(request, 'login2', errors=errors)
+                return begin(request, 'login', errors=errors)
         else:
-            return begin(request, 'login2')
+            return begin(request, 'login')
     
     else:
+        if not functions.check_login(request):
+            return HttpResponseRedirect('login/')
+        
         # return empty template
         c = {}
         template = functions.skeleton('empty')
         context = RequestContext(request, {
-            }, [site_proc]
+            }, [functions.site_proc]
         )
         context.update(c)
         return HttpResponse(template.render(context))
         
 
+def login(request):
+    errors = []
+    redi = request.META['PATH_INFO']
+    redi = redi.replace('login/', '');
+    if request.method == 'POST':
+        form = forms.LoginForm(request.POST)
+        if form.is_valid():
+            dict_cd = functions.do_login(request, form.cleaned_data)
+            if dict_cd['login'] == True:
+                return HttpResponseRedirect(redi)
+            else:
+                errors = [ dict_cd['msg'] ] 
+    
+    return begin(request, 'login', errors=errors)
+        
+        
 def ajax(request):
     '''
     ajax router
@@ -104,19 +118,17 @@ def begin(request, page, **kwargs):
     if kwargs:
         if kwargs.has_key('errors'):
             c.update({'errors': kwargs['errors']})
-    if page == 'login' or page == 'login2':
+    if page == 'login':
         if request.method == 'POST':
             c.update({'form': forms.LoginForm(request.POST)})
         else:
             c.update({'form': forms.LoginForm()})
     t = functions.skeleton(page)
     context = RequestContext(request, {
-        }, [site_proc]
+        }, [functions.site_proc]
     )
     context.update(c)
     h =  HttpResponse(t.render(context))
-    if page == 'login2':
-        h.set_cookie(key='dont_touch', value='true')
     return h
 
 # section home
