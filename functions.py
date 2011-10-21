@@ -9,64 +9,108 @@ from tiote import models
 
 ajaxKey = ''
 sessid = ''
-db_names = []
-
-def site_proc(request):
-    return {
-        'ajaxKey': ajaxKey,
-    }
-
-def http_500(msg=''):
-    response = HttpResponse(msg)
-    response.status_code = '500'
-    return response
     
+def common_query(request, query_name):
+    conn_params = get_conn_params(request)
     
+    if conn_params['dialect'] == 'postgresql':
+        if query_name == 'db_list':
+            result = models.full_query(conn_params, 
+                models.stored_query(query_name, conn_params['dialect'])
+            )
+            return result_to_json(result)
+        elif query_name == 'describe_databases':
+            db_list = models.full_query(conn_params, 
+                models.stored_query('db_list', conn_params['dialect']) )
+            dict_db = SortedDict()
+            for db in db_list['rows']:
+                r = rpr_query(request, 'table_list', {'db':db[0]})['rows']
+                d = SortedDict()
+                for tup in r:
+                    if tup[0] not in d:
+                        d[ tup[0] ] = []
+                    d[ tup[0] ].append((tup[1],))
+                dict_db[ db[0] ] = d
+            return json.dumps(dict_db)
+        
+        elif query_name == 'template_list':
+            return models.full_query(conn_params,
+                models.stored_query(query_name, conn_params['dialect']))['rows']
+                
+        elif query_name == 'group_list':
+            return models.full_query(conn_params,
+                models.stored_query(query_name, conn_params['dialect']))['rows']
     
-def get_conn_params(request):
-    data = {}
-    data['host'] = request.session.get('TT_HOST')
-    data['username'] = request.session.get('TT_USERNAME')
-    data['password'] = request.session.get('TT_PASSWORD')
-    data['dialect'] = request.session.get('TT_DIALECT')
-    if request.session.get('TT_DATABASE'):
-        data['database'] = request.session.get('TT_DATABASE')
-    else:
-        data['database'] = '' if data['dialect'] =='mysql' else 'postgres'
-    return data    
-    
-    
-    
+    elif conn_params['dialect'] == 'mysql':
+        
+        if query_name == 'db_names':
+            db_names =  models.get_databases( get_conn_params(request) )
+            return result_to_json(db_names)
+        
+        elif query_name == 'describe_databases':
+            result = rpr_query(request, query_name)
+            d = SortedDict()
+            for tup in result['rows']:
+                if tup[0] not in d:
+                    d[ tup[0] ] = []
+                d[ tup[0] ].append((tup[1],tup[2]))
+            jsan = json.dumps(d)
+            return json.dumps(d)
+        
+        
+        
 def rpr_query(request, query_type, query_data=None):
     conn_params = get_conn_params(request)
-    if query_type == 'describe_databases':
-        conn_params['database'] = 'INFORMATION_SCHEMA';
-        query = models.stored_query(query_type, conn_params['dialect'])
-        return models.full_query(conn_params, query)
-    
-    elif query_type == 'user_list':
-        conn_params['database'] = 'mysql'
-        q = models.stored_query(request.GET.get('query'),conn_params['dialect'])
-        r = models.full_query(conn_params, q);
-        if type(r) == dict:
-            return jsonize_result(r)
-        else:
-            return http_500(r)
+    if conn_params['dialect'] == 'postgresql':
         
-    elif query_type == 'create_user':
-        result = models.short_query(conn_params,
-            models.generate_query( query_type, dialect=conn_params['dialect'],
-                query_data=query_data)
-        )
-        return HttpResponse( json.dumps(result) )
-    elif query_type == 'drop_user':
-        result = models.short_query(conn_params,
-            models.generate_query( query_type, dialect=conn_params['dialect'],
-                query_data=query_data)
-        )
-        return HttpResponse(json.dumps(result) )
+        if query_type == 'describe_databases':
+            return SortedDict()
+        elif query_type == 'table_list':
+            # change default database
+            if 'db' in query_data:
+                conn_params['database'] = query_data['db']
+            return models.full_query(conn_params,
+                models.stored_query(query_type, conn_params['dialect']))
+        elif query_type == 'user_list':
+            r = models.full_query(conn_params,
+                models.stored_query(query_type, conn_params['dialect']))
+            if type(r) == dict:
+                return jsonize_result(r)
+            else:
+                return http_500(r)
+    
+    elif conn_params['dialect'] == 'mysql':
+        
+        if query_type == 'describe_databases':
+            conn_params['database'] = 'INFORMATION_SCHEMA';
+            query = models.stored_query(query_type, conn_params['dialect'])
+            return models.full_query(conn_params, query)
+        
+        elif query_type == 'user_list':
+            conn_params['database'] = 'mysql'
+            q = models.stored_query(request.GET.get('query'),conn_params['dialect'])
+            r = models.full_query(conn_params, q);
+            if type(r) == dict:
+                return jsonize_result(r)
+            else:
+                return http_500(r)
+            
+        elif query_type == 'create_user':
+            result = models.short_query(conn_params,
+                models.generate_query( query_type, dialect=conn_params['dialect'],
+                    query_data=query_data)
+            )
+            return HttpResponse( json.dumps(result) )
+        elif query_type == 'drop_user':
+            result = models.short_query(conn_params,
+                models.generate_query( query_type, dialect=conn_params['dialect'],
+                    query_data=query_data)
+            )
+            return HttpResponse(json.dumps(result) )
+        else:
+            return http_500('feature not yet implemented!')
     else:
-        return http_500('feature not yet implemented!')
+        return http_500('dialect not supported!')
 
 
 def full_query():
@@ -86,6 +130,8 @@ def do_login(request, cleaned_data):
     password = cleaned_data['password']
     database_driver = cleaned_data['database_driver']
     dict_post = {'username':username,'password':password,'database_driver':database_driver, 'host':host}
+    if 'connection_database' in cleaned_data:
+        dict_post['connection_database'] = cleaned_data['connection_database']
     dict_cd = models.model_login(dict_post)
     if not dict_cd['login']:
         #authentication failed
@@ -98,41 +144,46 @@ def do_login(request, cleaned_data):
         request.session['TT_PASSWORD'] = password
         request.session['TT_DIALECT'] = database_driver
         request.session['TT_HOST'] = host
+        if 'connection_database' in dict_post:
+            request.session['TT_DATABASE'] = dict_post['connection_database']
         return dict_cd
     
     
-def set_ajax_key(request):
-    global ajaxKey, sessid
-    if request.session.get('sessid', ''):
-        sessid = request.session.get('sessid', '')
+def get_conn_params(request):
+    data = {}
+    data['host'] = request.session.get('TT_HOST')
+    data['username'] = request.session.get('TT_USERNAME')
+    data['password'] = request.session.get('TT_PASSWORD')
+    data['dialect'] = request.session.get('TT_DIALECT')
+    if request.session.get('TT_DATABASE'):
+        data['database'] = request.session.get('TT_DATABASE')
     else:
-        sessid = hashlib.md5( str(random.random()) ).hexdigest()
-        request.session['sessid'] = sessid
-    d = request.META['PWD']
-    ajaxKey = hashlib.md5(sessid + d).hexdigest()
+        data['database'] = '' if data['dialect'] =='mysql' else 'postgres'
+    return data    
+
+
+
+#def set_ajax_key(request):
+#    global ajaxKey, sessid
+#    if request.session.get('sessid', ''):
+#        sessid = request.session.get('sessid', '')
+#    else:
+#        sessid = hashlib.md5( str(random.random()) ).hexdigest()
+#        request.session['sessid'] = sessid
+#    d = request.META['PWD']
+#    ajaxKey = hashlib.md5(sessid + d).hexdigest()
     
+def set_ajax_key(request):
+    if not request.session.get('ajaxKey', False):
+        sessid = hashlib.md5( str(random.random()) ).hexdigest()
+        d = request.META['PWD']
+        request.session['ajaxKey'] = hashlib.md5(sessid + d).hexdigest()
+        
 def validateAjaxRequest(request):
-    global ajaxKey
-    if request.GET.get('ajaxKey', False) and request.GET.get('ajaxKey', False) == ajaxKey:
+    if request.GET.get('ajaxKey', False) and request.GET.get('ajaxKey', False) == request.session.get('ajaxKey',''):
         return True
     else:
         return False
-    
-def commonQuery(request):
-    global db_names
-    query_name = request.GET.get('commonQuery', '')
-    if query_name == 'db_names':
-        db_names =  models.get_databases( get_conn_params(request) )
-        return result_to_json(db_names)
-    elif query_name == 'describe_databases':
-        result = rpr_query(request, query_name)
-        d = SortedDict()
-        for tup in result['rows']:
-            if tup[0] not in d:
-                d[ tup[0] ] = []
-            d[ tup[0] ].append((tup[1],tup[2]))
-        jsan = json.dumps(d)
-        return json.dumps(d)
         
         
 def inside_query(request, query_name):
@@ -159,13 +210,39 @@ def get_home_variables(request):
     variables = {'user': p['username'], 'host': p['host']}
     variables['dialect'] = 'PostgreSQL' if p['dialect'] == 'postgresql' else 'MySQL'
     result = models.full_query( p, models.stored_query('variables', p['dialect']))
-    if type(result) == dict:
-        ll = result['rows']
-        d = {}
-        for i in range( len(ll) ):
-              d[ll[i][0]] = ll[i][1]  
-        variables.update(d)
+    if p['dialect'] == 'postgresql':
+        variables['version'] = result['rows'][0]
         return variables
+    elif p['dialect'] == 'mysql':
+        if type(result) == dict:
+            ll = result['rows']
+            d = {}
+            for i in range( len(ll) ):
+                  d[ll[i][0]] = ll[i][1]  
+            variables.update(d)
+            return variables
+        else:
+            return http_500(result)
+    
+    
+def make_choices(choices):
+    if choices is None:
+        choices = (('',''),)
     else:
-        return http_500(result)
+        for i in range( len(choices) ):
+            choices[i] = choices[i][0],choices[i][0]
+    return choices
+
+
+def site_proc(request):
+    return {
+        'ajaxKey': request.session.get('ajaxKey',''),
+    }
+
+def http_500(msg=''):
+    response = HttpResponse(msg)
+    response.status_code = '500'
+    return response
+    
+    
     

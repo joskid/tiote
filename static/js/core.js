@@ -2,10 +2,9 @@ var pg; var nav;
 var pageLoadSpinner; var ajaxSpinner;
 var assets = new Hash({'xhrCount': 0});
 
-
 window.addEvent('domready', function() {
     // spinners 
-    pageLoadSpinner = new Spinner(document.body, {'message':'Page Loading...'});
+    pageLoadSpinner = new Spinner(document.body, {'message': 'loading page...'});
     ajaxSpinner = new Spinner(document.body, {'message': 'loading data...'});
     
 	nav = new Navigation();
@@ -17,18 +16,15 @@ window.addEvent('domready', function() {
 		if (loginState) {
 			if (Cookie.read('TT_NEXT')){
 				navObject = Cookie.read('TT_NEXT').parseQueryString(false, true);
-				console.log( Cookie.read('TT_NEXT'))
 				location.hash = '#' + Cookie.read('TT_NEXT');
 				Cookie.dispose('TT_NEXT');
 			}
 		} else {
-			console.log('not authenticated!');
 			Cookie.write('TT_NEXT', new Hash(navObject).toQueryString());
 			navObject = new Hash({'section': 'begin', 'view': 'login'});
             // funny redirect
             location.href = location.protocol + '//'+ location.host + location.pathname + 'login/'
 		}
-		
 		pg = new Page(navObject);
 		setTopMenuSelect();
 	});
@@ -41,7 +37,8 @@ window.addEvent('domready', function() {
 });
 
 function clearPage(){
-    $('sidebar').getChildren().destroy();
+    if ( ! $('db-tree') || Cookie.read('tt_updateSidebar'))
+        $('sidebar').getChildren().destroy();
     $('tt-content').getChildren().destroy();
 }
 
@@ -51,7 +48,6 @@ Page = new Class({
 	options: new Hash(),
 	
 	initialize: function(obj) {
-        this.startPageLoad();
 		console.log('new Page() object created');
 		data = obj;
 		this.updateOptions({'navObj': data, 'hash': location.hash});
@@ -65,10 +61,13 @@ Page = new Class({
 			Cookie.dispose('dont_touch')
 		} else {
             clearPage();
-            this.generatesidebar(sidebarData);
+            if (! $('db-tree') || Cookie.read('tt_updateSidebar')) {
+                this.generatesidebar(sidebarData);
+                if (Cookie.read('updateSidebar')) Cookie.dispose('tt_updateSidebar');
+            }
+            
 			this.getViewData(data); 
 		}
-        this.endPageLoad();
 	},
 	
     startPageLoad: function() {
@@ -77,8 +76,8 @@ Page = new Class({
     },
     
     endPageLoad: function() {
-        console.log('endPageLoad()!')
-        pageLoadSpinner.hide();
+//        if (pageLoadSpinner.active)
+            pageLoadSpinner.hide();
     },
     
 	setTitle: function(){
@@ -146,6 +145,26 @@ Page = new Class({
 	},
 	
 	generatesidebar: function(data) {
+        var endOfTree = function(item, ula, schema){
+            item.each(function(row){
+                var a_icon = new Element('a', {'class':'expand','href':'#'});
+                var eli = new Element('li',{'class':'tbls'});
+                var tbl_a = new Element('a',{text:row[0],
+                    href:"#section=table&schema="+schema+"&view=browse&table="+row[0]})
+                ula.adopt(eli.adopt(a_icon, tbl_a));
+            });
+            return ula;
+        };
+        
+        var updateSchemaName = function(sch){
+            if (sch == 'information_schema')
+                return '<strong>Catalog: </strong>' + sch;
+            else if(sch == 'pg_catalog')
+                return '<strong>View: </strong>' + sch;
+            else 
+                return '<strong>Schema: </strong>' + sch;
+        };
+            
 		var links = new Elements();
 		var eula = new Element('ul',{id:'db-tree','class':'collapse'});
 		if (data['section'] == 'begin'){
@@ -157,13 +176,26 @@ Page = new Class({
 				var db_a = new Element('a',{'text':key, 'href':"#section=database&view=overview&database="+key});
 				var tree_a = new Element('a', {'class':'expand','href':'#'});
 				var ula = new Element('ul',{});
-				item.each(function(row){
-					var a_icon = new Element('a', {'class':'expand','href':'#'});
-					var eli = new Element('li',{'class':'tbls'});
-					var tbl_a = new Element('a',{text:row[0],href:"#section=table&view=browse&table="+row[0]})
-					ula.adopt(eli.adopt(a_icon, tbl_a));
-				});
-				eula.adopt( ela.adopt(tree_a, db_a, ula) );
+                if (typeOf(item) == 'object') {
+                    var arr_uli = new Elements();
+                    Object.each(item, function(item,key){
+                        var ulala = new Element('ul',{'class':'collapse',
+                            'style': 'display:none'});
+                        lili = new Element('li',{'class':'schema collapse'}).adopt(
+                            new Element('a',{'class':'expand','href':'#'}), 
+                            new Element('span',{}).set('html',updateSchemaName(key)),
+                            ulala = endOfTree(item, ulala, key)
+                        )
+                        arr_uli.include(lili);
+                    });
+                    eula.adopt( ela.adopt(tree_a, db_a,
+                        new Element('ul',{'class':'collapse'}).adopt(arr_uli)
+                    ) );
+                } else {
+                    ula = endOfTree(item, ula, key);
+                    eula.adopt( ela.adopt(tree_a, db_a, ula) );                
+                }
+
 			});
 			
 			
@@ -175,8 +207,7 @@ Page = new Class({
 
 		new Element('div.sidebar').replaces($('sidebar')).id='sidebar';
 		var hh4 = new Element('h4',{'text':'databases'});
-		hh4.inject($('sidebar'));
-		eula.inject($('sidebar'));
+        $('sidebar').adopt(hh4, eula);
 		new Collapse($('db-tree'));
 	},
     

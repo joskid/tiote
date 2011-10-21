@@ -5,12 +5,6 @@ from django.forms.formsets import formset_factory
 
 from tiote import forms, functions
 
-def ender(request):
-    template = functions.skeleton('empty')
-    context = RequestContext(request, {
-        }, [functions.site_proc]                          
-    )
-    return HttpResponse(template.render(context))
 
 def home(request):
     params = request.GET
@@ -47,30 +41,37 @@ def users(request):
         return conditions
             
     params = request.GET
-    db_names = functions.inside_query(request, 'db_names')
+    conn_params = functions.get_conn_params(request)
+    db_list = functions.common_query(request, 'db_list')
+    group_list = functions.common_query(request, 'group_list')
+    UserForm = forms.get_dialect_form('UserForm', conn_params['dialect'] )
+    # user deletion request handling
     if request.method == 'POST' and request.GET.get('update') == 'delete':
         l = request.POST.get('whereToEdit').strip().split(';');
         conditions = get_conditions(l)
         return functions.rpr_query(request, 'drop_user', conditions)
-        
+    # user creation and editing request handling
     if request.method == 'POST' and not request.GET.get('sub-view'):
-        form = forms.UserForm(db_names,data=request.POST)
+        form = UserForm(dbs=db_list,data=request.POST, groups=group_list)
         if form.is_valid():
+            if conn_params['dialect'] == 'postgresql':
+                assert False
             # some necessary checks
-            if form.cleaned_data['access'] == 'select' and not form.cleaned_data['select_databases']:
-                return HttpResponse('The submitted form is incomplete! No databases selected!')
-            if form.cleaned_data['privileges'] == 'select':
-                if not form.cleaned_data['user_privileges'] and not form.cleaned_data['administrator_privileges']:
-                    return HttpResponse('The submitted form is incomplete! No privileges selected!')
-            # query determination and submission
-            if not request.GET.get('subview'): # new user creation
-                return functions.rpr_query(request,
-                    'create_user', form.cleaned_data)
-            return HttpResponse('valid form submitted!')
+            elif conn_params['dialect'] == 'mysql':
+                if form.cleaned_data['access'] == 'select' and not form.cleaned_data['select_databases']:
+                    return HttpResponse('The submitted form is incomplete! No databases selected!')
+                if form.cleaned_data['privileges'] == 'select':
+                    if not form.cleaned_data['user_privileges'] and not form.cleaned_data['administrator_privileges']:
+                        return HttpResponse('The submitted form is incomplete! No privileges selected!')
+                # query determination and submission
+                if not request.GET.get('subview'): # new user creation
+                    return functions.rpr_query(request,
+                        'create_user', form.cleaned_data)
+                return HttpResponse('valid form submitted!')
     elif request.method == 'POST' and request.GET.get('view'):
         return HttpResponse('edit not yet implemented')
     else:
-        form = forms.UserForm(dbs=db_names)
+        form = UserForm(dbs=db_list, groups=group_list)
 
     c = {'form':form,}
     template = functions.skeleton(params['view'])

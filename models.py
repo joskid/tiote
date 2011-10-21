@@ -5,7 +5,33 @@ from sqlalchemy.engine.url import URL
 from sqlalchemy.exceptions import OperationalError, ProgrammingError, DatabaseError
 from sqlalchemy.sql import select
 
-
+def stored_query(query, dialect):
+    if dialect == 'postgresql':
+        if query == 'variables':
+            return "SHOW server_version"
+        elif query == 'template_list':
+            return "SELECT datname FROM pg_database WHERE datistemplate=True"
+        elif query == 'group_list':
+            return "SELECT rolname FROM pg_roles WHERE rolcanlogin=False"
+        elif query == 'db_list':
+            return "SELECT datname FROM pg_database WHERE datistemplate = 'f';"
+        elif query == 'user_list':
+            return "SELECT rolname, rolsuper, rolinherit FROM pg_roles"
+        elif query == 'table_list':
+            return "SELECT schemaname, tablename FROM pg_tables ORDER BY schemaname DESC"
+        
+    elif dialect == 'mysql':
+        if query == 'describe_databases':
+            return "SELECT TABLE_SCHEMA, TABLE_NAME, TABLE_ROWS FROM tables"
+        elif query == 'db_list':
+            return "SHOW databases"
+        elif query == 'user_list':
+            return "SELECT user.`Host`, user.`User` FROM user"
+        elif query == 'variables':
+            return '''SHOW SESSION VARIABLES WHERE `Variable_name`='version_compile_machine' 
+            OR `Variable_name`='version_compile_os' OR `variable_name`='version'
+            '''
+    
 
 def generate_query(query_type, dialect='postgresql', query_data=None):
     if dialect == 'postgresql': #postgresql-only statements
@@ -78,15 +104,16 @@ def full_query(conn_params, query):
     '''
     executes and returns a query result
     '''
-    link = URL(conn_params['dialect'],username=conn_params['username'], password=conn_params['password'],
-        database=conn_params['database'])
-    eng = create_engine(link)
+    eng = create_engine(get_conn_link(conn_params))
     conn = ''
     try:
         conn = eng.connect()
         rr =  conn.execute(query)
+        d = {}
+        d =  {'columns': rr.keys(),'count': rr.rowcount, 
+            'rows': [tuple(row) for row in rr]}
         conn.close()
-        return {'columns': rr.keys(),'count': rr.rowcount, 'rows':rr.fetchall()}
+        return d
     except Exception as e:
         return str(e)
 
@@ -100,30 +127,19 @@ def short_query(conn_params, querys):
         conn = eng.connect()
         for query in querys:
             rr = conn.execute(query)
-        return {'status':'successfull', 'msg':''}
+        return {'status':'successfull', }
     except Exception as e:
         return {'status':'failed', 'msg': str(e) }
     
     
-def stored_query(query, dialect):
-    if dialect == 'postgresql':
-        pass
-    elif dialect == 'mysql':
-        if query == 'describe_databases':
-            return "SELECT TABLE_SCHEMA, TABLE_NAME, TABLE_ROWS FROM tables"
-        if query == 'user_list':
-            return "SELECT user.`Host`, user.`User` FROM user"
-        elif query == 'variables':
-            return '''SHOW SESSION VARIABLES WHERE `Variable_name`='version_compile_machine' 
-            OR `Variable_name`='version_compile_os' OR `variable_name`='version'
-            '''
-    
-    
 def model_login(conn_params):
-    link = URL(conn_params['database_driver'], username = conn_params['username'], password= conn_params['password'])
-    if conn_params['database_driver'] == 'postgresql':
+    link = URL(conn_params['database_driver'], username = conn_params['username'],
+        password= conn_params['password'], host = conn_params['host'])
+    if 'connection_database' in conn_params and conn_params['database_driver'] == 'postgresql':
+        link.database = conn_params['connection_database'] if conn_params['connection_database'] else 'postgres'
+    if not 'connection_database' in conn_params and conn_params['database_driver'] == 'postgresql':
         link.database = 'postgres'
-    
+    l = str(link)
     engine = create_engine(link)
     conn = ''
     dict_ret = {}
@@ -136,23 +152,7 @@ def model_login(conn_params):
         dict_ret =  {'login': True, 'msg': ''}
         conn.close()
     return dict_ret
-
-        
-    
-def get_databases(conn_params):
-    eng = create_engine( get_conn_link(conn_params) )
-    link = eng.url
-    conn = ''
-    if link.drivername == 'postgresql':
-        conn = create_engine(link).connect()
-        query = "SELECT datname FROM pg_database WHERE datistemplate = 'f';"
-    elif link.drivername == 'mysql':
-        link.database = 'INFORMATION_SCHEMA'
-        conn = create_engine(link).connect()
-        query = "SELECT SCHEMA_NAME FROM SCHEMATA"
-    
-    return conn.execute(query)
-
+ 
 
 
 def get_conn_link(conn_params):

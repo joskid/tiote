@@ -24,6 +24,18 @@ mysql_type_choices = (("varchar","varchar"),("char","char"),("text","text"),("ti
     ("bit","bit"),("enum","enum"),("set","set"),
 )
 
+pgsql_encoding = [('UTF8', 'utf8'),('SQL_ASCII', 'sql_ascii'),('BIG5', 'big5'), ('EUC_CN', 'euc_cn'), ('EUC_JP', 'euc_jp'), 
+    ('EUC_KR', 'euc_kr'), ('EUC_TW', 'euc_tw'), ('GB18030', 'gb18030'), ('GBK', 'gbk'),
+    ('ISO_8859_5', 'iso_8859_5'), ('ISO_8859_6', 'iso_8859_6'), ('ISO_8859_7', 'iso_8859_7'),
+    ('ISO_8859_8', 'iso_8859_8'), ('JOHAB', 'johab'), ('KOI8R', 'koi8r'), ('KOI8U', 'koi8u'),
+    ('LATIN1', 'latin1'), ('LATIN2', 'latin2'), ('LATIN3', 'latin3'), ('LATIN4', 'latin4'),
+    ('LATIN5', 'latin5'), ('LATIN6', 'latin6'), ('LATIN7', 'latin7'), ('LATIN8', 'latin8'),
+    ('LATIN9', 'latin9'), ('LATIN10', 'latin10'), ('MULE_INTERNAL', 'mule_internal'), 
+    ('WIN866', 'win866'), ('WIN874', 'win874'), ('WIN1250', 'win1250'), ('WIN1251', 'win1251'), 
+    ('WIN1252', 'win1252'), ('WIN1253', 'win1253'), ('WIN1254', 'win1254'), 
+    ('WIN1255', 'win1255'), ('WIN1256', 'win1256'), ('WIN1257', 'win1257'), ('WIN1258', 'win1258')
+]
+
 mysql_key_choices = (('',''),('primary','primary'),('unique','unique'),('index','index'),)
 mysql_other_choices = (('unsigned','Unsigned'),('binary','Binary'),('not null','Not NUll'), 
     ('auto increment','Auto Increment'),
@@ -39,20 +51,45 @@ admin_privilege_choices = (
     ('FILE', 'file'), ('PROCESS', 'process'), ('RELOAD', 'reload'), ('SHUTDOWN', 'shutdown'), ('SUPER', 'super')
 )
 
-class NewDbForm(forms.Form):
-    name = forms.CharField(widget=forms.TextInput(attrs={'class':'required'}))
-    charset = forms.ChoiceField(
-        choices = mysql_charset_choices,
-        initial = 'latin1'
-    )
+pgsql_privileges_choices = (
+    ('SUPERUSER', 'superuser'), ('CREATEDB', 'createdb'), ('CREATEROLE', 'createrole'),
+    ('INHERIT', 'inherit'),('REPLICATION', 'replication'),
+)
 
-class UserForm(forms.BaseForm):
+
+# New Database Form
+class mysqlDbForm(forms.Form):
+    def __init__(self, templates=None, **kwargs):
+        f = SortedDict()
+        f['name'] = forms.CharField(widget=forms.TextInput(attrs={'class':'required'}))
+        f['charset'] = forms.ChoiceField(
+            choices = mysql_charset_choices,
+            initial = 'latin1'
+        )
+        self.base_fields = f
+        forms.BaseForm.__init__(self, **kwargs)
+
+class pgsqlDbForm(forms.BaseForm):
     
-    def __init__(self, dbs = None, **kwargs):
-        for i in range( len(dbs) ):
-            dbs[i] = dbs[i][0],dbs[i][0]
+    def __init__(self, templates=None, **kwargs):
+        template_list = [('',''),] + functions.make_choices(templates)
+        f = SortedDict()
+        f['name'] = forms.CharField(widget=forms.TextInput(attrs={'class':'required'}))
+        f['encoding'] = forms.ChoiceField( choices = pgsql_encoding)
+        f['template'] = forms.ChoiceField( choices = template_list,
+            required = False,
+        )
         
-        f = SortedDict()    
+        self.base_fields = f
+        forms.BaseForm.__init__(self, **kwargs)
+
+#New Role/User Form
+class mysqlUserForm(forms.BaseForm):
+    
+    def __init__(self, dbs = None, groups=None, **kwargs):
+        dbs = functions.make_choices(dbs)
+        f = SortedDict()
+            
         f['host'] = forms.CharField(
             widget=forms.TextInput(attrs={'class':'required '}),
             initial='localhost',
@@ -100,6 +137,41 @@ class UserForm(forms.BaseForm):
         forms.BaseForm.__init__(self, **kwargs)
         
     
+class pgsqlUserForm(forms.BaseForm):
+    
+    def __init__(self, dbs=None, groups=None, **kwargs):
+        group_choices = functions.make_choices(groups)
+        
+        f = SortedDict()
+        f['role_name'] = forms.CharField(
+            widget = forms.TextInput(attrs={'class':'required'})
+            )
+        f['can_login'] = forms.CharField(
+            widget = forms.CheckboxInput
+            )
+        f['password'] = forms.CharField(
+            widget = forms.PasswordInput,
+            required = False
+            )
+        f['account_expires'] = forms.DateField(
+            required = False)
+        f['connection_limit'] = forms.IntegerField(
+            required = False)
+        f['comment'] = forms.CharField(
+            widget = forms.Textarea(attrs={'cols':'', 'rows':''}),
+            required = False)
+        f['role_privileges'] = forms.ChoiceField(
+            required = False, widget = forms.CheckboxSelectMultiple,
+            choices = pgsql_privileges_choices)
+        if groups is not None:
+            f['group_membership'] = forms.ChoiceField(
+                choices = groups, required = False,
+                widget = forms.CheckboxSelectMultiple,)
+        
+        self.base_fields = f
+        forms.BaseForm.__init__(self, **kwargs)
+    
+    
 class ExportForm(forms.Form):
     format_choices = (
         ('SQL', 'sql'),('CSV', 'csv')
@@ -128,7 +200,7 @@ class ExportForm(forms.Form):
 class QueryForm(forms.Form):
     sql = forms.CharField(
         help_text = 'Enter valid sql query and click query to execute',
-        widget = forms.Textarea(attrs={'class':'xxlarge'}),
+        widget = forms.Textarea(attrs={'cols':'', 'rows':''}),
         label = '',
     )
     
@@ -156,6 +228,8 @@ class LoginForm(forms.Form):
         choices = database_choices,
         validators = []
     )
+    connection_database = forms.CharField(
+        required=False, )
     
 class TableForm(forms.Form):
         
@@ -205,4 +279,16 @@ class FieldForm_my(forms.Form):
         required = False,
     )
     
-
+    
+def get_dialect_form(form_name, dialect):
+    '''
+    structure of dialect_forms:
+        { 'form_name': [ postgresql version of form_name, mysql version of form_name] }
+    '''
+    dialect_forms = {'DbForm': [pgsqlDbForm, mysqlDbForm],
+        'UserForm': [pgsqlUserForm, mysqlUserForm],
+    }
+    
+    return dialect_forms[form_name][0] if dialect == 'postgresql' else dialect_forms[form_name][1]
+    
+    

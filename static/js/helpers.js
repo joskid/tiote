@@ -157,7 +157,8 @@ function create_data_table(thead_rows, tbody_rows, insertion_point) {
 	$$('.sql thead tr th')[0].addClass('selector').setStyles({
 		'max-width': '25px',
 		'min-width': '25px',
-		'width': '25px'
+		'width': '25px',
+        'padding': '0px'
 	});
 	
 	// select a tr element or a range of tr elements when the shift key is pressed
