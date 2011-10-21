@@ -1,4 +1,4 @@
-
+import datetime
 # sqlaclehemy modules
 from sqlalchemy.engine import create_engine
 from sqlalchemy.engine.url import URL
@@ -16,7 +16,7 @@ def stored_query(query, dialect):
         elif query == 'db_list':
             return "SELECT datname FROM pg_database WHERE datistemplate = 'f';"
         elif query == 'user_list':
-            return "SELECT rolname, rolsuper, rolinherit FROM pg_roles"
+            return "SELECT rolname, rolcanlogin, rolsuper, rolinherit, rolvaliduntil FROM pg_roles"
         elif query == 'table_list':
             return "SELECT schemaname, tablename FROM pg_tables ORDER BY schemaname DESC"
         
@@ -35,7 +35,11 @@ def stored_query(query, dialect):
 
 def generate_query(query_type, dialect='postgresql', query_data=None):
     if dialect == 'postgresql': #postgresql-only statements
-        pass
+        if query_type == 'create_user':
+            q = "CREATE ROLE {role_name}".format(**query_data)
+            if query_data['role_privileges']:
+                q = q + " WITH"
+                
     
     elif dialect == 'mysql': # mysql-only statements
 
@@ -108,10 +112,17 @@ def full_query(conn_params, query):
     conn = ''
     try:
         conn = eng.connect()
-        rr =  conn.execute(query)
+        query_result =  conn.execute(query)
         d = {}
-        d =  {'columns': rr.keys(),'count': rr.rowcount, 
-            'rows': [tuple(row) for row in rr]}
+        l = []
+        for row in query_result:
+            row = list(row)
+            for i in range(len(row)):
+                if type( row[i] ) == datetime.datetime:
+                    row[i] = row[i].__str__()
+            l.append( tuple(row) )
+        d =  {'columns': query_result.keys(),'count': query_result.rowcount, 
+            'rows': l}
         conn.close()
         return d
     except Exception as e:
@@ -126,7 +137,7 @@ def short_query(conn_params, querys):
     try:
         conn = eng.connect()
         for query in querys:
-            rr = conn.execute(query)
+            query_result = conn.execute(query)
         return {'status':'successfull', }
     except Exception as e:
         return {'status':'failed', 'msg': str(e) }

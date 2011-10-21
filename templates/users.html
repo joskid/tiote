@@ -1,9 +1,9 @@
 <div class='row'>
-	<div class='span12' id='sql-container'></div>
+	<div id='sql-container'></div>
 	<div class='span12'>
 		<div class='small-form-container'>
 			<div id='form_result'></div>
-			
+            <h5 class="heading">Add New User</h5>
 			<form id='tt_form' action="" method="post" accept-charset="utf-8">
 				{% csrf_token %}
 				{% for field in form %}

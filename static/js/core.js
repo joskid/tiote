@@ -479,7 +479,7 @@ var XHR = new Class({
 
 function shortXHR(data){
 	op = new Hash(data)
-	op.extend({'method': 'get', 'async': false, 'timeout': 5000, 'showLoader':false})
+	op.extend({'method': 'get', 'async': false, 'timeout': 10000, 'showLoader':false})
 	var x = new XHR(op).send();
 	
 	if (x.isSuccess() ) {
@@ -489,17 +489,6 @@ function shortXHR(data){
 	}
 }
 
-function longXHR(data){
-	op = new Hash(data)
-	op.extend({'method': 'get', 'async': false, 'timeout': 10000, 'showLoader':true})
-	var x = new XHR(op).send();
-	
-	if (x.isSuccess() ) {
-		return x.response.text;
-	} else {
-		return '!! request failed !!';
-	}
-}
 
 function show(a) {
 	$(a).style.display = 'block';

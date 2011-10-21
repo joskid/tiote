@@ -3,6 +3,7 @@
     margin-left: 220px;
     max-width: 1180px;
     min-width: 700px;
+    padding: 0 10px 0 20px;
 }
 #tt-content {
     border-left: 1px solid #DDDDDD;
@@ -19,6 +20,7 @@ table.sql {
     border: medium none;
     display: block;
     overflow: auto;
+    padding-left: 20px;
 }
 table.sql * {
     border: medium none;
@@ -70,4 +72,11 @@ table.sql tr.table-tr-selected td {
 input[type="text"], textarea, select {
     font-family: mono;
     font-size: 12px;
+}
+h5.heading {
+    border-bottom: 1px solid #DDDDDD;
+    color: #888888;
+    margin-bottom: 20px;
+    padding-bottom: 0;
+    text-transform: uppercase;
 }

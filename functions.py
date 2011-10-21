@@ -161,17 +161,6 @@ def get_conn_params(request):
         data['database'] = '' if data['dialect'] =='mysql' else 'postgres'
     return data    
 
-
-
-#def set_ajax_key(request):
-#    global ajaxKey, sessid
-#    if request.session.get('sessid', ''):
-#        sessid = request.session.get('sessid', '')
-#    else:
-#        sessid = hashlib.md5( str(random.random()) ).hexdigest()
-#        request.session['sessid'] = sessid
-#    d = request.META['PWD']
-#    ajaxKey = hashlib.md5(sessid + d).hexdigest()
     
 def set_ajax_key(request):
     if not request.session.get('ajaxKey', False):
