@@ -120,7 +120,7 @@ def full_query():
 
 # returns page templates for each view
 def skeleton(which):
-    return loader.get_template(which + '.html')
+    return loader.get_template('tt_' + which + '.html')
 
 
 def check_login(request):

@@ -25,169 +25,103 @@
 /* Vars */
 /* Overlay style */
 #simple-modal-overlay {
-  position: fixed ;
-  display: block;
-  z-index: 99998;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: #000000;
-  background-position: center center;
-  background-repeat: no-repeat;
-  background: -webkit-gradient(radial, center center, 0, center center, 460, from(#ffffff), to(#291a49));
-  background: -webkit-radial-gradient(circle, #ffffff, #291a49);
-  background: -moz-radial-gradient(circle, #ffffff, #291a49);
-  background: -ms-radial-gradient(circle, #ffffff, #291a49);
+    background: -moz-radial-gradient(circle , #FFFFFF, #291A49) repeat scroll 0 0 transparent;
+    display: block;
+    height: 100%;
+    left: 0;
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 99998;
 }
 .simple-modal {
-  /* Style rewrite */
-
-  width: 600px;
-  left: 20px;
-  top: 20px;
-  /* */
-
-  position: absolute;
-  position: fixed;
-  margin: 0;
-  color: #808080;
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  font-size: 13px;
-  font-weight: normal;
-  line-height: 18px;
-  background-color: #FFFFFF;
-  border: 1px solid #EAEEFA;
-  border: 1px solid rgba(234, 238, 250, 0.6);
-  -webkit-box-shadow: 0 0 3px rgba(0, 0, 0, 0.6);
-  -moz-box-shadow: 0 0 3px rgba(0, 0, 0, 0.6);
-  box-shadow: 0 0 3px rgba(0, 0, 0, 0.6);
-  z-index: 99999;
-  border-radius: 6px;
-  -webkit-border-radius: 6px;
-  -moz-border-radius: 6px;
+    background-color: #FFFFFF;
+    border: 1px solid rgba(234, 238, 250, 0.6);
+    border-radius: 6px 6px 6px 6px;
+    box-shadow: 0 0 3px rgba(0, 0, 0, 0.6);
+    color: #808080;
+    font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;
+    font-size: 13px;
+    font-weight: normal;
+    left: 20px;
+    line-height: 18px;
+    margin: 0;
+    position: fixed;
+    top: 20px;
+    width: 600px;
+    z-index: 99999;
 }
 .simple-modal .simple-modal-header {
-  padding: 5px 15px;
-  margin: 0;
-  border-bottom: 1px solid #EEEEEE;
+    border-bottom: 1px solid #EEEEEE;
+    margin: 0;
+    padding: 5px 15px;
 }
 .simple-modal .simple-modal-header h1 {
-  margin: 0;
-  color: #404040;
-  font-size: 18px;
-  font-weight: bold;
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  line-height: 36px;
+    color: #404040;
+    font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;
+    font-size: 16px;
+    font-weight: bold;
+    margin: -5px;
 }
 .simple-modal a.close {
-  position: absolute;
-  right: 15px;
-  top: 15px;
-  color: #999;
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  font-size: 17px;
-  font-weight: normal;
-  line-height: 10px;
-  text-decoration: none;
+    color: #999999;
+    font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;
+    font-size: 17px;
+    font-weight: normal;
+    line-height: 10px;
+    position: absolute;
+    right: 15px;
+    text-decoration: none;
+    top: 15px;
 }
 .simple-modal a.close:hover {
-  color: #444;
+    color: #444444;
 }
 .simple-modal .simple-modal-body {
-  padding: 15px;
-  /* Extra style */
-
+    padding: 15px;
 }
 .simple-modal .simple-modal-body div.contents {
-  overflow: hidden;
+    overflow: hidden;
 }
 .simple-modal .simple-modal-body p {
-  font-size: 13px;
-  font-weight: normal;
-  color: #606060;
-  line-height: 18px;
+    color: #606060;
+    font-size: 13px;
+    font-weight: normal;
+    line-height: 18px;
 }
 .simple-modal .simple-modal-body p img {
-  display: block;
-  margin: 0 auto 10px auto;
+    display: block;
+    margin: 0 auto 10px;
 }
 .simple-modal .simple-modal-footer {
-  display: block;
-  background-color: #F5F5F5;
-  padding: 14px 15px 15px;
-  border-top: 1px solid #EEEEEE;
-  -webkit-border-radius: 0 0 6px 6px;
-  -moz-border-radius: 0 0 6px 6px;
-  border-radius: 0 0 6px 6px;
-  -webkit-box-shadow: inset 0 1px 0 #FFF;
-  -moz-box-shadow: inset 0 1px 0 #FFF;
-  box-shadow: inset 0 1px 0 #FFF;
-  zoom: 1;
-  margin-bottom: 0;
-  text-align: center;
+    background-color: #F5F5F5;
+    border-radius: 0 0 6px 6px;
+    border-top: 1px solid #EEEEEE;
+    box-shadow: 0 1px 0 #FFFFFF inset;
+    display: block;
+    margin-bottom: 0;
+    padding: 4px 5px 5px;
+    text-align: center;
 }
-/*.simple-modal .simple-modal-footer a.btn {
-  text-decoration: none;
-  cursor: pointer;
-  display: inline-block;
-  background-repeat: no-repeat;
-  padding: 5px 14px 6px;
-  color: #333;
-  font-size: 13px;
-  line-height: normal;
-  border: 1px solid transparent;
-  -webkit-transition: 0.2s linear all;
-  -moz-transition: 0.2s linear all;
-  transition: 0.2s linear all;
-  border-radius: 3px;
-  -webkit-border-radius: 3px;
-  -moz-border-radius: 3px;
-}
-.simple-modal .simple-modal-footer a.btn.primary {
-  color: #FFF;
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.25);
-  background-color: #999;
-  background-repeat: repeat-x;
-  margin-right: 15px;
-}
-.simple-modal .simple-modal-footer a.btn.primary:hover {
-  border: 1px solid #444;
-  background-color: #444;
-}
-.simple-modal .simple-modal-footer a.btn.secondary {
-  padding: 5px 2px 6px;
-}
-.simple-modal .simple-modal-footer a.btn.secondary:hover {
-  color: #999;
-}*/
-/* Draggable style */
 .simple-modal.draggable .simple-modal-header:hover {
-  cursor: move;
-  background-color: #f8f8f8;
-  -webkit-border-top-left-radius: 6px;
-  -webkit-border-top-right-radius: 6px;
-  -moz-border-radius-topleft: 6px;
-  -moz-border-radius-topright: 6px;
-  border-top-left-radius: 6px;
-  border-top-right-radius: 6px;
+    background-color: #F8F8F8;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    cursor: move;
 }
-/* Loading style */
 .simple-modal.loading .simple-modal-body {
-  min-height: 60px;
-  background: transparent url("../images/loader.gif") no-repeat center center;
+    background: url("../images/loader.gif") no-repeat scroll center center transparent;
+    min-height: 60px;
 }
 .simple-modal.loading .simple-modal-body div.contents {
-  display: none;
+    display: none;
 }
 .simple-modal.loading .close, .simple-modal.loading .simple-modal-header, .simple-modal.loading .simple-modal-footer {
-  display: none;
+    display: none;
 }
-/* Hide header */
 .simple-modal.hide-header .simple-modal-header {
-  display: none;
+    display: none;
 }
-/* Hide header */
 .simple-modal.hide-footer .simple-modal-footer {
-  display: none;
+    display: none;
 }

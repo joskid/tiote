@@ -80,3 +80,6 @@ h5.heading {
     padding-bottom: 0;
     text-transform: uppercase;
 }
+.actions {
+    padding: 10px 20px 10px 41%;
+}
