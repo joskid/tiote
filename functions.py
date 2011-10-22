@@ -68,6 +68,12 @@ def rpr_query(request, query_type, query_data=None):
                 query_data=query_data)
         )
         return HttpResponse( json.dumps(result) )
+    elif query_type == 'drop_user':
+        result = models.short_query(conn_params,
+            models.generate_query( query_type, dialect=conn_params['dialect'],
+                query_data=query_data)
+        )
+        return HttpResponse(json.dumps(result) )
     # uncommon queries
     elif conn_params['dialect'] == 'postgresql':
         
@@ -103,12 +109,6 @@ def rpr_query(request, query_type, query_data=None):
             else:
                 return http_500(r)
             
-        elif query_type == 'drop_user':
-            result = models.short_query(conn_params,
-                models.generate_query( query_type, dialect=conn_params['dialect'],
-                    query_data=query_data)
-            )
-            return HttpResponse(json.dumps(result) )
         else:
             return http_500('feature not yet implemented!')
     else:

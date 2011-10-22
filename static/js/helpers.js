@@ -265,7 +265,10 @@ function generate_where(context, e) {
         selected_rows.each(function(tiri,tiri_index){
             var where = '';
             tiri.getChildren('td[class!=selector]').each(function(tida,tida_index){
-                where += ' ' + cols[tida_index] + '=' + tida.childNodes[0].nodeValue +'';
+                if (! tida.hasChildNodes())
+                    where += ' ' + cols[tida_index] + '=' + '';
+                else
+                    where += ' ' + cols[tida_index] + '=' + tida.childNodes[0].nodeValue +'';
                 if (tida != tiri.getLast() )
                     where += ' AND';
             });

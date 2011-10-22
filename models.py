@@ -59,8 +59,14 @@ def generate_query(query_type, dialect='postgresql', query_data=None):
 #            if query_data['comment']:
 #                q1 = "COMMENT ON ROLE {role_name} IS \'{comment}\'".format(**query_data)
 #                queries.append(q1)
-            queries = [q0, ]
+            queries = (q0, )
             return queries
+        elif query_type == 'drop_user':
+            queries = []
+            for cond in query_data:
+                q = "DROP ROLE {rolname}".format(**cond)
+                queries.append(q) 
+            return tuple(queries)
                 
     
     elif dialect == 'mysql': # mysql-only statements

@@ -309,7 +309,7 @@ Page = new Class({
 				else if (e.target.id == 'action_delete') msg += 'delete ';
 				msg += ' selected rows?';
                 var confirmDiag = new SimpleModal({'btn_ok': 'Yes',
-                    'overlayClick': false, 'draggable':false
+                    'overlayClick': false, 'draggable':false, 'offsetTop': 0.2 * screen.availHeight
                 });
                 confirmDiag.show({
                     'model': 'confirm',
@@ -325,11 +325,14 @@ Page = new Class({
 		}
 		var action_delete = function(e){
 			var whereToEdit = generate_where( data_table.toElement().id, e) ;
+            console.log(whereToEdit);
             if ( whereToEdit ) {
                 var request_url = generate_ajax_url(true,{});
                 request_url += '&update=delete';
-                console.log(request_url);
                 var x = new XHR({'url':request_url,
+                    'onRequest':function(){
+                        ajaxSpinner.show(true);
+                    },
                 	'onSuccess':function(){
                 		resp = JSON.decode(this.response.text);
                 		if (resp.status == 'failed') {
@@ -337,7 +340,11 @@ Page = new Class({
                 		} else {
                 			reloadPage();
                 		}
-                	} }).post({'whereToEdit':whereToEdit});
+                	},
+                    'onComplete': function(){
+                        ajaxSpinner.hide();
+                    }
+                }).post({'whereToEdit':whereToEdit});
             }
 		}
 		var action_edit = function(e){
@@ -473,13 +480,7 @@ var XHR = new Class({
 				hide('header-load');
                 ajaxSpinner.hide();
                 if (msg == 'invalid ajax request!') location.reload()
-                var SM = new SimpleModal({'draggable':false,'overlayClick':false});
-                SM.show({
-                    'title': 'Error!',
-                    'contents': msg
-                });
-                
-
+                showDialog('Error!', msg, {'draggable':false,'overlayClick':false})
 			});
 		}
 	},
