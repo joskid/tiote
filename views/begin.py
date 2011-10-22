@@ -66,10 +66,10 @@ def ajax(request):
     #check XmlHttpRequest
     if not request.is_ajax():
         # return 500 error
-        return functions.http_500('not an ajax request')
+        return functions.http_500('not an ajax request!')
     
     if not functions.validateAjaxRequest(request):
-        return functions.http_500('Invalid ajax request!')
+        return functions.http_500('invalid ajax request!')
     # ajax request is okay
     
         

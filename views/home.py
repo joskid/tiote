@@ -52,12 +52,17 @@ def users(request):
         return functions.rpr_query(request, 'drop_user', conditions)
     # user creation and editing request handling
     if request.method == 'POST' and not request.GET.get('sub-view'):
-        form = UserForm(dbs=db_list,data=request.POST, groups=group_list)
+        form = UserForm(dbs=db_list, groups=group_list, data=request.POST)
         if form.is_valid():
             if conn_params['dialect'] == 'postgresql':
-                assert False
-            # some necessary checks
+                # query determination and submission
+                if not request.GET.get('subview'): # new user creation
+                    return functions.rpr_query(request,
+                        'create_user', form.cleaned_data)
+                return HttpResponse('valid form submitted!')
+            
             elif conn_params['dialect'] == 'mysql':
+                # some necessary checks
                 if form.cleaned_data['access'] == 'select' and not form.cleaned_data['select_databases']:
                     return HttpResponse('The submitted form is incomplete! No databases selected!')
                 if form.cleaned_data['privileges'] == 'select':
@@ -68,6 +73,15 @@ def users(request):
                     return functions.rpr_query(request,
                         'create_user', form.cleaned_data)
                 return HttpResponse('valid form submitted!')
+        else:
+            template = functions.skeleton('form-errors')
+            context = RequestContext(request, {'form':form}, 
+                [functions.site_proc]
+            )
+            h = HttpResponse(template.render(context))
+            h.set_cookie('tt_formContainsErrors','true')
+            return h
+            
     elif request.method == 'POST' and request.GET.get('view'):
         return HttpResponse('edit not yet implemented')
     else:

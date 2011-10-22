@@ -4,6 +4,7 @@
 		<div class='small-form-container'>
 			<div id='form_result'></div>
             <h5 class="heading">Add New User</h5>
+            <div id="msg-placeholder"></div>
 			<form id='tt_form' action="" method="post" accept-charset="utf-8">
 				{% csrf_token %}
 				{% for field in form %}
@@ -15,7 +16,7 @@
 				</div>
 				{% endfor %}
 				</fieldset>
-			  <div class='actions'><input type="submit" class='btn primary submit-button' value="Continue &rarr;"/></div>
+			  <div class='actions'><input type="submit" class='btn primary submit-button' value="Submit &rarr;"/></div>
 			</form>
 		</div>
 		<div id='undisplayed_result' class='hidden' style="display:none;"></div>

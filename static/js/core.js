@@ -395,16 +395,30 @@ Page = new Class({
 					'X-CSRFToken': Cookie.read('csrftoken')
 				},
 				'url': request_url,
-                onSuccess: function(text, xml){
+                onSuccess: function(responseTree, responseElements, responseHTML, responseJavaScript){
                 	var result_holder = $('undisplayed_result');
-                	resp = JSON.decode( result_holder.childNodes[0].nodeValue)
-                	if (resp.status == 'failed') {
-                		showDialog('Error!', resp.msg, {});
-                	} else { reloadPage(); }
+                    $('msg-placeholder').getChildren().destroy();
+                    if (Cookie.read('tt_formContainsErrors')){
+                        console.log('the submitted form contains errors!');
+                        $('msg-placeholder').adopt($(undisplayed_result).getChildren());
+                        Cookie.dispose('tt_formContainsErrors');
+                    } else {
+                        resp = JSON.decode( result_holder.childNodes[0].nodeValue)
+                        if (resp.status == 'failed') {
+                            showDialog('Error!', resp.msg, {'overlayClick':false});
+                        } else { reloadPage(); }                        
+                    }
+
+                },
+                onFailure: function(xhr){
+                    showDialog('Error!',
+                        'An unexpected error was encountered. Please reload the page and try again',
+                        {'overlayClick':false}
+                    )
                 }
                 
 			}
-		})
+		});
 	}
 	
 });
@@ -458,11 +472,14 @@ var XHR = new Class({
 				if (xhr.status == 500 && xhr.statusText == "UNKNOWN STATUS CODE") msg = xhr.response;
 				hide('header-load');
                 ajaxSpinner.hide();
+                if (msg == 'invalid ajax request!') location.reload()
                 var SM = new SimpleModal({'draggable':false,'overlayClick':false});
                 SM.show({
                     'title': 'Error!',
                     'contents': msg
                 });
+                
+
 			});
 		}
 	},

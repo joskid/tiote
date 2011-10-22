@@ -333,8 +333,9 @@ var updateAssets = function(obj, bool){
 }
 
 function showDialog(title, msg, options){
-	options = options || {};
-	var SM = new SimpleModal(options);
+    op = {'offsetTop': 0.2 * screen.availHeight}
+	if (options) op = Object.merge(op, options)
+	var SM = new SimpleModal(op);
     SM.show({
         'title': title, 'contents': msg
     })

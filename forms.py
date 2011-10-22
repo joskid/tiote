@@ -52,8 +52,8 @@ admin_privilege_choices = (
 )
 
 pgsql_privileges_choices = (
-    ('SUPERUSER', 'superuser'), ('CREATEDB', 'createdb'), ('CREATEROLE', 'createrole'),
-    ('INHERIT', 'inherit'),('REPLICATION', 'replication'),
+    ('INHERIT', 'inherit'), ('CREATEDB', 'createdb'), ('CREATEROLE', 'createrole'),
+    ('REPLICATION', 'replication'),('SUPERUSER', 'superuser'),
 )
 
 
@@ -139,7 +139,7 @@ class mysqlUserForm(forms.BaseForm):
     
 class pgsqlUserForm(forms.BaseForm):
     
-    def __init__(self, dbs=None, groups=None, **kwargs):
+    def __init__(self, groups=None, dbs=None, **kwargs):
         group_choices = functions.make_choices(groups)
         
         f = SortedDict()
@@ -153,18 +153,18 @@ class pgsqlUserForm(forms.BaseForm):
             widget = forms.PasswordInput,
             required = False
             )
-        f['account_expires'] = forms.DateField(
+        f['valid_until'] = forms.DateTimeField(
             required = False)
         f['connection_limit'] = forms.IntegerField(
             required = False)
-        f['comment'] = forms.CharField(
-            widget = forms.Textarea(attrs={'cols':'', 'rows':''}),
-            required = False)
-        f['role_privileges'] = forms.ChoiceField(
+#        f['comment'] = forms.CharField(
+#            widget = forms.Textarea(attrs={'cols':'', 'rows':''}),
+#            required = False)
+        f['role_privileges'] = forms.MultipleChoiceField(
             required = False, widget = forms.CheckboxSelectMultiple,
             choices = pgsql_privileges_choices)
         if groups is not None:
-            f['group_membership'] = forms.ChoiceField(
+            f['group_membership'] = forms.MultipleChoiceField(
                 choices = groups, required = False,
                 widget = forms.CheckboxSelectMultiple,)
         

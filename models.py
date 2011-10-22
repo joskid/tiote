@@ -36,9 +36,31 @@ def stored_query(query, dialect):
 def generate_query(query_type, dialect='postgresql', query_data=None):
     if dialect == 'postgresql': #postgresql-only statements
         if query_type == 'create_user':
-            q = "CREATE ROLE {role_name}".format(**query_data)
+            # create role statement
+            q0 = "CREATE ROLE {role_name}".format(**query_data)
+            if query_data['can_login']:
+                q0 += " LOGIN"
+            if query_data['password']:
+                q0 += " ENCRYPTED PASSWORD '{password}'".format(**query_data)
             if query_data['role_privileges']:
-                q = q + " WITH"
+                for option in query_data['role_privileges']:
+                    q0 += " " + option
+            if query_data['connection_limit']:
+                q0 += " CONNECTION LIMIT {connection_limit}".format(**query_data)
+            if query_data['valid_until']:
+                q0 += " VALID UNTIL '{valid_until}'".format(**query_data)
+            if query_data['group_membership']:
+                q0 += " IN ROLE"
+                for grp_index in range( len(query_data['group_membership']) ):
+                    if grp_index == len(query_data['group_membership']) - 1:
+                        q0 += " " + query_data['group_membership'][grp_index]
+                    else:
+                        q0 += " " + query_data['group_membership'][grp_index] + ","
+#            if query_data['comment']:
+#                q1 = "COMMENT ON ROLE {role_name} IS \'{comment}\'".format(**query_data)
+#                queries.append(q1)
+            queries = [q0, ]
+            return queries
                 
     
     elif dialect == 'mysql': # mysql-only statements
@@ -126,6 +148,7 @@ def full_query(conn_params, query):
         conn.close()
         return d
     except Exception as e:
+        conn.close()
         return str(e)
 
 
@@ -134,12 +157,14 @@ def short_query(conn_params, querys):
     executes and returns the success state of the query
     """
     eng = create_engine( get_conn_link(conn_params) )
+    conn = ''
     try:
         conn = eng.connect()
         for query in querys:
             query_result = conn.execute(query)
         return {'status':'successfull', }
     except Exception as e:
+        conn.close()
         return {'status':'failed', 'msg': str(e) }
     
     
