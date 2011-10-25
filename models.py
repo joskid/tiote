@@ -292,11 +292,10 @@ def short_query(conn_params, queries):
 def model_login(conn_params):
     link = URL(conn_params['database_driver'], username = conn_params['username'],
         password= conn_params['password'], host = conn_params['host'])
-    if 'connection_database' in conn_params and conn_params['database_driver'] == 'postgresql':
-        link.database = conn_params['connection_database'] if conn_params['connection_database'] else 'postgres'
-    if not 'connection_database' in conn_params and conn_params['database_driver'] == 'postgresql':
+    if conn_params['connection_database']:
+        link.database = conn_params['connection_database']
+    elif not conn_params['connection_database'] and conn_params['database_driver'] == 'postgresql':
         link.database = 'postgres'
-    l = str(link)
     engine = create_engine(link)
     conn = ''
     dict_ret = {}

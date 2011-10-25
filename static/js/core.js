@@ -49,24 +49,21 @@ Page = new Class({
 	
 	initialize: function(obj) {
 		console.log('new Page() object created');
-		data = obj;
-		this.updateOptions({'navObj': data, 'hash': location.hash});
-		var menuData = new Hash({'section': data['section']});
-		var sidebarData = new Hash({'section': data['section']});
+		this.updateOptions({'navObj': obj, 'hash': location.hash});
 		this.setTitle('here');
-		this.generateTopMenu(menuData);
+		this.generateTopMenu(obj);
 		self = this; 
 		if (Cookie.read('dont_touch')) {
-			console.log('The page returned contains errors!')
-			Cookie.dispose('dont_touch')
+			console.log('The page returned contains errors!');
+			Cookie.dispose('dont_touch');
 		} else {
             clearPage();
             if (! $('db-tree') || ! $('db-tree').hasChildNodes() ||Cookie.read('tt_updateSidebar')) {
-                this.generatesidebar(sidebarData);
+                this.generatesidebar(obj);
                 if (Cookie.read('updateSidebar')) Cookie.dispose('tt_updateSidebar');
             }
             
-			this.getViewData(data); 
+			this.generateView(obj); 
 		}
 	},
 	
@@ -94,13 +91,7 @@ Page = new Class({
 		this.updateOptions({'title': title});
 	},
 	
-	getViewData: function(data){
-		op = new Hash({'method': 'get', 'onSuccess': this.loadView});
-		op.extend(data);
-		x = new XHR(op).send()
-	},
-	
-    generateTopMenu: function(data){
+	generateTopMenu: function(data){
 		var links = new Hash();
 		l = ['query', 'import', 'export', 'insert', 'structure', 'overview', 'browse', 'update', 'search', 'home'];
 		l.append(['login', 'help', 'faq', 'users',]);
@@ -108,7 +99,7 @@ Page = new Class({
 			links[item] = new Element('a', {'text': item});
 		});
 		
-		var order = []; var prefix_str; var suffix_str;
+		var order = []; var prefix_str; var suffix;
 		if (data['section'] == 'begin') {
 			order = ['login', 'help', 'faq'];
 			prefix_str = '#section=begin';
@@ -120,18 +111,25 @@ Page = new Class({
 		if (data['section'] == 'database') {
 			order = ['overview', 'query','import','export'];
 			prefix_str = '#section=database';
-			suffix_str = '&table=';
+			suffix = ['&database=']
 		}
 		if (data['section'] == 'table') {
 			order = ['browse', 'structure', 'insert', 'search', 'query', 'import', 'export'];
 			prefix_str = '#section=table';
-			suffix_str = '&database=&table=';
+			suffix = ['&database=','&table='];
 		}
 		
 		var aggregate_links = new Elements();
 		order.each(function(item, key){
 			elmt = links[item];
 			elmt.href = prefix_str + '&view=' + elmt.text;
+            if (data['section'] == 'database' || data['section'] == 'table'){
+                elmt.href += suffix[0] + data['database'];
+                if (data['schema'])
+                    elmt.href += '&schema=' + data['schema'];
+            }
+            if (data['section'] == 'table')
+                elmt.href += suffix[1] + data['table'];
 			// todo: add suffix_str eg &table=weed
 			elmt.text = elmt.text.capitalize();
 			var ela = new Element('li',{});
@@ -145,12 +143,15 @@ Page = new Class({
 	},
 	
 	generatesidebar: function(data) {
-        var endOfTree = function(item, ula, key){
+        var endOfTree = function(item, ula, db, schema){
+            schema = schema || false;
             item.each(function(row){
                 var a_icon = new Element('a', {'class':'expand','href':'#'});
-                var eli = new Element('li',{'class':'tbl '+key});
+                var eli = new Element('li',{'class':'tbl '+db});
                 var tbl_a = new Element('a',{text:row[0],
-                    href:"#section=table&schema="+key+"&view=browse&table="+row[0]})
+                    href:"#section=table&view=browse&database="+db+"&table="+row[0]})
+                if (schema)
+                    tbl_a.href += '&schema=' + schema;
                 ula.adopt(eli.adopt(a_icon, tbl_a));
             });
             return ula;
@@ -171,20 +172,20 @@ Page = new Class({
 			
 		} else if (data['section'] == 'home' || data['section'] =='database' || data['section'] == 'table') {
 			dbs_tbls = JSON.decode( shortXHR({'commonQuery':'describe_databases'}) );
-			Object.each(dbs_tbls, function(item,key){
-				var ela = new Element('li',{'class':'db '+key})
-				var db_a = new Element('a',{'text':key, 'href':"#section=database&view=overview&database="+key});
+			Object.each(dbs_tbls, function(db_data,db){
+				var ela = new Element('li',{'class':'db '+db})
+				var db_a = new Element('a',{'text':db, 'href':"#section=database&view=overview&database="+db});
 				var tree_a = new Element('a', {'class':'expand','href':'#'});
 				var ula = new Element('ul',{});
-                if (typeOf(item) == 'object') {
+                if (typeOf(db_data) == 'object') {
                     var arr_uli = new Elements();
-                    Object.each(item, function(item,key){
+                    Object.each(db_data, function(schema_data,schema){
                         var ulala = new Element('ul',{'class':'collapse',
                             'style': 'display:none'});
-                        lili = new Element('li',{'class':'schema collapse '+key}).adopt(
+                        lili = new Element('li',{'class':'schema collapse '+schema}).adopt(
                             new Element('a',{'class':'expand','href':'#'}), 
-                            new Element('span',{}).set('html',updateSchemaName(key)),
-                            ulala = endOfTree(item, ulala, key)
+                            new Element('span',{}).set('html',updateSchemaName(schema)),
+                            ulala = endOfTree(schema_data, ulala, db, schema )
                         )
                         arr_uli.include(lili);
                     });
@@ -192,7 +193,7 @@ Page = new Class({
                         new Element('ul',{'class':'collapse'}).adopt(arr_uli)
                     ) );
                 } else {
-                    ula = endOfTree(item, ula, key);
+                    ula = endOfTree(db_data, ula, db);
                     eula.adopt( ela.adopt(tree_a, db_a, ula) );                
                 }
 
@@ -217,39 +218,37 @@ Page = new Class({
 	},
 	
     
-	loadView: function(text, xml) {
-		// self = Page
-		// this = xhr instance
-		console.log('loadView() called!');
-		self.generateView =  function(viewData, data) {
-			console.log('generateView() called!');
-			if(!data['section']) {
-				nav.state.empty()
-				nav.set({'section': 'home','view': 'home'});
-			}
-			if (data['section'] == 'begin') {
-				$('tt-content').set('html', viewData['text']);
-			}
-			if(data['section'] == 'home') {
-				$('tt-content').set('html', viewData['text']);
-				// further individual page processing
-				if ( data['view'] == 'users') {
-					self.updateUserView();
-				} else {
-                    self.completeForm();
+	generateView: function(data){
+        self = this;
+		x = new XHR(Object.merge({'method':'get',
+            'onSuccess': function(text,xml){
+                var viewData = {'text' : text,'xml' : xml};
+                console.log(data);
+                if(!data['section']) {
+                    nav.state.empty()
+                    nav.set({'section': 'home','view': 'home'});
                 }
-			} else if (data['section'] == 'database'){
-                $('tt-content').set('html', viewData['text']);
-                if (data['view'] == 'overview') {
-                    self.completeOverview();
+                if (data['section'] == 'begin') {
+                    $('tt-content').set('html', viewData['text']);
                 }
+                if(data['section'] == 'home') {
+                    $('tt-content').set('html', viewData['text']);
+                    // further individual page processing
+                    if ( data['view'] == 'users') {
+                        self.updateUserView();
+                    } else {
+                        self.completeForm();
+                    }
+                } else if (data['section'] == 'database'){
+                    $('tt-content').set('html', viewData['text']);
+                    if (data['view'] == 'overview') {
+                        self.completeOverview();
+                    }
+                }
+                runXHRJavascript();
             }
-            runXHRJavascript();
-			
-		}
-		
-		xhrData = {'text' : text,'xml' : xml};
-		self.generateView(xhrData, self.options.navObj); 
+        },data)
+        ).send()
 	},
 	
     
@@ -385,10 +384,9 @@ Page = new Class({
                 self.endPageLoad();
             }
         }).send()
-        
-		
                 
 	},
+    
     
 	loadTableOptions: function(opt_type){
 		var actions = function(e){ // basic router

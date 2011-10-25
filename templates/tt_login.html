@@ -30,7 +30,8 @@
 				{{ field.label_tag}}
 				<div class='input'>
 					{{ field }}
-				</div><!-- {% if field.errors %} <span class='help-inline'>{{field.errors}}</span>{% endif %} -->
+				</div>
+				<!-- {% if field.help_text %}<div class='alert-message warning'>{{field.help_text}}</span>{% endif %} -->
 			</div>
 		{% endfor %}
 		</fieldset>
@@ -41,4 +42,3 @@
 <script type="text/javascript" ajaxKey='{{ajaxKey}}' charset="utf-8">            
 </script>
 {% endblock %}
-{% block scripts %}{% endblock %}

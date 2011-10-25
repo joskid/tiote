@@ -235,10 +235,12 @@ class LoginForm(forms.Form):
     )
     database_driver = forms.ChoiceField(
         choices = database_choices,
-        validators = []
+        widget = forms.Select(attrs={'class':'select_requires:connection_database:postgresql'}),
     )
     connection_database = forms.CharField(
-        required=False, )
+        required=False, 
+        help_text='Optional but needed if the PostgreSQL installation does not include the default `postgres` database'
+    )
     
     
 class ExportForm(forms.Form):
