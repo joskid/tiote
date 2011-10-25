@@ -2,9 +2,8 @@ from django.conf.urls.defaults import patterns, include, url
 import settings
 
 urlpatterns = patterns('',
-    (r'^$', 'tiote.views.begin.empty'),
-    (r'^ajax/$', 'tiote.views.begin.ajax'),
-    (r'^bootstrap/$','tiote.views.begin_hm.ender'),
-    (r'^login/$', 'tiote.views.begin.login'),
+    (r'^$', 'tiote.views.start.index'),
+    (r'^ajax/$', 'tiote.views.start.ajax'),
+    (r'^login/$', 'tiote.views.start.login'),
 )
 

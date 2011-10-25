@@ -12,12 +12,15 @@ def home(request):
         functions.get_conn_params(request)['dialect']
     )
     template_list = functions.common_query(request, 'template_list')
+    user_list = functions.common_query(request, 'user_list');
+    charset_list = functions.common_query(request, 'charset_list');
     if request.method == 'POST':
-        form = DbForm(templates=template_list, data=request.POST)
+        form = DbForm(templates=template_list, users=user_list,
+            charsets=charset_list, data=request.POST)
         if form.is_valid():
-            pass
+            return functions.rpr_query(request, 'create_db', form.cleaned_data)
     else:
-        form = DbForm(templates=template_list)
+        form = DbForm(templates=template_list, users=user_list, charsets=charset_list)
         
     c = {'form':form, 'variables':functions.get_home_variables(request)}
     template = functions.skeleton(params['view'])
@@ -29,16 +32,6 @@ def home(request):
 
 
 def users(request):
-    def get_conditions(l):
-        conditions = []
-        for i in range( len(l) ):
-            ll = l[i].strip().split('AND')
-            d = {}
-            for ii in range( len(ll) ):
-                lll = ll[ii].strip().split('=')
-                d.update( {lll[0].lower() : lll[1].lower()} )
-            conditions.append(d)
-        return conditions
             
     params = request.GET
     conn_params = functions.get_conn_params(request)
@@ -48,7 +41,7 @@ def users(request):
     # user deletion request handling
     if request.method == 'POST' and request.GET.get('update') == 'delete':
         l = request.POST.get('whereToEdit').strip().split(';');
-        conditions = get_conditions(l)
+        conditions = functions.get_conditions(l)
         return functions.rpr_query(request, 'drop_user', conditions)
     # user creation and editing request handling
     if request.method == 'POST' and not request.GET.get('sub-view'):
@@ -143,3 +136,17 @@ def export(request):
             'form': form}, [functions.site_proc]                          
         )
         return HttpResponse(template.render(context))
+
+
+def route(request):
+    if request.GET['view'] == 'users':
+        return users(request)
+    elif request.GET['view'] == 'query':
+        return query(request)
+    elif request.GET['view'] == 'export':
+        return export(request)
+    elif request.GET['view'] == 'import':
+        return import_(request)
+    elif request.GET['view'] == 'home':
+        return home(request)
+    

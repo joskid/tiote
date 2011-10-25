@@ -7,40 +7,21 @@ from django.core import serializers
 from tiote import forms, functions, views
 
 
-def empty(request):
-    '''
-    application start
-    '''
-    
+def index(request):
     functions.set_ajax_key(request)
     request.session.set_expiry(1800)
     
-    if request.method == 'POST':
-        # this is a login request
-        
-        form = forms.LoginForm(request.POST)
-        if form.is_valid():
-            dict_cd = functions.do_login(request, form.cleaned_data)
-            if dict_cd['login'] == True:
-                return begin(request, 'empty')
-            else:
-                errors = [ dict_cd['msg'] ] 
-                return begin(request, 'login', errors=errors)
-        else:
-            return begin(request, 'login')
+    if not functions.check_login(request):
+        return HttpResponseRedirect('login/')
     
-    else:
-        if not functions.check_login(request):
-            return HttpResponseRedirect('login/')
-        
-        # return empty template
-        c = {}
-        template = functions.skeleton('empty')
-        context = RequestContext(request, {
-            }, [functions.site_proc]
-        )
-        context.update(c)
-        return HttpResponse(template.render(context))
+    # return empty template
+    c = {}
+    template = functions.skeleton('start')
+    context = RequestContext(request, {
+        }, [functions.site_proc]
+    )
+    context.update(c)
+    return HttpResponse(template.render(context))
         
 
 def login(request):
@@ -60,9 +41,6 @@ def login(request):
         
         
 def ajax(request):
-    '''
-    ajax router
-    '''
     #check XmlHttpRequest
     if not request.is_ajax():
         # return 500 error
@@ -104,11 +82,11 @@ def ajax(request):
     if request.GET.get('section', False) == 'begin':
         return begin(request, request.GET.get('view', False))
     if request.GET.get('section', False) == 'home':
-        return home(request)
+        return views.home.route(request)
     elif request.GET.get('section', False) == 'database':
-        return database(request)
+        return views.database.route(request)
     elif request.GET.get('view', False) == 'table':
-        return table(request)
+        return views.table.route(request)
     else:
         return functions.http_500('request corresponses to no function!')
    
@@ -131,30 +109,4 @@ def begin(request, page, **kwargs):
     context.update(c)
     h =  HttpResponse(t.render(context))
     return h
-
-# section home
-def home(request):
-    '''
-    home section router
-    '''
-    params = request.GET
-    if params['view'] == 'users':
-        return views.home.users(request)
-    elif params['view'] == 'query':
-        return views.home.query(request)
-    elif params['view'] == 'export':
-        return views.home.export(request)
-    elif params['view'] == 'import':
-        return views.home.import_(request)
-    elif params['view'] == 'home':
-        return views.home.home(request)
-        
-
-
-def database(request):
-    pass
-
-
-def table(request):
-    pass
 

@@ -1,41 +1,58 @@
-<div class='table-placeholder'>
-	<div class='select-controls'>
-		<ul class='select'>
-			<li><a href='' class='select-all'>All</a></li>
-			<li><a href='' class='select-none'>None</li>
-		</ul>
-		<ul class='with-selected'>
-			<li><a class='selected-empty'>Empty</a></li>
-			<li><a class='selected-drop'>Drop</a></li>
-			<li><a class='selected-optimize'>Optimize</a></li>
-		</ul>
-	</div>
-	<div class='table-sql'>
-		
-	</div>
-</div>
-<div class='small-container'>
-	<h3>Options</h3>
-	<a class='drop-db'>Drop the {{ db }} database</a>
-	<br /><br />
-	<h3>Edit Database</h3>
-	<br /><br />
-	<h3>create a new table</h3>
-	{% if errors %}
-	<ul class='error-list'>
-		{% for err in errors %}
-		<li>{{ err }}</li>
-		{% endfor %}
-	</ul>
-	{% endif %}
-	<form action="" method="post" accept-charset="utf-8">
-		{% csrf_token %}
-		{{ tableform.as_p }}
-		<p>Setup the fields for the table below</p>
-		{{ fieldformset.management_form }}
-		<div>
-			{{ form }}
+<div class='row'>
+	<div id='sql-container'></div>
+	<div class='span11'>
+		<div class='small-form-container'>
+			<div id='form_result'></div>
+            <h5 class="heading">Add New Table</h5>
+            <div id="msg-placeholder"></div>
+			<form id='tt_form' class="variable_form" action="" method="post" accept-charset="utf-8">
+				{% csrf_token %}
+                <div class="table-form">
+				{% for field in form %}
+					{% if field.name in table_fields %}
+					    <div class="clearfix">
+					        {{ field.label_tag}}
+					        <div class='input'>
+					            {{ field }}
+					        </div>
+					    </div>
+					{% endif %}
+				{% endfor %}
+				</div>
+                <span>Start creating fields for this table.</span>    
+        <div class='field-form variable_form'>
+            <h6 class="heading"> New Field </h6>
+            <table class='compact-form'><tbody>
+            {% for field in form %}
+            	{% if field.label == 'values'%}
+            	<tr class='hidden values-needed'><td>{{field.label_tag}}</td><td>{{field}}</td><td colspan='2'>{{field.help_text}}</td></tr>
+            	{% else %}
+	                {% if field.name not in table_fields and field.label not in odd_fields %}
+	                <tr><td class="input-header">{{field.label_tag}}<td class="contains-input">{{field}}</td>
+	                {% endif %}
+	                {% if field.name not in table_fields and field.label in odd_fields %}
+	                <td class="input-header">{{field.label_tag}}</td><td class="contains-input">{{field}}</td></tr>
+	                {% endif %}
+                {% endif %}
+            {% endfor %}
+            </tbody></table>
+        </div>
+			  <div class="form-controls">
+                  <input type="submit" class='btn primary submit-button' value="Submit &rarr;"/>
+                  <a id="newFieldForm" class="pull-right pointer">Add another field</a>
+              </div>
+			</form>
 		</div>
-		<p><input type="submit" value="Continue &rarr;"/></p>
-	</form>
+		<div id='undisplayed_result' class='hidden' style="display:none;"></div>
+	</div>
 </div>
+
+<script type="text/javascript" ajaxKey="{{ajaxKey}}" charset="utf-8">
+	var j = $$('table.compact-form td ul')[0];  var con = new Elements();
+    j.getChildren().each(function(item,key){
+        con.include( item.getChildren()[0] )
+    });
+    j.getParent().getParent().adopt(new Element('td',{'colspan':5,'class':'occupy'}).adopt(con)); 
+    j.getParent().destroy();
+
+</script>

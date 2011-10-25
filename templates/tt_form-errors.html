@@ -1,9 +1,6 @@
 {% if errors %}
 <div class='alert-message error'>
-	{% for err in errors %}
-	<p>{{ err }}</p>
-	{% endfor %}
-</div>
+	{% for err in errors %}<p>{{ err }}</p>{% endfor %}
 </div>
 {% endif %}
 {% if form.errors %}

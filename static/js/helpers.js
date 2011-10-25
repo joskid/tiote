@@ -62,38 +62,39 @@ Element.implement({
 	}
 });
 
-// deprecated from 1.3; found in 1.2
-var $defined = function(obj){
-	return (obj != undefined);
-};
 
-
-var serialize = function(context){
-	var form = $(context);
-	var form_data = new Hash();
+var serializeForm = function(context){
+	var form_data = new Object();
 	// input[type=text]
-	$$(context +' input[type=text]').each(function(item,key){
+	$$('#' + context +' input[type=text]').each(function(item,key){
 		form_data[item.get('name')] = item.get('value');
 	});
+    // hidden input
+    $$('#'+context+' input[type=hidden]').each(function(item){
+        form_data[item.name] = item.value;
+    })
 	// input[type=password]
-	$$(context +' input[type=password]').each(function(item, key){
+	$$('#' + context +' input[type=password]').each(function(item, key){
 		form_data[item.get('name')] = item.get('value');
 	});
 	// input[type=radio]
-	$$(context + ' input[type=radio]').each(function(item, key){
+	$$('#' + context + ' input[type=radio]').each(function(item, key){
 		if (item.checked)
-			form_data[item.name] = item.value
+			form_data[item.name] = item.value;
 	});
 	// input[type=checkbox]
-	$$(context + ' input[type=checkbox]').each(function(item,key){
+	$$('#' + context + ' input[type=checkbox]').each(function(item,key){
 		if ( ! form_data.has(item.name) ) 
 			form_data[item.name] = [];
 		if (item.checked) {
-			ar = form_data[item.name]
+			ar = form_data[item.name];
 			form_data[item.name][ar.length] = item.value;
-			console.log(form_data[item.name])
 		}
 	});
+    // select
+    $$('#' + context + ' select').each(function(item,key){
+        form_data[item.name] = item.value;
+    })
 	return form_data;
 }
 
@@ -252,6 +253,7 @@ function isThereSelection(context,e) {
 	if ( $$('#'+context+' tr.table-tr-selected') ) return true
 	else return False
 }
+
 function generate_where(context, e) {
 	var selected_rows = $$('#'+context+' tr.table-tr-selected');
     var whereToEdit = '';
@@ -363,4 +365,20 @@ function setTopMenuSelect(){
 function templating(s,d){
     for(var p in d)
         s=s.replace(new RegExp('{'+p+'}','g'),d[p]);return s;
+}
+
+function disableSubmissionButton(){
+    window.addEvent('domready', function(){
+    if ( $$('input.btn.submit-button') )
+        $$('input.btn.submit-button').each(function(item){
+           item.addEvent('submit', function(){
+               $(item).set('value','working...').set('disabled', 'disabled');
+           });
+        });
+    });
+    
+}
+
+function disableButton(btn){
+   $(btn).set('value', 'working...').set('disabled','disabled');
 }

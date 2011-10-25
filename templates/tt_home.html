@@ -12,7 +12,8 @@
 			Using {{variables.dialect}} {{variables.version}}
 		</p>
 		<h5 class='heading'>Create a new database</h5>
-		<form class='span8' action="" method="post" accept-charset="utf-8">
+        <div id="msg-placeholder"></div>
+		<form class='span8' id='tt_form' action="" method="post" accept-charset="utf-8">
 			<fieldset>
 				{% csrf_token %}
 						{% for field in form %}
@@ -30,3 +31,4 @@
 	</div>
 
 </div>
+<div id='undisplayed_result' class='hidden' style="display:none;"></div>

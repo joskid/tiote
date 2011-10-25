@@ -35,7 +35,7 @@ table.sql thead th {
     cursor: pointer;
     font-weight: normal;
     max-width: 300px;
-    min-width: 200px;
+    min-width: 150px;
     padding: 5px;
 }
 table.sql thead th.table-th-sort {
@@ -74,12 +74,40 @@ input[type="text"], textarea, select {
     font-size: 12px;
 }
 h5.heading {
+    margin-bottom: 20px;
+    text-transform: uppercase;
+}
+.heading {
     border-bottom: 1px solid #DDDDDD;
     color: #888888;
-    margin-bottom: 20px;
     padding-bottom: 0;
-    text-transform: uppercase;
 }
 .actions {
     padding: 10px 20px 10px 41%;
+}
+table.compact-form td, table.compact-form, table.compact-form th {
+    border: medium none;
+}
+table.compact-form td label {
+    width: auto;
+}
+table.compact-form td.occupy label {
+    padding-right: 20px;
+}
+.form-controls a {
+    cursor: pointer;
+}
+div.validation-advice {
+    background-color: #FFFFCC;
+    border: 1px solid yellow;
+    font-size: 12px;
+    margin-top: 2px;
+    padding: 1px;
+    width: 216px;
+}
+.pointer {
+    cursor: pointer;
+}
+.hidden {
+    display: none;
 }

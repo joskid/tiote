@@ -6,6 +6,7 @@
             <h5 class="heading">Add New User</h5>
             <div id="msg-placeholder"></div>
 			<form id='tt_form' action="" method="post" accept-charset="utf-8">
+                <fieldset>
 				{% csrf_token %}
 				{% for field in form %}
 				<div class="clearfix">

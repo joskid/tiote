@@ -10,13 +10,15 @@ def stored_query(query, dialect):
         if query == 'variables':
             return "SHOW server_version"
         elif query == 'template_list':
-            return "SELECT datname FROM pg_database WHERE datistemplate=True"
+            return "SELECT datname FROM pg_database"
         elif query == 'group_list':
             return "SELECT rolname FROM pg_roles WHERE rolcanlogin=False"
         elif query == 'db_list':
             return "SELECT datname FROM pg_database WHERE datistemplate = 'f';"
-        elif query == 'user_list':
+        elif query == 'user_rpr':
             return "SELECT rolname, rolcanlogin, rolsuper, rolinherit, rolvaliduntil FROM pg_roles"
+        elif query == 'user_list':
+            return "SELECT rolname FROM pg_roles"
         elif query == 'table_list':
             return "SELECT schemaname, tablename FROM pg_tables ORDER BY schemaname DESC"
         
@@ -25,8 +27,16 @@ def stored_query(query, dialect):
             return "SELECT TABLE_SCHEMA, TABLE_NAME, TABLE_ROWS FROM tables"
         elif query == 'db_list':
             return "SHOW databases"
-        elif query == 'user_list':
+        elif query == 'user_rpr':
             return "SELECT user.`Host`, user.`User` FROM user"
+        elif query == 'user_list':
+            return "SELECT user.`User` FROM user"
+        elif query == 'table_rpr':
+            return ""
+        elif query == 'supported_engines':
+            return "SELECT engine, support FROM information_schema.engines WHERE support='yes' OR support='default'"
+        elif query == 'charset_list':
+            return "SELECT CHARACTER_SET_NAME FROM INFORMATION_SCHEMA.CHARACTER_SETS"
         elif query == 'variables':
             return '''SHOW SESSION VARIABLES WHERE `Variable_name`='version_compile_machine' 
             OR `Variable_name`='version_compile_os' OR `variable_name`='version'
@@ -35,6 +45,7 @@ def stored_query(query, dialect):
 
 def generate_query(query_type, dialect='postgresql', query_data=None):
     if dialect == 'postgresql': #postgresql-only statements
+        
         if query_type == 'create_user':
             # create role statement
             q0 = "CREATE ROLE {role_name}".format(**query_data)
@@ -67,18 +78,26 @@ def generate_query(query_type, dialect='postgresql', query_data=None):
                 q = "DROP ROLE {rolname}".format(**cond)
                 queries.append(q) 
             return tuple(queries)
-                
+        elif query_type == 'create_db':
+            q = "CREATE DATABASE {name}".format(**query_data)
+            if query_data['encoding']:
+                q += " WITH ENCODING='{encoding}'".format(**query_data)
+            if query_data['owner']:
+                q += " OWNER={owner}".format(**query_data)
+            if query_data['template']:
+                q += " TEMPLATE={template}".format(**query_data)
+            return (q, )
     
     elif dialect == 'mysql': # mysql-only statements
 
         if query_type == 'create_user':
             # create user statement
-            querys = []
+            queries = []
             q1 = "CREATE USER '{username}'@'{host}'".format(**query_data)
             if query_data['password']:
                 q1 += " IDENTIFIED BY '{password}'".format(**query_data)
             
-            querys.append(q1)
+            queries.append(q1)
             # grant privileges
             q2 = "GRANT"
             if query_data['privileges'] == 'all':
@@ -100,8 +119,8 @@ def generate_query(query_type, dialect='postgresql', query_data=None):
                     # grant option
                     if query_data['options']:
                         q3 += " WITH {options[0]}".format(**query_data)
-                    # append generated query to querys
-                    querys.append(q3)
+                    # append generated query to queries
+                    queries.append(q3)
             else:
                 # database access
                 if query_data['access'] == 'all':
@@ -114,19 +133,115 @@ def generate_query(query_type, dialect='postgresql', query_data=None):
                 # grant option
                 if query_data['options']:
                     q4 += " WITH {options[0]}".format(**query_data)
-                querys.append(q4)
-            return tuple( querys )
+                queries.append(q4)
+            return tuple( queries )
+        
+        elif query_type == 'create_db':
+            q = "CREATE DATABASE {name}".format(**query_data)
+            if query_data['charset']:
+                q += " CHARACTER SET {charset}".format(**query_data)
+            return (q, )
+        
+        elif query_type == 'create_table':
+            q = "CREATE TABLE `{db}`.`{name}`".format(**query_data)
+            
+            sub_form_count = query_data.pop('sub_form_count')
+            if sub_form_count != 0:
+                q += ' ('
+                l_primary = []
+                l_index = []
+                l_unique = []
+                for fi in range(sub_form_count):
+                    if query_data['key_'+str(fi)]:
+                        if query_data['key_'+str(fi)] == 'primary':
+                            l_primary.append( query_data['name_'+str(fi)] )
+                        elif query_data['key_'+str(fi)] == 'unique':
+                            l_unique.append( query_data['name_'+str(fi)] )
+                        elif query_data['key_'+str(fi)] == 'index':
+                            l_index.append( query_data['name_'+str(fi)] )
+                    sub_q = ' {name_'+str(fi)+'} {type_'+str(fi)+'}'
+                    # types with binary
+                    if query_data['type_'+str(fi)] in ['tinytext','text','mediumtext','longtext']:
+                        sub_q += ' BINARY' if 'binary' in query_data['other_'+str(fi)] else ''
+                    # types with length
+                    if query_data['type_'+str(fi)] in ['bit','tinyint','smallint','mediumint','int','integer','bigint',
+                                      'real','double','float','decimal','numeric','char','varchar',
+                                      'binary','varbinary']:
+                        sub_q += '({size_'+str(fi)+'})' if query_data['size_'+str(fi)] else ''
+                    # types with unsigned
+                    if query_data['type_'+str(fi)] in ['tinyint','smallint','mediumint','int','integer','bigint',
+                                      'real','double','float','decimal','numeric']:
+                        sub_q += ' UNSIGNED' if 'unsigned' in query_data['other_'+str(fi)] else ''
+                    # types needing values
+                    if query_data['type_'+str(fi)] in ['set','enum']:
+                        sub_q += ' {values_'+str(fi)+'}' if query_data['values_'+str(fi)] else ''
+                    # types needing charsets
+                    if query_data['type_'+str(fi)] in ['char','varchar','tinytext','text',
+                                            'mediumtext','longtext','enum','set']:
+                        sub_q += ' CHARACTER SET {charset_'+str(fi)+'}'
+                    # some options
+                    sub_q += ' NOT NULL' if 'not null' in query_data['other_'+str(fi)] else ' NULL'
+                    s_d = query_data['default_'+str(fi)]
+                    if s_d:
+                        if query_data['type_'+str(fi)] not in ['tinyint','smallint','mediumint','int','integer','bigint',
+                                          'bit','real','double','float','decimal','numeric']:
+                            sub_q += ' DEFAULT \''+s_d+'\''
+                        else:
+                            sub_q += ' DEFAULT '+s_d+''
+#                    sub_q += ' DEFAULT {default_'+str(fi)+'}' if query_data['default_'+str(fi)] else ''
+                    sub_q += ' AUTO_INCREMENT' if 'auto increment' in query_data['other_'+str(fi)] else ''
+                    # append to query
+                    q += sub_q if fi == sub_form_count-1 else sub_q + ','
+            
+                # handle keys: primary, index and unique
+                if l_index:
+                    sub_q = ', INDEX ('
+                    for i in range(len(l_index)):
+                        sub_q += ' '+l_index[i] +')' if i == len(l_index) - 1 else ' '+l_index[i]+','
+                        q += sub_q
+                if l_unique:
+                    sub_q = ', UNIQUE ('
+                    for i in range(len(l_unique)):
+                        sub_q += ' '+l_unique[i] +')' if i == len(l_unique) - 1 else ' '+l_unique[i]+','
+                        q += sub_q
+                if l_primary:
+                    sub_q = ', PRIMARY KEY ('+l_primary[0]+')'
+                    q += sub_q
+            q += ')' if sub_form_count != 0 else ''
+            q += " CHARACTER SET {charset} ENGINE {engine}"
+            q = q.format(**query_data)
+            return (q, )
+        
+        elif query_type == 'drop_table':
+            queries = []
+            db = query_data.pop('db')
+            for where in query_data['conditions']:
+                queries.append( "DROP TABLE `"+db+"`.`{table_name}`".format(**where))
+            return tuple(queries)
+        
+        elif query_type == 'empty_table':
+            queries = []
+            db = query_data.pop('db')
+            for where in query_data['conditions']:
+                queries.append( "TRUNCATE `"+db+"`.`{table_name}".format(**where) )
+            return queries
+        
+        elif query_type == 'column_list':
+            return ("SELECT column_name FROM `information_schema`.`columns` WHERE table_schema='{db}' AND table_name='{table}")
         
         elif query_type == 'drop_user':
-            querys = []
+            queries = []
             for where in query_data:
                 q = "DROP USER '{user}'@'{host}'".format(**where)
-                querys.append(q)
-            return tuple(querys)
+                queries.append(q)
+            return tuple(queries)
         
+        elif query_type == 'table_rpr':
+            q = "SELECT TABLE_NAME, ENGINE, TABLE_ROWS, TABLE_COLLATION FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '{schema[0]}'".format(**query_data)
+            return (q,)
         elif query_type == 'rename_user':
             pass
-        
+
         else:
             return None
 
@@ -158,7 +273,7 @@ def full_query(conn_params, query):
         return str(e)
 
 
-def short_query(conn_params, querys):
+def short_query(conn_params, queries):
     """
     executes and returns the success state of the query
     """
@@ -166,7 +281,7 @@ def short_query(conn_params, querys):
     conn = ''
     try:
         conn = eng.connect()
-        for query in querys:
+        for query in queries:
             query_result = conn.execute(query)
         return {'status':'successfull', }
     except Exception as e:

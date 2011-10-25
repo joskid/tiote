@@ -8,7 +8,7 @@
 			{% endfor %}
 		</ul>
 		{% endif %}
-		<form action="" method="post" accept-charset="utf-8">
+		<form id="tt_form" action="" method="post" accept-charset="utf-8">
 			{% csrf_token %}
 			<fieldset>
 			{% for field in form %}

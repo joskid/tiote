@@ -1,4 +1,4 @@
-{% extends 'tt_empty.html' %}
+{% extends 'tt_start.html' %}
 
 {% block content %}
 <div class='span12'>
@@ -22,7 +22,7 @@
 </div>
 {% endif %}
 <div class='span8'>
-	<form action="" id='login' method="post" accept-charset="utf-8">
+	<form action="" id='tt_form' method="post" accept-charset="utf-8">
 		{% csrf_token %}
 		<fieldset>
 		{% for field in form %}
@@ -41,3 +41,4 @@
 <script type="text/javascript" ajaxKey='{{ajaxKey}}' charset="utf-8">            
 </script>
 {% endblock %}
+{% block scripts %}{% endblock %}

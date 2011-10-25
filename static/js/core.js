@@ -61,7 +61,7 @@ Page = new Class({
 			Cookie.dispose('dont_touch')
 		} else {
             clearPage();
-            if (! $('db-tree') || Cookie.read('tt_updateSidebar')) {
+            if (! $('db-tree') || ! $('db-tree').hasChildNodes() ||Cookie.read('tt_updateSidebar')) {
                 this.generatesidebar(sidebarData);
                 if (Cookie.read('updateSidebar')) Cookie.dispose('tt_updateSidebar');
             }
@@ -145,12 +145,12 @@ Page = new Class({
 	},
 	
 	generatesidebar: function(data) {
-        var endOfTree = function(item, ula, schema){
+        var endOfTree = function(item, ula, key){
             item.each(function(row){
                 var a_icon = new Element('a', {'class':'expand','href':'#'});
-                var eli = new Element('li',{'class':'tbls'});
+                var eli = new Element('li',{'class':'tbl '+key});
                 var tbl_a = new Element('a',{text:row[0],
-                    href:"#section=table&schema="+schema+"&view=browse&table="+row[0]})
+                    href:"#section=table&schema="+key+"&view=browse&table="+row[0]})
                 ula.adopt(eli.adopt(a_icon, tbl_a));
             });
             return ula;
@@ -164,15 +164,15 @@ Page = new Class({
             else 
                 return '<strong>Schema: </strong>' + sch;
         };
-            
+        
 		var links = new Elements();
 		var eula = new Element('ul',{id:'db-tree','class':'collapse'});
 		if (data['section'] == 'begin'){
 			
-		} else if (data['section'] == 'home') {
+		} else if (data['section'] == 'home' || data['section'] =='database' || data['section'] == 'table') {
 			dbs_tbls = JSON.decode( shortXHR({'commonQuery':'describe_databases'}) );
 			Object.each(dbs_tbls, function(item,key){
-				var ela = new Element('li',{'class':'dbs'})
+				var ela = new Element('li',{'class':'db '+key})
 				var db_a = new Element('a',{'text':key, 'href':"#section=database&view=overview&database="+key});
 				var tree_a = new Element('a', {'class':'expand','href':'#'});
 				var ula = new Element('ul',{});
@@ -181,7 +181,7 @@ Page = new Class({
                     Object.each(item, function(item,key){
                         var ulala = new Element('ul',{'class':'collapse',
                             'style': 'display:none'});
-                        lili = new Element('li',{'class':'schema collapse'}).adopt(
+                        lili = new Element('li',{'class':'schema collapse '+key}).adopt(
                             new Element('a',{'class':'expand','href':'#'}), 
                             new Element('span',{}).set('html',updateSchemaName(key)),
                             ulala = endOfTree(item, ulala, key)
@@ -225,10 +225,7 @@ Page = new Class({
 			console.log('generateView() called!');
 			if(!data['section']) {
 				nav.state.empty()
-				nav.set({
-					'section' : 'home',
-					'view' : 'home'
-				});
+				nav.set({'section': 'home','view': 'home'});
 			}
 			if (data['section'] == 'begin') {
 				$('tt-content').set('html', viewData['text']);
@@ -238,25 +235,109 @@ Page = new Class({
 				// further individual page processing
 				if ( data['view'] == 'users') {
 					self.updateUserView();
-				}
-			}
+				} else {
+                    self.completeForm();
+                }
+			} else if (data['section'] == 'database'){
+                $('tt-content').set('html', viewData['text']);
+                if (data['view'] == 'overview') {
+                    self.completeOverview();
+                }
+            }
             runXHRJavascript();
 			
 		}
 		
 		xhrData = {'text' : text,'xml' : xml};
 		self.generateView(xhrData, self.options.navObj); 
-		
-
 	},
 	
+    
+    completeOverview: function(){
+        console.log('completeOverviewView()!');
+        this.loadTable('table_rpr', 'representation')
+        // varchar and set formats
+        var updateSelectNeedsValues = function(){
+            $$('#tt_form .compact-form select.needs-values').each(function(item){
+                item.addEvent('change', function(e){
+                    if (e.target.value == 'set' || e.target.value == 'enum')
+                        e.target.getParent('table').getElements('.values-needed').removeClass('hidden');
+                    else
+                        e.target.getParent('table').getElements('.values-needed').addClass('hidden');
+                });
+            });
+        }
+        
+        // new field event and handler
+            $('newFieldForm').addEvent('click', function(e){
+                var temp_t = $('newFieldForm').getParent().getSiblings('.field-form');
+                var newForm = temp_t[temp_t.length - 1].clone();
+                var form_count = temp_t.length;
+                var trs = newForm.getChildren()[1].getChildren()[0].getChildren();
+                trs.each(function(tira,tira_index){
+                    var tds = tira.getChildren();
+                    tds.each(function(tidi, tid_index){
+                        if( tidi.getChildren('label')[0] &&  tidi.getChildren('label')[0].getChildren('input')[0]){
+                            tidi.getChildren('label').each(function(lab,key){
+                                tt = lab.get('for').split('_');
+                                lab.set('for',tt[0]+'_'+tt[1]+'_'+String(form_count)+'_'+String(key));
+                                var lab_input = lab.getChildren('input')[0];
+                                if (lab_input.checked) {
+                                    lab_input.removeAttribute('checked');
+                                }
+                                lab_input.name = tt[1]+'_'+String(form_count);
+                                lab_input.id = tt[0]+'_'+tt[1]+'_'+String(form_count)+'_'+String(key);                                
+                            });
+                        }else if( tidi.getChildren('label')[0] ){
+                            var labi = tidi.getChildren('label')[0];
+                            var att = labi.get('for').split('_');
+                            labi.set('for',att[0]+'_'+att[1]+'_'+String(form_count));
+                        } else if ( tidi.getChildren('input')[0]){
+                            var inputi = tidi.getChildren('input')[0];
+                            var temp_name = inputi.name.split('_');
+                            inputi.name = temp_name[0] +'_'+ String(form_count);
+                            inputi.id = 'id_'+inputi.name;
+                            inputi.value = '';
+                        } else if ( tidi.getChildren('select')[0]){
+                            var sel = tidi.getChildren('select')[0];
+                            var temp_name = sel.name.split('_');
+                            sel.name = temp_name[0] +'_'+ String(form_count);
+                            sel.id = 'id_'+sel.name; var cl = ''
+                            // fix the select_requires class needed for validation
+                            sel.get('class').split(' ').each(function(item){
+                                if (item.contains('select_requires:')){
+                                    var ar_t = item.split(':');
+                                    cl += ar_t[0]+':'+ar_t[1].split('_')[0]+'_'+String(form_count)+':'+ar_t[2]+' ';
+                                } else {
+                                    cl += item + ' ';
+                                }
+                            });
+                            sel.removeProperty('class').set('class', cl);
+                        }
+                    });
+                });
+                newForm.inject($$('div.form-controls')[0], 'before');
+                var delete_form = new Element('a',{'text':'delete field',
+                    'class':'delete-form pull-right pointer'});
+                // delete form event and handler
+                delete_form.inject(newForm, 'top').addEvent('click',function(e){
+                    e.target.getParent().destroy();
+                });
+                // delete all validation advice
+                newForm.getElements('.validation-advice').destroy();
+                updateSelectNeedsValues();
+
+            });
+        this.loadTableOptions('table');
+        updateSelectNeedsValues();
+        this.completeForm();
+        
+    },
 
 	updateUserView: function(){
 		// xhr request users table and load it
-		var x = new XHR({'query':'user_list','type':'representation',
-			'onSuccess': this.loadTable,'method':'get'}).send();
-		
-		this.loadTableOptions('minimal')
+		this.loadTable('user_rpr','representation');
+		this.loadTableOptions('user')
 		console.log('updateUserView() called!');
 	
 		// hide some elmts
@@ -287,17 +368,26 @@ Page = new Class({
 		this.completeForm();
 	},
 	
-    loadTable: function(text,xml){
-		console.log('loadTable() called!')
-        self.startPageLoad();
-		if (JSON.validate(text)) {
-			jsan = JSON.decode(text)
-            
-			this.data_table = create_data_table(jsan['columns'], jsan['rows'], 'sql-container')
-		} else {
-			$('sql-container').set('text','!! invalid JSON data !!');
-		}
-        self.endPageLoad();
+    loadTable: function(query, type){
+        console.log('loadTable() called!')
+        // xhr request for table list
+        var x = new XHR({'query':query, 'type':type,
+            'schema': this.options.navObj.database, 'method': 'get',
+            'onSuccess': function(text,xml){
+                self.startPageLoad();
+                if (JSON.validate(text)) {
+                    jsan = JSON.decode(text)
+
+                    this.data_table = create_data_table(jsan['columns'], jsan['rows'], 'sql-container')
+                } else {
+                    $('sql-container').set('text','!! invalid JSON data !!');
+                }
+                self.endPageLoad();
+            }
+        }).send()
+        
+		
+                
 	},
     
 	loadTableOptions: function(opt_type){
@@ -307,6 +397,8 @@ Page = new Class({
 				var msg = 'Are you sure you want to ';
 				if (e.target.id == 'action_edit') msg += 'edit ';
 				else if (e.target.id == 'action_delete') msg += 'delete ';
+                else if (e.target.id == 'action_drop') msg += 'drop ';
+                else if (e.target.id == 'action_empty') msg += 'empty ';
 				msg += ' selected rows?';
                 var confirmDiag = new SimpleModal({'btn_ok': 'Yes',
                     'overlayClick': false, 'draggable':false, 'offsetTop': 0.2 * screen.availHeight
@@ -314,8 +406,11 @@ Page = new Class({
                 confirmDiag.show({
                     'model': 'confirm',
                     'callback': function(){
-                        if (e.target.id == 'action_edit' ) return action_edit(e);
-						else if (e.target.id == 'action_delete') return action_delete(e);
+//                        if (e.target.id == 'action_edit' ) return action_edit(e);
+//						else if (e.target.id == 'action_delete') return action_delete(e);
+//                        else if (e.target.id == 'action_drop') return action_drop(e);
+//                        else if (e.target.id == 'action_empty') return action_empty(e);
+                        return do_action(e);
                         this.hide();
                     },
                     'title': 'Confirm Action!',
@@ -323,39 +418,43 @@ Page = new Class({
                 });
 			} else { console.log('nothing to work on!')}
 		}
-		var action_delete = function(e){
-			var whereToEdit = generate_where( data_table.toElement().id, e) ;
-            console.log(whereToEdit);
-            if ( whereToEdit ) {
+
+        var do_action = function(e){
+            console.log('do_action()');
+            var whereToEdit = generate_where( data_table.toElement().id, e) ;
+            var navObj = location.hash.replace('#','').parseQueryString();
+            var fail_msgs = {'action_delete': navObj['view']+' deletion failed!',
+                'action_drop': navObj['view']+' drop failed!'
+            }
+            
+            if (whereToEdit) {
                 var request_url = generate_ajax_url(true,{});
-                request_url += '&update=delete';
+                if (e.target.id == 'action_delete') request_url += '&update=delete';
+                else if (e.target.id == 'action_edit') request_url += '&update=edit';
+                else if (e.target.id == 'action_drop') request_url += '&update=drop';
+                else if (e.target.id == 'action_empty') request_url += '&update=empty';
+                // make action request
+                var actionSpinner = new Spinner(data_table)
                 var x = new XHR({'url':request_url,
                     'onRequest':function(){
-                        ajaxSpinner.show(true);
+                        actionSpinner.show(true);
                     },
                 	'onSuccess':function(){
                 		resp = JSON.decode(this.response.text);
                 		if (resp.status == 'failed') {
-                			showDialog('User Deletion failed!', resp.msg, {});
+                			showDialog(fail_msgs[e.target.id], resp.msg, {});
                 		} else {
                 			reloadPage();
                 		}
                 	},
                     'onComplete': function(){
-                        ajaxSpinner.hide();
+                        actionSpinner.hide();
                     }
                 }).post({'whereToEdit':whereToEdit});
             }
-		}
-		var action_edit = function(e){
-			var whereToEdit = generate_where( data_table.toElement().id, e) ;
-            if ( whereToEdit ){
-                var request_url = generate_ajax_url(true,{});
-                request_url += '&update=edit';
-                var x = new XHR({'url':request_url,'onSuccess':this.loadTable }).post({'whereToEdit':whereToEdit});
-            }
-		}
-		// opt_type = minimal || structure or browser || full
+        }
+
+		// opt_type = user || table || data
 		console.log('loadTableOptions() called!');
 		var diva = new Element('div#table-options');
 		var pipi = new Element('p').adopt(new Element('span',{'text':'Select: '}));
@@ -370,10 +469,10 @@ Page = new Class({
 			pipi.adopt(i);
 		});
 		pipi.adopt(new Element('span',{'text':'With Selected: '}));
-		if (opt_type == 'minimal')
-            or = ['edit','delete']
-        else
-            or = []
+		if (opt_type == 'user')
+            or = ['delete']
+        else if (opt_type == 'table')
+            or = ['empty', 'drop']
 		or.each(function(item, key){
 			var a = new Element('a',{'text':item,'id':'action_'+item,
 				'events': {
@@ -382,26 +481,67 @@ Page = new Class({
 			})
 			pipi.adopt(a);
 		});
-		diva.adopt( pipi );
-		diva.inject( $('sql-container'), 'top');
+		diva.adopt( pipi ).inject( $('sql-container'), 'top');
 	},
     
-	
+    
 	completeForm : function(){
-		var form = $('tt_form');
+        form_name = 'tt_form';
+		var form = $(form_name);
 		var undisplayed_result = $('undisplayed_result');
 		//validation
-		new Form.Validator.Inline(form);
-		// generate the form submission url
+		var form_validator = new Form.Validator.Inline(form, {
+            'evaluateFieldsOnBlur':false, 'evaluateFieldsOnChange': false}
+        );
+        // add new vaildation
+        form_validator.add('select_requires', {
+            errorMsg: function(el){
+                var stmt = '';
+                el.get('class').split(' ').each(function(item){
+                    if (item.contains('select_requires:') && assets['stmt'] != item)
+                        stmt = item;
+                });
+                updateAssets({'stmt':stmt})
+                var ar_t = assets['stmt'].split(':');
+                return 'This field requires '+ar_t[1].split('_')[0]+' field';
+            },
+            test: function(el){
+                var stmt = '';
+                el.get('class').split(' ').each(function(item){
+                    if (item.contains('select_requires:') && assets['stmt'] != item)
+                        stmt = item;
+                });
+                updateAssets({'stmt':stmt})
+                var ar_t = assets['stmt'].split(':'); var ex_vals = ar_t[2].split('|');
+                if (ex_vals.contains(el.value)) {
+                    if ($('id_'+ar_t[1]).value )
+                        return true
+                    else
+                        return false
+                } else 
+                    return true
+            }
+        });
+        
+//        form_validator.addEvent('onElementFail', function(field, validatorsFailed){
+//            if ($$('div.validation-advice'))
+//                $$('div.validation-advice').each(function(item){
+//                    item.addClass('alert-message warning')
+//                });
+//        });
 		var request_url = generate_ajax_url(true);
-		// integrate ajax
-		var xx = new Form.Request(form,undisplayed_result,{
+        self = this;
+        var xx = new Form.Request(form,undisplayed_result,{
 			requestOptions:{
 				'spinnerTarget': form,
 				'header': {
 					'X-CSRFToken': Cookie.read('csrftoken')
 				},
 				'url': request_url,
+                onRequest: function(){
+//                    form_data = serializeForm(form_name);
+//                    updateAssets(form_data);
+                }, 
                 onSuccess: function(responseTree, responseElements, responseHTML, responseJavaScript){
                 	var result_holder = $('undisplayed_result');
                     $('msg-placeholder').getChildren().destroy();
@@ -413,7 +553,13 @@ Page = new Class({
                         resp = JSON.decode( result_holder.childNodes[0].nodeValue)
                         if (resp.status == 'failed') {
                             showDialog('Error!', resp.msg, {'overlayClick':false});
-                        } else { reloadPage(); }                        
+                        } else {
+                            // decide next course of action
+                            if (self.options.navObj['view'] == home && this.options.navObj['view'] == 'home')
+                                nav.set({'section':'database','view':'overview','database':form_data['name']});
+                            else
+                                reloadPage(); 
+                        }                        
                     }
 
                 },
@@ -450,6 +596,8 @@ var XHR = new Class({
             options.url += 'query=' + options.query
             if (options.type)
                 options.url += '&type=' + options.type
+            if (options.schema)
+                options.url += '&schema=' + options.schema
         }
 		else {
 			if (options.section)
@@ -479,8 +627,10 @@ var XHR = new Class({
 				if (xhr.status == 500 && xhr.statusText == "UNKNOWN STATUS CODE") msg = xhr.response;
 				hide('header-load');
                 ajaxSpinner.hide();
-                if (msg == 'invalid ajax request!') location.reload()
-                showDialog('Error!', msg, {'draggable':false,'overlayClick':false})
+                if (msg == 'invalid ajax request!') 
+                    location.reload()
+                else
+                    showDialog('Error!', msg, {'draggable':false,'overlayClick':false})
 			});
 		}
 	},
@@ -498,7 +648,7 @@ var XHR = new Class({
 function shortXHR(data){
 	op = new Hash(data)
 	op.extend({'method': 'get', 'async': false, 'timeout': 10000, 'showLoader':false})
-	var x = new XHR(op).send();
+	x = new XHR(op).send();
 	
 	if (x.isSuccess() ) {
 		return x.response.text;
