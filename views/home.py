@@ -23,7 +23,7 @@ def home(request):
         form = DbForm(templates=template_list, users=user_list, charsets=charset_list)
         
     c = {'form':form, 'variables':functions.get_home_variables(request)}
-    template = functions.skeleton(params['view'])
+    template = functions.skeleton(params['view'], params['section'])
     context = RequestContext(request, {
         }, [functions.site_proc]                          
     )
@@ -81,7 +81,7 @@ def users(request):
         form = UserForm(dbs=db_list, groups=group_list)
 
     c = {'form':form,}
-    template = functions.skeleton(params['view'])
+    template = functions.skeleton(params['view'], params['section'])
     context = RequestContext(request, {
         }, [functions.site_proc]
     )
@@ -99,7 +99,7 @@ def query(request):
     
     else:
         form = forms.QueryForm()
-        template = functions.skeleton(params['view'])
+        template = functions.skeleton(params['view'], params['section'])
         context = RequestContext(request, {
             'form': form}, [functions.site_proc]                          
         )
@@ -115,7 +115,7 @@ def import_(request):
     
     elif request.method == 'GET':
         form = forms.ImportForm()
-        template = functions.skeleton(params['view'])
+        template = functions.skeleton(params['view'], params['section'])
         context = RequestContext(request, {
             'form': form}, [functions.site_proc]                          
         )
@@ -131,7 +131,7 @@ def export(request):
     
     elif request.method == 'GET':
         form = forms.ExportForm()
-        template = functions.skeleton(params['view'])
+        template = functions.skeleton(params['view'], params['section'])
         context = RequestContext(request, {
             'form': form}, [functions.site_proc]                          
         )

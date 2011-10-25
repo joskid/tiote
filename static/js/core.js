@@ -148,7 +148,7 @@ Page = new Class({
             item.each(function(row){
                 var a_icon = new Element('a', {'class':'expand','href':'#'});
                 var eli = new Element('li',{'class':'tbl '+db});
-                var tbl_a = new Element('a',{text:row[0],
+                var tbl_a = new Element('a',{text:row[0],'style':'display:block;overflow:hidden',
                     href:"#section=table&view=browse&database="+db+"&table="+row[0]})
                 if (schema)
                     tbl_a.href += '&schema=' + schema;
@@ -223,15 +223,10 @@ Page = new Class({
 		x = new XHR(Object.merge({'method':'get',
             'onSuccess': function(text,xml){
                 var viewData = {'text' : text,'xml' : xml};
-                console.log(data);
-                if(!data['section']) {
+                if (!data['section']) {
                     nav.state.empty()
                     nav.set({'section': 'home','view': 'home'});
-                }
-                if (data['section'] == 'begin') {
-                    $('tt-content').set('html', viewData['text']);
-                }
-                if(data['section'] == 'home') {
+                } else if (data['section'] == 'home') {
                     $('tt-content').set('html', viewData['text']);
                     // further individual page processing
                     if ( data['view'] == 'users') {

@@ -53,15 +53,6 @@ var Navigation = new Class({
 	}
 });
 
-Element.implement({
-	switchClass : function(first, second) {
-		var hasSecond = this.hasClass(second);
-		this.removeClass( hasSecond ? second : first);
-		this.addClass( hasSecond ? first : second);
-		return this;
-	}
-});
-
 
 var serializeForm = function(context){
 	var form_data = new Object();
@@ -362,10 +353,6 @@ function setTopMenuSelect(){
 	});
 }
 
-function templating(s,d){
-    for(var p in d)
-        s=s.replace(new RegExp('{'+p+'}','g'),d[p]);return s;
-}
 
 function disableSubmissionButton(){
     window.addEvent('domready', function(){

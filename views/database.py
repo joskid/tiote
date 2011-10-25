@@ -52,7 +52,7 @@ def overview(request):
             , label_suffix=' ->')
             
       
-    template = functions.skeleton(params['view'])
+    template = functions.skeleton(params['view'], params['section'])
     context = RequestContext(request, {'form': form, 'edit':False,
         'table_fields': ['name', 'engine', 'charset'],
         'odd_fields': ['type','key','charset']},

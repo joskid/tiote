@@ -28,7 +28,9 @@ admin_privilege_choices = ('FILE','PROCESS','RELOAD', 'SHUTDOWN','SUPER')
 
 pgsql_privileges_choices = ('INHERIT','CREATEDB','CREATEROLE','REPLICATION','SUPERUSER')
 
+format_choices = ( ('SQL', 'sql'),('CSV', 'csv') )
 
+export_choices = ( ('structure', 'structure'),('data', 'data') )
 # New Database Form
 class mysqlDbForm(forms.Form):
     def __init__(self, templates=None, users=None, charsets=None, **kwargs):
@@ -138,7 +140,7 @@ class pgsqlUserForm(forms.BaseForm):
             required = False, widget = forms.CheckboxSelectMultiple,
             choices = functions.make_choices(pgsql_privileges_choices, True) 
         )
-        if groups is not None:
+        if groups:
             f['group_membership'] = forms.MultipleChoiceField(
                 choices = functions.make_choices(groups, True), required = False,
                 widget = forms.CheckboxSelectMultiple,)
@@ -244,12 +246,6 @@ class LoginForm(forms.Form):
     
     
 class ExportForm(forms.Form):
-    format_choices = (
-        ('SQL', 'sql'),('CSV', 'csv')
-    )
-    export_choices = (
-        ('structure', 'structure'),('data', 'data')
-    )
     output_choices = ( ('browser', 'browser'), ('file', 'text file'))
     format = forms.ChoiceField(
         choices = format_choices,
@@ -269,19 +265,26 @@ class ExportForm(forms.Form):
     
 
 class QueryForm(forms.Form):
-    sql = forms.CharField(
+    query = forms.CharField(
         help_text = 'Enter valid sql query and click query to execute',
         widget = forms.Textarea(attrs={'cols':'', 'rows':''}),
         label = '',
     )
     
     
-class ImportForm(forms.Form):
-    file = forms.FileField(
-        help_text = 'Upload a sql file',
-        
-    )
-    
+class ImportForm(forms.BaseForm):
+    def __init__(self, include_csv = False, **kwargs):
+        f = SortedDict()
+        f['file'] = forms.FileField(
+            help_text = 'Upload a sql file',
+        )
+        if include_csv:
+            f['format'] = forms.ChoiceField(
+                choices = output_choices,
+                widget = forms.RadioSelect,
+            )
+        self.base_fields = f
+        forms.BaseForm.__init__(self, **kwargs)
     
 def get_dialect_form(form_name, dialect):
     '''
