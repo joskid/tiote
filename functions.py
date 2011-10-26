@@ -257,3 +257,15 @@ def get_conditions(l):
             d.update( {lll[0].lower() : lll[1].lower()} )
         conditions.append(d)
     return conditions
+
+
+def response_shortcut(request, template = False, extra_vars=False ):
+    # extra_vars are more context variables
+    template = skeleton(template) if template else skeleton(request.GET['view'], request.GET['section'])
+    context = RequestContext(request, {
+        }, [site_proc]
+    )
+    if extra_vars:
+        context.update(extra_vars)
+    return HttpResponse(template.render(context))
+

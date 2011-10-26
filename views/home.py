@@ -22,13 +22,8 @@ def home(request):
     else:
         form = DbForm(templates=template_list, users=user_list, charsets=charset_list)
         
-    c = {'form':form, 'variables':functions.get_home_variables(request)}
-    template = functions.skeleton(params['view'], params['section'])
-    context = RequestContext(request, {
-        }, [functions.site_proc]                          
-    )
-    context.update(c)
-    return HttpResponse(template.render(context))
+    return functions.response_shortcut(request,
+        extra_vars={'form':form, 'variables':functions.get_home_variables(request)})
 
 
 def users(request):
@@ -67,11 +62,8 @@ def users(request):
                         'create_user', form.cleaned_data)
                 return HttpResponse('valid form submitted!')
         else:
-            template = functions.skeleton('form-errors')
-            context = RequestContext(request, {'form':form}, 
-                [functions.site_proc]
-            )
-            h = HttpResponse(template.render(context))
+            h = functions.response_shortcut(request,template='form_errors',
+                extra_vars={'form':form});
             h.set_cookie('tt_formContainsErrors','true')
             return h
             
@@ -80,18 +72,10 @@ def users(request):
     else:
         form = UserForm(dbs=db_list, groups=group_list)
 
-    c = {'form':form,}
-    template = functions.skeleton(params['view'], params['section'])
-    context = RequestContext(request, {
-        }, [functions.site_proc]
-    )
-    context.update(c)
-    return HttpResponse(template.render(context))
+    return functions.response_shortcut(request, extra_vars={'form':form,})
 
 
 def query(request):
-    
-    params = request.GET
     if request.method == 'POST':
         form = forms.ExportForm(request.POST)
         if form.is_valid():
@@ -99,43 +83,31 @@ def query(request):
     
     else:
         form = forms.QueryForm()
-        template = functions.skeleton(params['view'], params['section'])
-        context = RequestContext(request, {
-            'form': form}, [functions.site_proc]                          
-        )
-        return HttpResponse(template.render(context))
-    
+        
+    return functions.response_shortcut(request, extra_vars={'form':form,})    
     
 def import_(request):
-    params = request.GET
     if request.method == 'POST':
         form = forms.ImportForm(request.POST)
         if form.is_valid():
             return HttpResponse('feature not yet implemented');
     
-    elif request.method == 'GET':
+    else:
         form = forms.ImportForm()
-        template = functions.skeleton(params['view'], params['section'])
-        context = RequestContext(request, {
-            'form': form}, [functions.site_proc]                          
-        )
-        return HttpResponse(template.render(context))
+    
+    return functions.response_shortcut(request, extra_vars={'form':form,})
 
 
 def export(request):
-    params = request.GET
     if request.method == 'POST':
         form = forms.ExportForm(request.POST)
         if form.is_valid():
             return HttpResponse('feature not yet implemented');
     
-    elif request.method == 'GET':
+    else:
         form = forms.ExportForm()
-        template = functions.skeleton(params['view'], params['section'])
-        context = RequestContext(request, {
-            'form': form}, [functions.site_proc]                          
-        )
-        return HttpResponse(template.render(context))
+        
+    return functions.response_shortcut(request, extra_vars={'form':form,})
 
 
 def route(request):

@@ -4,15 +4,8 @@ from django.views.decorators.http import require_http_methods
 
 from tiote import forms, functions
 
-def ajax(request):
-    return functions.http_500('feature not yet implemented!')
-
 
 def overview(request):
-    def generate_response():
-        pass
-    
-    c = {}
     TableForm = forms.get_dialect_form('TableForm', 
         functions.get_conn_params(request)['dialect'])
     params = request.GET
@@ -46,21 +39,17 @@ def overview(request):
             return functions.rpr_query(request, 'create_table',
                 query_data)
         else:
-            return functions.form_errors(request, form)
+            return functions.response_shortcut(request, template='form_errors',
+                extra_vars={'form':form,})
     else:
         form = TableForm(engines=supported_engines, charsets=charset_list
             , label_suffix=' ->')
             
-      
-    template = functions.skeleton(params['view'], params['section'])
-    context = RequestContext(request, {'form': form, 'edit':False,
-        'table_fields': ['name', 'engine', 'charset'],
-        'odd_fields': ['type','key','charset']},
-        [functions.site_proc]
-    )
-    context.update(c)
-    return HttpResponse(template.render(context))
 
+    return functions.response_shortcut(request, extra_vars={'form': form, 'edit':False,
+        'table_fields': ['name', 'engine', 'charset'],
+        'odd_fields': ['type','key','charset']}
+    )
     
 
 def query(request):
