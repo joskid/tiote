@@ -12,6 +12,9 @@
     overflow-x: hidden;
     overflow-y: auto;
 }
+#sidebar ul {
+    margin-bottom: 0;
+}
 h3.rule-bottom {
     border-bottom: 1px solid #DDDDDD;
     text-transform: uppercase;

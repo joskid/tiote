@@ -207,8 +207,15 @@ Page = new Class({
 		}
 
 		new Element('div.sidebar').replaces($('sidebar')).id='sidebar';
-		var hh4 = new Element('h4',{'text':'databases'});
-        $('sidebar').adopt(hh4, eula);
+        var gnlnks = new Element('ul',{});
+        ['home', 'query'].each(function(lnk){
+            gnlnks.adopt(new Element('li').adopt( ( new Element('a',
+                {'href':location.protocol+'//'+location.host+location.pathname+'#section=home&view='+lnk,
+                'text': lnk})) )
+            );
+        });
+        $('sidebar').adopt(new Element('h6',{'text':'Quick Links'}),
+            gnlnks,new Element('h6',{'text':'databases'}), eula);
 		new Collapse($('db-tree'));
 	},
     
@@ -263,8 +270,8 @@ Page = new Class({
         }
         
         // new field event and handler
-            $('newFieldForm').addEvent('click', function(e){
-                var temp_t = $('newFieldForm').getParent().getSiblings('.field-form');
+            $('newColumnForm').addEvent('click', function(e){
+                var temp_t = $('newColumnForm').getParent().getSiblings('.column-form');
                 var newForm = temp_t[temp_t.length - 1].clone();
                 var form_count = temp_t.length;
                 var trs = newForm.getChildren()[1].getChildren()[0].getChildren();
@@ -311,7 +318,7 @@ Page = new Class({
                     });
                 });
                 newForm.inject($$('div.form-controls')[0], 'before');
-                var delete_form = new Element('a',{'text':'delete field',
+                var delete_form = new Element('a',{'text':'delete column',
                     'class':'delete-form pull-right pointer'});
                 // delete form event and handler
                 delete_form.inject(newForm, 'top').addEvent('click',function(e){
