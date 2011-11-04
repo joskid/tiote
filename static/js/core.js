@@ -9,6 +9,16 @@ window.addEvent('domready', function() {
     
 	nav = new Navigation();
 	
+// (function(){
+//		var winWidth = getWindowWidth();
+//		var winHeight = getWindowHeight();
+//		if (viewportSize[0] != winWidth || viewportSize[1] != winHeight) {
+//			viewportSize = [winWidth, winHeight];
+//			sizePage();
+//		}
+//	}).periodical(175);
+    
+    
 	nav.addEvent('navigationChanged', function(navObject){
 		// do page initialization here
         loginState = checkLoginState();
@@ -158,53 +168,41 @@ Page = new Class({
         };
         
         var updateSchemaName = function(sch){
-            if (sch == 'information_schema')
+            if (sch == 'information_schema' || sch == 'pg_catalog')
                 return '<strong>Catalog: </strong>' + sch;
-            else if(sch == 'pg_catalog')
-                return '<strong>View: </strong>' + sch;
             else 
                 return '<strong>Schema: </strong>' + sch;
         };
         
-		var links = new Elements();
 		var eula = new Element('ul',{id:'db-tree','class':'collapse'});
-		if (data['section'] == 'begin'){
-			
-		} else if (data['section'] == 'home' || data['section'] =='database' || data['section'] == 'table') {
-			dbs_tbls = JSON.decode( shortXHR({'commonQuery':'describe_databases'}) );
-			Object.each(dbs_tbls, function(db_data,db){
-				var ela = new Element('li',{'class':'db '+db})
-				var db_a = new Element('a',{'text':db, 'href':"#section=database&view=overview&database="+db});
-				var tree_a = new Element('a', {'class':'expand','href':'#'});
-				var ula = new Element('ul',{});
-                if (typeOf(db_data) == 'object') {
-                    var arr_uli = new Elements();
-                    Object.each(db_data, function(schema_data,schema){
-                        var ulala = new Element('ul',{'class':'collapse',
-                            'style': 'display:none'});
-                        lili = new Element('li',{'class':'schema collapse '+schema}).adopt(
-                            new Element('a',{'class':'expand','href':'#'}), 
-                            new Element('span',{}).set('html',updateSchemaName(schema)),
-                            ulala = endOfTree(schema_data, ulala, db, schema )
-                        )
-                        arr_uli.include(lili);
-                    });
-                    eula.adopt( ela.adopt(tree_a, db_a,
-                        new Element('ul',{'class':'collapse'}).adopt(arr_uli)
-                    ) );
-                } else {
-                    ula = endOfTree(db_data, ula, db);
-                    eula.adopt( ela.adopt(tree_a, db_a, ula) );                
-                }
+        dbs_tbls = JSON.decode( shortXHR({'commonQuery':'describe_databases'}) );
+        Object.each(dbs_tbls, function(db_data,db){
+            var ela = new Element('li',{'class':'db '+db})
+            var db_a = new Element('a',{'text':db, 'href':"#section=database&view=overview&database="+db});
+            var tree_a = new Element('a', {'class':'expand','href':'#'});
+            var ula = new Element('ul',{});
+            if (typeOf(db_data) == 'object') {
+                var arr_uli = new Elements();
+                Object.each(db_data, function(schema_data,schema){
+                    var ulala = new Element('ul',{'class':'collapse',
+                        'style': 'display:none'});
+                    var lili = new Element('li',{'class':'schema collapse '+schema}).adopt(
+                        new Element('a',{'class':'expand','href':'#'}), 
+                        new Element('a',{'class': 'schema-item',
+                            'href':"#section=database&view=overview&database="+db+"&schema="+schema}).set('html',updateSchemaName(schema)),
+                        ulala = endOfTree(schema_data, ulala, db, schema )
+                    )
+                    arr_uli.include(lili);
+                });
+                eula.adopt( ela.adopt(tree_a, new Element('span',{'text':db}),
+                    new Element('ul',{'class':'collapse'}).adopt(arr_uli)
+                ) );
+            } else {
+                ula = endOfTree(db_data, ula, db);
+                eula.adopt( ela.adopt(tree_a, db_a, ula) );                
+            }
 
-			});
-			
-			
-		} else if (data['section'] == 'database'){
-			
-		} else if (data['section'] == 'table'){
-			
-		}
+        });
 
 		new Element('div.sidebar').replaces($('sidebar')).id='sidebar';
         var gnlnks = new Element('ul',{});
@@ -226,8 +224,8 @@ Page = new Class({
 	
     
 	generateView: function(data){
-        self = this;
-		x = new XHR(Object.merge({'method':'get',
+        var self = this;
+		var x = new XHR(Object.merge({'method':'get',
             'onSuccess': function(text,xml){
                 var viewData = {'text' : text,'xml' : xml};
                 if (!data['section']) {
@@ -246,6 +244,11 @@ Page = new Class({
                     if (data['view'] == 'overview') {
                         self.completeOverview();
                     }
+                } else if (data['section'] == 'table'){
+                    $('tt-content').set('html', viewData['text']);
+                    if (data['view'] == 'browse'){
+                        self.completeBrowseView();
+                    }
                 }
                 runXHRJavascript();
             }
@@ -253,6 +256,11 @@ Page = new Class({
         ).send()
 	},
 	
+    
+    completeBrowseView: function(){
+        self.loadTable('browse_table','representation');
+    },
+    
     
     completeOverview: function(){
         console.log('completeOverviewView()!');
@@ -354,7 +362,6 @@ Page = new Class({
 		});
 		hideAll(sbls_1); hideAll(sbls_2);
 		$$('.addevnt').addEvent('change', function(e){
-			jj = (e.target);
 			if (e.target.id == 'id_access_0') {
 				hideAll(sbls_1);
 			} else if( e.target.id == 'id_privileges_0') {
@@ -373,11 +380,14 @@ Page = new Class({
         console.log('loadTable() called!')
         // xhr request for table list
         var x = new XHR({'query':query, 'type':type,
-            'schema': this.options.navObj.database, 'method': 'get',
+            'schema': this.options.navObj.schema, 
+            'database': this.options.navObj.database,
+            'table': this.options.navObj.table,
+            'method': 'get',
             'onSuccess': function(text,xml){
                 self.startPageLoad();
                 if (JSON.validate(text)) {
-                    jsan = JSON.decode(text)
+                    var jsan = JSON.decode(text)
 
                     this.data_table = create_data_table(jsan['columns'], jsan['rows'], 'sql-container')
                 } else {
@@ -392,7 +402,7 @@ Page = new Class({
     
 	loadTableOptions: function(opt_type){
 		var actions = function(e){ // basic router
-			var whereToEdit = generate_where( data_table.toElement().id, e) ;
+			var whereToEdit = generate_where(data_table, e) ;
 			if ( whereToEdit ) {
 				var msg = 'Are you sure you want to ';
 				if (e.target.id == 'action_edit') msg += 'edit ';
@@ -421,7 +431,7 @@ Page = new Class({
 
         var do_action = function(e){
             console.log('do_action()');
-            var whereToEdit = generate_where( data_table.toElement().id, e) ;
+            var whereToEdit = generate_where( data_table, e) ;
             var navObj = location.hash.replace('#','').parseQueryString();
             var fail_msgs = {'action_delete': navObj['view']+' deletion failed!',
                 'action_drop': navObj['view']+' drop failed!'
@@ -576,6 +586,7 @@ Page = new Class({
 	
 });
 
+
 var XHR = new Class({
 
 	Extends: Request,
@@ -593,19 +604,25 @@ var XHR = new Class({
 		else if (options.commonQuery)
 			options.url += 'commonQuery=' + options.commonQuery;
         else if (options.query){
-            options.url += 'query=' + options.query
+            options.url += 'query=' + options.query;
             if (options.type)
-                options.url += '&type=' + options.type
+                options.url += '&type=' + options.type;
             if (options.schema)
-                options.url += '&schema=' + options.schema
+                options.url += '&schema=' + options.schema;
+            if (options.database)
+                options.url += '&database=' + options.database;
+            if (options.table)
+                options.url += '&table=' + options.table;
         }
 		else {
 			if (options.section)
 				options.url += 'section=' + options.section;
 			if (options.view)
 				options.url += '&view=' + options.view;
-			if (options.db)
-				options.url += '&db=' + options.db
+			if (options.database)
+				options.url += '&database=' + options.database
+            if (options.schema)
+                options.url += '&schema=' + options.schema
 			if (options.table)
 				options.url += '&table=' + options.table
 		}
