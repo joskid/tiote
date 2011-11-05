@@ -8,7 +8,6 @@ from django.utils.datastructures import SortedDict
 from tiote import models
 
 ajaxKey = ''
-sessid = ''
     
 def common_query(request, query_name):
     conn_params = get_conn_params(request)
@@ -72,12 +71,19 @@ def rpr_query(request, query_type, query_data=None):
         
         if query_type == 'describe_databases':
             return SortedDict()
+        
         elif query_type == 'table_list':
             # change default database
             if 'db' in query_data:
                 conn_params['database'] = query_data['db']
             return models.full_query(conn_params,
                 models.stored_query(query_type, conn_params['dialect']))
+        
+        elif query_type == 'existing_tables':
+            conn_params['database'] = request.GET['database']
+            return models.full_query(conn_params,
+                models.stored_query(query_type, conn_params['dialect']))['rows']
+
         elif query_type == 'user_rpr':
             r = models.full_query(conn_params,
                 models.stored_query(query_type, conn_params['dialect']))
@@ -85,7 +91,26 @@ def rpr_query(request, query_type, query_data=None):
                 return jsonize_result(r)
             else:
                 return http_500(r)
-    
+            
+        elif query_type == 'table_rpr':
+            conn_params['database'] = request.GET.get('database')
+            q = models.generate_query(request.GET.get('query'), conn_params['dialect'],request.GET)[0]
+            r = models.full_query(conn_params, q)
+            if type(r) == dict:
+                return jsonize_result(r)
+            else:
+                return http_500(r)
+
+        elif query_type == 'browse_table':
+            conn_params['database'] = request.GET.get('database');
+            count = models.full_query(conn_params, 
+                models.generate_query('count_rows', conn_params['dialect'], {'table': request.GET.get('table')}),
+                )['rows'][0][0]
+            
+            assert False
+        else:
+            return http_500('query not implemented!')
+            
     elif conn_params['dialect'] == 'mysql':
         
         if query_type == 'describe_databases':
@@ -104,20 +129,35 @@ def rpr_query(request, query_type, query_data=None):
             
         elif query_type == 'table_rpr':
             q = models.generate_query(query_type, conn_params['dialect'], request.GET)[0]
-            r = models.full_query(conn_params, q);
+            r = models.full_query(conn_params, q)
             if type(r) == dict:
                 return jsonize_result(r)
             else:
-                return http_500(r);
+                return http_500(r)
+            
+        elif query_type == 'browse_table':
+            conn_params['database'] = request.GET.get('database')
+            dbtbl = {'table': request.GET.get('table'),'database':request.GET.get('database')}
+            dbtbl['offset'] = request.GET.get('offset') if request.GET.get('offset') else 0
+            dbtbl['limit'] = request.GET.get('limit') if request.GET.get('limit') else 100
+            count = models.full_query(conn_params, 
+                models.generate_query('count_rows', conn_params['dialect'], dbtbl)[0],
+                )['rows'][0][0]
+            r = models.full_query(conn_params,
+                models.generate_query(request.GET.get('query'), conn_params['dialect'], dbtbl)[0]
+                )
+            # other needed display data
+            r.update({'total_count': count, 'offset': dbtbl['offset'], 'limit':dbtbl['limit']})
+            if type(r) == dict:
+                return jsonize_result(r)
+            else:
+                return http_500(r)
         
         else:
             return http_500('feature not yet implemented!')
     else:
         return http_500('dialect not supported!')
 
-
-def full_query():
-    pass
 
 # returns page templates for each view
 def skeleton(which, section=None ):
@@ -143,7 +183,7 @@ def do_login(request, cleaned_data):
         return dict_cd
     
     else:
-        # authencation succeeded
+        # authentication succeeded
         request.session['TT_LOGIN'] = 'true'
         request.session['TT_USERNAME'] = username
         request.session['TT_PASSWORD'] = password

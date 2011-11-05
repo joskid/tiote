@@ -107,7 +107,7 @@ function generate_ajax_url(withAjaxKey,extra_data) {
 // table related functions
 // uses moo
 function create_data_table(thead_rows, tbody_rows, insertion_point, markable, tbl) {
-	var tbl = new Element('table', {
+	tbl = new Element('table', {
 		'class': 'sql zebra-striped',
 		'id': 'query_results',
 		'summary': 'items returned from table'
@@ -279,7 +279,7 @@ var $ES = function(selector, filter) {
 };
 
 function reloadPage(){
-	context = new Hash();
+	var context = new Hash();
 	context.extend(location.hash.replace("#",'').parseQueryString(false, true));
 	nav.state.empty();
 	nav.set(context);
@@ -300,7 +300,7 @@ var updateAssets = function(obj, bool){
 }
 
 function showDialog(title, msg, options){
-    op = {'offsetTop': 0.2 * screen.availHeight}
+    var op = {'offsetTop': 0.2 * screen.availHeight}
 	if (options) op = Object.merge(op, options)
 	var SM = new SimpleModal(op);
     SM.show({
@@ -315,7 +315,7 @@ function checkLoginState(){
 
 // add a class of select to the current displayed menu
 function setTopMenuSelect(){
-	aas = $$('.nav')[0].getElements('a');
+	var aas = $$('.nav')[0].getElements('a');
 	aas.each(function(item){
 		if (location.href.contains(item.hash)){
 			item.getParent().addClass('active');
@@ -339,30 +339,37 @@ function getWindowHeight() {
 		return document.documentElement.clientHeight;
 }
 
-function create_pagination(total, limit, present_index){
-    // total is the number of rows,
-    // limit is the number of rows that can be displayed
-    var pag_no = Math.ceil( total / limit);
-    present_index = present_index || 1;
-    var lnks = new Elements();
-    var li_prv = new Element('li',{'class':'prev'}).adopt(new Element('a',
-        {'text':'&larr; Previous','href':'#'})
-    );
-    var li_nxt = new Element('li',{'class':'next'}).adopt(new Element('a',
-        {'text':'Next &rarr;','href':'#'})
-    );
-    for (var i = 1; i <= pag_no; i++) {
-        var eli = new Element('li').adopt(new Element('a',{'text':i,'href':'#'}));
-        if (present_index == i)
-            eli.addClass('active');
-        lnks.include(eli);
+function tbl_pagination(total_count, limit, offset) {
+    var ret = new Element('p', {'class':'paginatn pull-right'});
+    var pag_max = Math.floor(total_count / limit); var pag_lnks = new Elements();
+    for ( i = 0; i < (pag_max + 1); i++) {
+        var navObj = location.hash.parseQueryString(false, true);
+        navObj['offset'] = String(i*limit);
+        var request_url = location.protocol+'//'+location.host+location.pathname+Object.toQueryString(navObj);
+        pag_lnks.include( new Element('a',{'href': request_url, 
+            'class':'pag_lnk', 'text':(i+1)})
+        );
     }
-    if (present_index == pag_no)
-        li_nxt.addClass('disabled');
-    else if (present_index == 1)
-        li_prv.addClass('disabled');
-    var div_pag = new Element('div',{'class':'pagination'}).adopt(
-        new Element('ul').adopt(li_prv, lnks, li_nxt)
-    )
-    return div_pag
+    var ancs = new Elements(); var j = Math.floor(offset/limit);
+    if ( pag_max > 0 ) {
+        if (j == 0) {
+            ancs.append( [ pag_lnks[0].addClass('active'), pag_lnks[1].addClass('last'),
+                pag_lnks[1].clone().set('text','Next').addClass('cntrl').removeClass('last'),
+                pag_lnks[pag_max].clone().set('text', 'Last').addClass('cntrl')
+            ]);
+        } else if (j == pag_max) {
+            ancs.append( [ pag_lnks[0].clone().set('text','First').addClass('cntrl'), 
+                pag_lnks[j-1].clone().set('text','Prev').addClass('cntrl last'),
+                pag_lnks[j-1], pag_lnks[j].addClass('active') 
+            ]);
+        } else {
+            ancs.append( [ pag_lnks[0].clone().set('text','First').addClass('cntrl').removeClass('last'),
+                pag_lnks[j-1].clone().set('text','Prev').addClass('cntrl last'),
+                pag_lnks[j-1], pag_lnks[j].addClass('active'), pag_lnks[j+1],
+                pag_lnks[j+1].clone().set('text','Next').addClass('cntrl').removeClass('last'),
+                pag_lnks[pag_max].clone().set('text', 'Last').addClass('cntrl').removeClass('last')
+            ] );
+        }
+    }
+    return ret.adopt(ancs);
 }

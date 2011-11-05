@@ -88,15 +88,16 @@ Page = new Class({
     },
     
 	setTitle: function(){
-		title = 'tiote';
-		r = location.hash.replace('#','').parseQueryString();
+		var title = 'tiote';
+		var r = location.hash.replace('#','').parseQueryString();
 		Object.each(r, function(item, key){
 			if (key == 'view' && r[key] == r['section']) {
 			} else {
-				s = ' ';
-				title += s + '/' + s + item;
+                if (key == 'view' || key =='section') { /* skip */ } 
+                else { title += ' / ' + item; }
 			}
 		});
+        title += ' / ' + r['view'];
 		document.title = title
 		this.updateOptions({'title': title});
 	},
@@ -113,17 +114,14 @@ Page = new Class({
 		if (data['section'] == 'begin') {
 			order = ['login', 'help', 'faq'];
 			prefix_str = '#section=begin';
-		}
-		if (data['section'] == 'home') {
+		}else if (data['section'] == 'home') {
 			order = ['home', ,'users','query', 'import', 'export'];
 			prefix_str = '#section=home';
-		}
-		if (data['section'] == 'database') {
+		}else if (data['section'] == 'database') {
 			order = ['overview', 'query','import','export'];
 			prefix_str = '#section=database';
 			suffix = ['&database=']
-		}
-		if (data['section'] == 'table') {
+		}else if (data['section'] == 'table') {
 			order = ['browse', 'structure', 'insert', 'search', 'query', 'import', 'export'];
 			prefix_str = '#section=table';
 			suffix = ['&database=','&table='];
@@ -175,7 +173,7 @@ Page = new Class({
         };
         
 		var eula = new Element('ul',{id:'db-tree','class':'collapse'});
-        dbs_tbls = JSON.decode( shortXHR({'commonQuery':'describe_databases'}) );
+        var dbs_tbls = JSON.decode( shortXHR({'commonQuery':'describe_databases'}) );
         Object.each(dbs_tbls, function(db_data,db){
             var ela = new Element('li',{'class':'db '+db})
             var db_a = new Element('a',{'text':db, 'href':"#section=database&view=overview&database="+db});
@@ -258,7 +256,8 @@ Page = new Class({
 	
     
     completeBrowseView: function(){
-        self.loadTable('browse_table','representation');
+        this.loadTable('browse_table','representation');
+        this.loadTableOptions('data');
     },
     
     
@@ -383,16 +382,22 @@ Page = new Class({
             'schema': this.options.navObj.schema, 
             'database': this.options.navObj.database,
             'table': this.options.navObj.table,
+            'offset': this.options.navObj.offset,
             'method': 'get',
             'onSuccess': function(text,xml){
                 self.startPageLoad();
                 if (JSON.validate(text)) {
-                    var jsan = JSON.decode(text)
-
-                    this.data_table = create_data_table(jsan['columns'], jsan['rows'], 'sql-container')
+                    var tbl_json = JSON.decode(text);
+                    this.data_table = create_data_table(tbl_json['columns'],
+                        tbl_json['rows'], 'sql-container');
+                    if (Object.keys(tbl_json).contains('total_count')) {
+                        $('table-options').adopt(tbl_pagination(tbl_json['total_count'],
+                            tbl_json['limit'], tbl_json['offset']) )
+                    }
                 } else {
                     $('sql-container').set('text','!! invalid JSON data !!');
                 }
+
                 self.endPageLoad();
             }
         }).send()
@@ -450,7 +455,7 @@ Page = new Class({
                         actionSpinner.show(true);
                     },
                 	'onSuccess':function(){
-                		resp = JSON.decode(this.response.text);
+                		var resp = JSON.decode(this.response.text);
                 		if (resp.status == 'failed') {
                 			showDialog(fail_msgs[e.target.id], resp.msg, {});
                 		} else {
@@ -465,9 +470,9 @@ Page = new Class({
         }
 
 		// opt_type = user || table || data
-		console.log('loadTableOptions() called!');
+		console.log('loadTableOptions()!');
 		var diva = new Element('div#table-options');
-		var pipi = new Element('p').adopt(new Element('span',{'text':'Select: '}));
+		var pipi = new Element('p',{'class':'pull-left'}).adopt(new Element('span',{'text':'Select: '}));
         
 		var or = ['all', 'none']; var evnts = [true, false]
 		or.each(function(item, key){
@@ -483,12 +488,14 @@ Page = new Class({
             or = ['delete']
         else if (opt_type == 'table')
             or = ['empty', 'drop']
+        else if (opt_type == 'data')
+            or = ['edit', 'delete']
 		or.each(function(item, key){
 			var a = new Element('a',{'text':item,'id':'action_'+item,
 				'events': {
 					click: actions
 				}
-			})
+			});
 			pipi.adopt(a);
 		});
 		diva.adopt( pipi ).inject( $('sql-container'), 'top');
@@ -613,6 +620,8 @@ var XHR = new Class({
                 options.url += '&database=' + options.database;
             if (options.table)
                 options.url += '&table=' + options.table;
+            if (options.offset)
+                options.url += '&offset=' + options.offset;
         }
 		else {
 			if (options.section)
