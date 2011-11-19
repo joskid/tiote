@@ -127,6 +127,22 @@ WHERE table_catalog='{database}' AND table_schema='{schema}' AND table_name='{ta
  AND constraint_name like '%_pkey%'".format(**query_data)
             return (q0,)
         
+        elif query_type == 'drop_table':
+            queries = []
+            db = query_data.pop('db')
+            for where in query_data['conditions']:
+                added_q0 = 'information_schema.' if query_data['schema'] == 'information_schema' else ''
+                queries.append( "DROP TABLE "+added_q0+"{table_name}".format(**where))
+            return tuple(queries)
+        
+        elif query_type == 'empty_table':
+            queries = []
+            db = query_data.pop('db')
+            for where in query_data['conditions']:
+                added_q0 = 'information_schema.' if query_data['schema'] == 'information_schema' else ''
+                queries.append( "TRUNCATE "+added_q0+"{table_name}".format(**where) )
+            return queries
+        
     elif dialect == 'mysql': # mysql-only statements
 
         if query_type == 'create_user':

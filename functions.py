@@ -110,7 +110,7 @@ def rpr_query(request, query_type, query_data=None):
         r = models.full_query(conn_params,
             models.generate_query(query_type, conn_params['dialect'], sub_q_data)[0]
             )
-        # other needed display data
+        # format and return data
         if type(r) == dict:
             r.update({'total_count': count, 'offset': sub_q_data['offset'],
                       'limit':sub_q_data['limit'], 'keys': keys})

@@ -21,8 +21,10 @@ def overview(request):
             q = 'drop_table'
         elif request.GET.get('update') == 'empty':
             q = 'empty_table'
-        return functions.rpr_query(request, q ,
-            {'db':request.GET['database'],'conditions':functions.get_conditions(l)} )
+        query_data = {'db':request.GET['database'],'conditions':functions.get_conditions(l)}
+        if request.GET.get('schema'):
+            query_data['schema'] = request.GET.get('schema')
+        return functions.rpr_query(request, q , query_data)
         
     
     if request.method == 'POST':

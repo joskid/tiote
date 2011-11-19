@@ -422,13 +422,18 @@ Page = new Class({
     
     
 	loadTableOptions: function(opt_type){
-		self = this; 
-		var whereToEdit = '';
-		var actions = function(e){ // basic router
-			if (self.options.navObj['view'] == 'browse')
-				whereToEdit = generate_where_using_pk(data_table)
+		
+		var get_where = function(){
+			var w = ''
+			if (location.hash.replace('#','').parseQueryString(false, true)['view'] == 'browse')
+				w = generate_where_using_pk(data_table)
 			else
-				whereToEdit = generate_where(data_table) ;
+				w = generate_where(data_table) ;
+			return w;
+		};
+		
+		var actions = function(e){ // basic router
+			var whereToEdit = get_where();
 			if ( whereToEdit ) {
 				var msg = 'Are you sure you want to ';
 				if (e.target.id == 'action_edit') msg += 'edit ';
@@ -456,6 +461,7 @@ Page = new Class({
 		}
 
         var do_action = function(e){
+			var whereToEdit = get_where();
             console.log('do_action()');
             var navObj = location.hash.replace('#','').parseQueryString();
             var fail_msgs = {'action_delete': navObj['view']+' deletion failed!',
