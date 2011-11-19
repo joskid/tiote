@@ -1,47 +1,56 @@
 import datetime
 # sqlaclehemy modules
-from sqlalchemy.engine import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.engine.url import URL
 from sqlalchemy.exceptions import OperationalError, ProgrammingError, DatabaseError
-from sqlalchemy.sql import select
 
 def stored_query(query, dialect):
-    if dialect == 'postgresql':
-        if query == 'variables':
-            return "SHOW server_version"
-        elif query == 'template_list':
-            return "SELECT datname FROM pg_database"
-        elif query == 'group_list':
-            return "SELECT rolname FROM pg_roles WHERE rolcanlogin=False"
-        elif query == 'db_list':
-            return "SELECT datname FROM pg_database WHERE datistemplate = 'f';"
-        elif query == 'user_rpr':
-            return "SELECT rolname, rolcanlogin, rolsuper, rolinherit, rolvaliduntil FROM pg_roles"
-        elif query == 'user_list':
-            return "SELECT rolname FROM pg_roles"
-        elif query == 'table_list':
-            return "SELECT schemaname, tablename FROM pg_tables ORDER BY schemaname DESC"
-        
-    elif dialect == 'mysql':
-        if query == 'describe_databases':
-            return "SELECT TABLE_SCHEMA, TABLE_NAME, TABLE_ROWS FROM tables"
-        elif query == 'db_list':
-            return "SHOW databases"
-        elif query == 'user_rpr':
-            return "SELECT user.`Host`, user.`User` FROM user"
-        elif query == 'user_list':
-            return "SELECT user.`User` FROM user"
-        elif query == 'table_rpr':
-            return ""
-        elif query == 'supported_engines':
-            return "SELECT engine, support FROM information_schema.engines WHERE support='yes' OR support='default'"
-        elif query == 'charset_list':
-            return "SELECT CHARACTER_SET_NAME FROM INFORMATION_SCHEMA.CHARACTER_SETS"
-        elif query == 'variables':
-            return '''SHOW SESSION VARIABLES WHERE `Variable_name`='version_compile_machine' 
-            OR `Variable_name`='version_compile_os' OR `variable_name`='version'
-            '''
+    # db of stored queries
+    stored_query_db = {
+        'postgresql': {
+            'variables':
+                "SHOW server_version",
+            'template_list':
+                "SELECT datname FROM pg_database",
+            'group_list':
+                "SELECT rolname FROM pg_roles WHERE rolcanlogin=False",
+            'db_list':
+                "SELECT datname FROM pg_database WHERE datistemplate = 'f';",
+            'user_rpr': 
+                "SELECT rolname, rolcanlogin, rolsuper, rolinherit, rolvaliduntil FROM pg_roles",
+            'user_list':
+                "SELECT rolname FROM pg_roles",
+            'table_list':
+                "SELECT schemaname, tablename FROM pg_tables ORDER BY schemaname DESC",
+            'existing_tables':
+                "SELECT tablename FROM pg_tables WHERE \
+                NOT schemaname='information_schema' AND NOT schemaname='pg_catalog'",
+        },
+
+        'mysql': {
+            'describe_databases': 
+                "SELECT TABLE_SCHEMA, TABLE_NAME, TABLE_ROWS FROM `information_schema`.`tables`",
+            'db_list':
+                "SHOW databases",
+            'user_rpr':
+                "SELECT user.`Host`, user.`User` FROM user",
+            'user_list':
+                "SELECT user.`User` FROM user",
+            'supported_engines':
+                "SELECT engine, support FROM `information_schema`.`engines` \
+                WHERE support='yes' OR support='default'",
+            'charset_list':
+                "SELECT CHARACTER_SET_NAME FROM INFORMATION_SCHEMA.CHARACTER_SETS",
+            'variables':
+                '''SHOW SESSION VARIABLES WHERE `Variable_name`='version_compile_machine' 
+                OR `Variable_name`='version_compile_os' OR `variable_name`='version'
+                '''     
+        }
+    }        
     
+    # 
+    return stored_query_db[dialect][query]
+
 
 def generate_query(query_type, dialect='postgresql', query_data=None):
     if dialect == 'postgresql': #postgresql-only statements
@@ -78,6 +87,7 @@ def generate_query(query_type, dialect='postgresql', query_data=None):
                 q = "DROP ROLE {rolname}".format(**cond)
                 queries.append(q) 
             return tuple(queries)
+        
         elif query_type == 'create_db':
             q = "CREATE DATABASE {name}".format(**query_data)
             if query_data['encoding']:
@@ -87,7 +97,36 @@ def generate_query(query_type, dialect='postgresql', query_data=None):
             if query_data['template']:
                 q += " TEMPLATE={template}".format(**query_data)
             return (q, )
-    
+        
+        elif query_type == 'table_rpr':
+            q = "SELECT table_name, table_type, table_schema FROM \
+                information_schema.tables WHERE table_schema='{schema}'".format(**query_data)
+            return (q, )
+        
+        elif query_type == 'count_rows':
+            added_q0 = 'information_schema.' if query_data['schema'] =='information_schema' else ''
+            q0 = "SELECT count(*) FROM "+added_q0+"{table}".format(**query_data)
+            return (q0,)
+        
+        elif query_type == 'browse_table':
+            added_q0 = 'information_schema.' if query_data['schema'] =='information_schema' else ''
+            q0 = "SELECT * FROM "+added_q0+"{table} LIMIT {limit} OFFSET {offset}".format(**query_data)
+            return (q0,)
+        
+        elif query_type == 'delete_row':
+            queries = []
+            for whereCond in query_data['conditions']:
+                added_q0 = 'information_schema.' if query_data['schema'] == 'information_schema' else ''
+                q0 = "DELETE FROM "+added_q0+"{table}".format(**query_data) + " WHERE "+whereCond
+                queries.append(q0)
+            return tuple(queries)
+        
+        elif query_type == 'table_keys':
+            q0 = "SELECT constraint_name, column_name FROM information_schema.key_column_usage \
+WHERE table_catalog='{database}' AND table_schema='{schema}' AND table_name='{table}'\
+ AND constraint_name like '%_pkey%'".format(**query_data)
+            return (q0,)
+        
     elif dialect == 'mysql': # mysql-only statements
 
         if query_type == 'create_user':
@@ -216,18 +255,18 @@ def generate_query(query_type, dialect='postgresql', query_data=None):
             queries = []
             db = query_data.pop('db')
             for where in query_data['conditions']:
-                queries.append( "DROP TABLE `"+db+"`.`{table_name}`".format(**where))
+                queries.append( "DROP TABLE "+db+".{table_name}".format(**where))
             return tuple(queries)
         
         elif query_type == 'empty_table':
             queries = []
             db = query_data.pop('db')
             for where in query_data['conditions']:
-                queries.append( "TRUNCATE `"+db+"`.`{table_name}".format(**where) )
+                queries.append( "TRUNCATE "+db+".{table_name}".format(**where) )
             return queries
         
         elif query_type == 'column_list':
-            return ("SELECT column_name FROM `information_schema`.`columns` WHERE table_schema='{db}' AND table_name='{table}")
+            return ("SELECT column_name FROM information_schema.columns WHERE table_schema='{db}' AND table_name='{table}")
         
         elif query_type == 'drop_user':
             queries = []
@@ -236,12 +275,33 @@ def generate_query(query_type, dialect='postgresql', query_data=None):
                 queries.append(q)
             return tuple(queries)
         
+        elif query_type == 'delete_row':
+            queries = []
+            for where in query_data['conditions']:
+                queries.append("DELETE FROM {database}.{table}".format(**query_data) + " WHERE "+where+" LIMIT 1" )
+            return queries
+                
+        elif query_type == 'indexes':
+            return ("SHOW indexes FROM `{database}`.`{table}`".format(**query_data), )
+                
         elif query_type == 'table_rpr':
-            q = "SELECT TABLE_NAME, ENGINE, TABLE_ROWS, TABLE_COLLATION FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '{schema[0]}'".format(**query_data)
+            q = "SELECT TABLE_NAME, TABLE_ROWS, TABLE_TYPE, ENGINE FROM \
+            `INFORMATION_SCHEMA`.`TABLES` WHERE TABLE_SCHEMA = '{database}'".format(**query_data)
             return (q,)
-        elif query_type == 'rename_user':
-            pass
 
+        elif query_type == 'count_rows':
+            q0 = "SELECT count(*) FROM `{database}`.`{table}`".format(**query_data)
+            return (q0, )
+        
+        elif query_type == 'browse_table':
+            q0 = "SELECT * FROM `{database}`.`{table}` LIMIT {limit} OFFSET {offset}".format(**query_data)
+            return (q0,)
+        
+        elif query_type == 'table_keys':
+            
+            q0 = "SELECT CONSTRAINT_NAME, COLUMN_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE \
+                WHERE TABLE_SCHEMA='{database}' AND TABLE_NAME='{table}' AND CONSTRAINT_NAME='PRIMARY'".format(**query_data)
+            return (q0, )
         else:
             return None
 
@@ -252,10 +312,10 @@ def full_query(conn_params, query):
     executes and returns a query result
     '''
     eng = create_engine(get_conn_link(conn_params))
-    conn = ''
+    conn = eng.connect()
     try:
         conn = eng.connect()
-        query_result =  conn.execute(query)
+        query_result =  conn.execute(text(query))
         d = {}
         l = []
         for row in query_result:
@@ -271,8 +331,8 @@ def full_query(conn_params, query):
     except Exception as e:
         conn.close()
         return str(e)
-
-
+    
+    
 def short_query(conn_params, queries):
     """
     executes and returns the success state of the query
@@ -282,7 +342,7 @@ def short_query(conn_params, queries):
     try:
         conn = eng.connect()
         for query in queries:
-            query_result = conn.execute(query)
+            query_result = conn.execute(text(query))
         return {'status':'successfull', }
     except Exception as e:
         conn.close()
@@ -313,14 +373,5 @@ def model_login(conn_params):
 
 def get_conn_link(conn_params):
     return '{dialect}://{username}:{password}@{host}/{database}'.format(**conn_params)
-
-def get_tables():
-    pass
-
-
-
-def get_columns():
-    pass
-
 
 

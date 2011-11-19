@@ -40,7 +40,7 @@ div#table-options {
     margin-bottom: 3px;
 }
 #table-options .paginatn a.last {
-    padding-right: 10px;
+    padding-right: 6px;
 }
 #table-options .paginatn a.active {
     font-weight: bold;
@@ -63,6 +63,14 @@ table.sql * {
 table.sql thead th {
     background-color: #F5F5F5;
     background-image: -moz-linear-gradient(center top , #FFFFFF, #F5F5F5);
+	background-image: -khtml-gradient(linear, left top, left bottom, from(#ffffff), to(#f5f5f5));
+	background-image: -moz-linear-gradient(top, #ffffff, #f5f5f5);
+	background-image: -ms-linear-gradient(top, #ffffff, #f5f5f5);
+	background-image: -webkit-gradient(linear, left top, left bottom, color-stop(0%, #ffffff), color-stop(100%, #f5f5f5));
+	background-image: -webkit-linear-gradient(top, #ffffff, #f5f5f5);
+	background-image: -o-linear-gradient(top, #ffffff, #f5f5f5);
+	background-image: linear-gradient(top, #ffffff, #f5f5f5);
+	filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#ffffff', endColorstr='#f5f5f5', GradientType=0);
     background-repeat: repeat-x;
     border-bottom: 1px solid #DDDDDD;
     border-right: 1px solid #DDDDDD;
@@ -73,6 +81,10 @@ table.sql thead th {
     max-width: 300px;
     min-width: 150px;
     padding: 2px;
+}
+table.sql thead div span {
+    margin: 0;
+    width: 0;
 }
 table.sql thead th.table-th-sort {
     font-weight: bold;

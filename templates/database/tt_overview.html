@@ -19,12 +19,12 @@
 					{% endif %}
 				{% endfor %}
 				</div>
-                <span>Start creating fields for this table.</span>    
-        <div class='field-form variable_form'>
-            <h6 class="heading"> New Field </h6>
+				<span>Start creating fields for this table.</span>    
+        <div class='column-form variable_form'>
+            <h6 class="heading"> New Column </h6>
             <table class='compact-form'><tbody>
             {% for field in form %}
-            	{% if field.label == 'values'%}
+            	{% if field.label == 'values' or field.label == 'references' %}
             	<tr class='hidden values-needed'><td>{{field.label_tag}}</td><td>{{field}}</td><td colspan='2'>{{field.help_text}}</td></tr>
             	{% else %}
 	                {% if field.name not in table_fields and field.label not in odd_fields %}
@@ -38,9 +38,9 @@
             </tbody></table>
         </div>
 			  <div class="form-controls">
-                  <input type="submit" class='btn primary submit-button' value="Submit &rarr;"/>
-                  <a id="newFieldForm" class="pull-right pointer">Add another field</a>
-              </div>
+	        <input type="submit" class='btn primary submit-button' value="Submit &rarr;"/>
+	        <a id="newColumnForm" class="pull-right pointer">Add another column</a>
+        </div>
 			</form>
 		</div>
 		<div id='undisplayed_result' class='hidden' style="display:none;"></div>
@@ -48,11 +48,12 @@
 </div>
 
 <script type="text/javascript" ajaxKey="{{ajaxKey}}" charset="utf-8">
-	var j = $$('table.compact-form td ul')[0];  var con = new Elements();
-    j.getChildren().each(function(item,key){
-        con.include( item.getChildren()[0] )
-    });
-    j.getParent().getParent().adopt(new Element('td',{'colspan':5,'class':'occupy'}).adopt(con)); 
-    j.getParent().destroy();
-
+    if ($$('table.compact-form td ul')){
+        var j = $$('table.compact-form td ul')[0];  var con = new Elements();
+        j.getChildren().each(function(item,key){
+            con.include( item.getChildren()[0] );
+        });
+        j.getParent().getParent().adopt(new Element('td',{'colspan':5,'class':'occupy'}).adopt(con)); 
+        j.getParent().destroy();        
+    }
 </script>

@@ -27,7 +27,6 @@ def home(request):
 
 
 def users(request):
-            
     params = request.GET
     conn_params = functions.get_conn_params(request)
     db_list = functions.common_query(request, 'db_list')

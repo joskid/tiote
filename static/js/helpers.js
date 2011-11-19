@@ -14,7 +14,7 @@ var Navigation = new Class({
 			window.onhashchange = this.agent.bind(this);
 			this.agent();
 		} else {
-		var navigationChangeTimer = setInterval(this.agent.bind(this), this.options.interval);
+			var navigationChangeTimer = setInterval(this.agent.bind(this), this.options.interval);
 		}
 	},
 	
@@ -60,10 +60,10 @@ function serializeForm(context){
 	$$('#' + context +' input[type=text]').each(function(item,key){
 		form_data[item.get('name')] = item.get('value');
 	});
-    // hidden input
-    $$('#'+context+' input[type=hidden]').each(function(item){
-        form_data[item.name] = item.value;
-    })
+	// hidden input
+	$$('#'+context+' input[type=hidden]').each(function(item){
+		form_data[item.name] = item.value;
+	})
 	// input[type=password]
 	$$('#' + context +' input[type=password]').each(function(item, key){
 		form_data[item.get('name')] = item.get('value');
@@ -82,125 +82,154 @@ function serializeForm(context){
 			form_data[item.name][ar.length] = item.value;
 		}
 	});
-    // select
-    $$('#' + context + ' select').each(function(item,key){
-        form_data[item.name] = item.value;
-    })
+	// select
+	$$('#' + context + ' select').each(function(item,key){
+		form_data[item.name] = item.value;
+	})
 	return form_data;
 }
 
 function generate_ajax_url(withAjaxKey,extra_data) {
-    extra_data = extra_data || {};
-    withAjaxKey = withAjaxKey || false;
-    var n = new Hash( location.hash.replace('#','').parseQueryString(false, true) );
-    n.extend(extra_data);
-    var request_url = 'ajax/?';
-    n.each(function(item,key){
-        if (key == 'section') {request_url += key + '=' + item; }
-        else {request_url += '&' + key + '=' + item;}
-    })
-    if (withAjaxKey) request_url += '&ajaxKey=' + ajaxKey;
-    return request_url
+	extra_data = extra_data || {};
+	withAjaxKey = withAjaxKey || false;
+	var n = new Hash( location.hash.replace('#','').parseQueryString(false, true) );
+	n.extend(extra_data);
+	var request_url = 'ajax/?';
+	n.each(function(item,key){
+		if (key == 'section') {
+			request_url += key + '=' + item;
+		}
+		else {
+			request_url += '&' + key + '=' + item;
+		}
+	})
+	if (withAjaxKey) request_url += '&ajaxKey=' + ajaxKey;
+	return request_url
 }
 
 
 // table related functions
 // uses moo
-function create_data_table(thead_rows, tbody_rows, insertion_point, markable, tbl) {
-	tbl = new Element('table', {
-		'class': 'sql zebra-striped',
-		'id': 'query_results',
-		'summary': 'items returned from table'
-	}) || tbl;
-    
-    markable = markable || true;
-    
-    if (markable) {
-        var th_rows = ['']
-        th_rows.append(thead_rows)
-        thead_rows = th_rows;        
-    }
-	
-	data_table = new HtmlTable(tbl, {
+function create_data_table(thead_rows, tbody_rows, options) {
+	var default_options = {
+		'tbl': new Element('table', {
+			'class': 'sql zebra-striped',
+			'id': 'query_results',
+			'summary': 'items returned from table'
+		}),
+		'insertion_point': 'sql-container'
+	}
+	options = Object.merge(default_options, options);
+	// table height
+	if (Object.keys(options).contains('height'))
+		options['tbl'] = options['tbl'].setStyle('max-height', options['height']);
+	// force markable
+	if (options['with_checkboxes'])
+		options['markable'] = true;
+	else {
+		
+	}
+	// checkboxes
+	if (options['markable']) {
+		var th_rows = ['']
+		th_rows.append(thead_rows)
+		thead_rows = th_rows;        
+	}
+	// create tbl
+	data_table = new HtmlTable(options['tbl'], {
 		properties: {},
 		headers: thead_rows,
 		zebra: true, 
 		selectable:false,
 		sortable:true
-//        rowFocus: function(e){
-//            console.log(e.target)
-//        },
-//        rowUnFocus: function(e){
-//            console.log(e.target)
-//        }
 	});
-	
-	// hack: create ids for the generated table
-    // but should slow down the table creation
+	// add primary keys
+	if (Object.keys(options).contains('keys'))
+		data_table['keys'] = options['keys'];
+	// create ids for the generated table
 	for (var i = 0; i < tbody_rows.length; i++) {
 		data_table.push(tbody_rows[i], {
 			'id': 'row_'+ i
 		});
 	}
 	
-    if (markable) {
-        // add checkboxes to the table
-        var trs = $(data_table).getElements('tr')
-        var tdd = new Element('th', {'id': 'selector'});
-        for (var i=1; i < trs.length; i++) {
-            var td_select = new Element('td', {'class': 'selector'});
-            var anc_check = new Element('input', {'class': 'checker',	'id': 'check_' + (i-1),	'type': 'checkbox'	});
-            anc_check.inject(td_select)
-            td_select.inject(trs[i], 'top')
-        }
-    }
+	if (options['markable']) {
+		// add checkboxes to the table
+		var trs = $(data_table).getElements('tr')
+		var tdd = new Element('th', {
+			'id': 'selector'
+		});
+		for (var i=1; i < trs.length; i++) {
+			var td_select = new Element('td', {
+				'class': 'selector'
+			});
+			var anc_check = new Element('input', {
+				'class': 'checker',	
+				'id': 'check_' + (i-1),	
+				'type': 'checkbox'
+			});
+			anc_check.inject(td_select)
+			td_select.inject(trs[i], 'top')
+		}
+	}
 	
-    if ( $('query_results') == null) { data_table.inject($(insertion_point) ); }
-    else { data_table.replaces( $('query_results') ); data_table.id = 'query_results'; }
+	if ( $('query_results') == null) {
+		data_table.inject($(options['insertion_point']) );
+	}
+	else {
+		data_table.replaces( $('query_results') );
+		data_table.id = 'query_results';
+	}
 	
-	if (markable) {
-        //reduce the width of the first tr element
-        $$('.sql thead tr th')[0].addClass('selector').setStyles({
-            'max-width': '25px',
-            'min-width': '25px',
-            'width': '25px',
-            'padding': '0px 0px 0px 4px'
-        });
+	if (options['markable']) {
+		//reduce the width of the first tr element
+		var sels = $$('table.sql tbody td.selector')
+		sels.include($$('.sql thead tr th')[0].addClass('selector'));
+		sels.each(function(item){
+			item.setStyles({
+				'max-width': '25px',
+				'min-width': '25px',
+				'width': '25px',
+				'padding': '0px 0px 0px 4px'
+			});
+		})
 
-        // select a tr element or a range of tr elements when the shift key is pressed
-        selected_tr = ''
-        $$('input.checker').addEvent('click', function(e) {
-            last_selected_tr = selected_tr || '';
-            var id =  e.target.getProperty('id');
-            id = id.replace('check', 'row'); // id of equivalent <tr>
-            selected_tr = $(id)
-            if (e.shift && typeof(last_selected_tr == 'element')){
-                var checker_status;
-                if (data_table.isSelected(last_selected_tr)) {
-                    data_table.selectRange(last_selected_tr, selected_tr);
-                    checker_status = true;
-                }else if (data_table.isSelected(selected_tr)) {
-                    data_table.deselectRange(last_selected_tr, selected_tr);
-                    checker_status = false;
-                }
-                // (un)check the checkboxes
-                var start_i; var end_i;
-                var sel_tr_index = parseInt(id.split('_')[1])
-                var last_sel_tr_index = parseInt(last_selected_tr.id.split('_')[1])
-                if (sel_tr_index > last_sel_tr_index) {
-                    start_i = last_sel_tr_index; end_i = sel_tr_index;
-                } else {
-                    start_i = sel_tr_index; end_i = last_sel_tr_index;
-                }
-                for (var j = start_i; j < (end_i + 1); j++){
-                    $('check_'+String(j)).setProperty('checked', checker_status);
-                }
-            } else {
-                data_table.toggleRow(e.target.getParent('tr'));
-            }		
+		// select a tr element or a range of tr elements when the shift key is pressed
+		selected_tr = ''
+		$$('input.checker').addEvent('click', function(e) {
+			last_selected_tr = selected_tr || '';
+			var id =  e.target.getProperty('id');
+			id = id.replace('check', 'row'); // id of equivalent <tr>
+			selected_tr = $(id)
+			if (e.shift && typeof(last_selected_tr == 'element')){
+				var checker_status;
+				if (data_table.isSelected(last_selected_tr)) {
+					data_table.selectRange(last_selected_tr, selected_tr);
+					checker_status = true;
+				}else if (data_table.isSelected(selected_tr)) {
+					data_table.deselectRange(last_selected_tr, selected_tr);
+					checker_status = false;
+				}
+				// (un)check the checkboxes
+				var start_i; var end_i;
+				var sel_tr_index = parseInt(id.split('_')[1])
+				var last_sel_tr_index = parseInt(last_selected_tr.id.split('_')[1])
+				if (sel_tr_index > last_sel_tr_index) {
+					start_i = last_sel_tr_index;
+					end_i = sel_tr_index;
+				} else {
+					start_i = sel_tr_index;
+					end_i = last_sel_tr_index;
+				}
+				for (var j = start_i; j < (end_i + 1); j++){
+					$('check_'+String(j)).setProperty('checked', checker_status);
+				}
+			} else {
+				data_table.toggleRow(e.target.getParent('tr'));
+			}		
 
-        });
-    }
+		});
+	}
 	return data_table;
 }
 
@@ -209,42 +238,69 @@ function create_data_table(thead_rows, tbody_rows, insertion_point, markable, tb
 // state = true : ticks all checkboxes and selects all rows
 // state = false : unticks all checkboxes and deselects all rows
 function set_all_tr_state(context, state) {
-    state ? context.selectAll() : context.selectNone();
+	state ? context.selectAll() : context.selectNone();
 	for (var i=0; i < $(context).getElements('tbody tr').length; i++) {
-	  	$('check_'+i).setProperty('checked', state);
+		$('check_'+i).setProperty('checked', state);
 	}
 }
 
+function generate_where_using_pk(wrk_table) {
+	if (! Object.keys(wrk_table).contains('keys'))
+		return '';
+	else {
+		// index of cols with primary key
+		var col_titles = [];
+		wrk_table['keys']['rows'].each(function(obj,obj_in){
+			$(wrk_table).getElements('thead th').each(function(th, th_i){
+				if (th.getElement('div').get('text').trim() == obj[1] )
+					col_titles.include({'title':obj[1], 'index':th_i});
+			});
+		});
+		// generate where stmt
+		var where_stmt = '';
+		if (wrk_table.getSelected().length > 0) {
+			wrk_table.getSelected().each(function(row,row_in){
+				var cols = row.getElements('td');
+				col_titles.each(function(obj){
+					where_stmt += ' ' + obj['title'] +'='+cols[obj['index']].get('text');
+					where_stmt += (row_in == wrk_table.getSelected().length - 1) ? '' : ';';
+				});
+			});
+		}
+		return where_stmt.trim(); // empty string indeicateds no row was selected
+	}
+}
 
-function generate_where(wrk_table, e) {
+function generate_where(wrk_table) {
 	var selected_rows = wrk_table.getSelected();
-    var whereToEdit = '';
-    if (! selected_rows) {
-        return whereToEdit;
-    }else {
-        var th_divs = $(wrk_table).getElements('th div'); var cols = [];
-        th_divs.each(function(diva, diva_index){
-            if (diva_index != 0) cols.push(diva.childNodes[1].nodeValue);
-        })
-        selected_rows.each(function(tiri,tiri_index){
-            var where = '';
-            tiri.getChildren('td[class!=selector]').each(function(tida,tida_index){
-                if (! tida.hasChildNodes())
-                    where += ' ' + cols[tida_index] + '=' + '';
-                else
-                    where += ' ' + cols[tida_index] + '=' + tida.childNodes[0].nodeValue +'';
-                if (tida != tiri.getLast() )
-                    where += ' AND';
-            });
-            whereToEdit += where
-            if (tiri != selected_rows.getLast() ) whereToEdit += '; ';
-        });
-        return whereToEdit;
-    }
+	var whereToEdit = '';
+	if (! selected_rows) {
+		return whereToEdit;
+	}else {
+		var th_divs = $(wrk_table).getElements('th div');
+		var cols = [];
+		th_divs.each(function(diva, diva_index){
+			if (diva_index != 0) cols.push(diva.childNodes[1].nodeValue);
+		})
+		selected_rows.each(function(tiri,tiri_index){
+			var where = '';
+			tiri.getChildren('td[class!=selector]').each(function(tida,tida_index){
+				if (! tida.hasChildNodes())
+					where += ' ' + cols[tida_index] + '=' + '';
+				else
+					where += ' ' + cols[tida_index] + '=' + tida.childNodes[0].nodeValue +'';
+				if (tida != tiri.getLast() )
+					where += ' AND';
+			});
+			whereToEdit += where
+			if (tiri != selected_rows.getLast() ) whereToEdit += '; ';
+		});
+		return whereToEdit;
+	}
 }
 
 function runXHRJavascript(){
-    console.log('runXHRJavaxript() called!');
+	console.log('runXHRJavaxript() called!');
 	var scripts = $ES("script", 'rightside');
 	for (var i=0; i<scripts.length; i++) {
 		// basic xss prevention
@@ -300,17 +356,22 @@ var updateAssets = function(obj, bool){
 }
 
 function showDialog(title, msg, options){
-    var op = {'offsetTop': 0.2 * screen.availHeight}
+	var op = {
+		'offsetTop': 0.2 * screen.availHeight
+		}
 	if (options) op = Object.merge(op, options)
 	var SM = new SimpleModal(op);
-    SM.show({
-        'title': title, 'contents': msg
-    })
+	SM.show({
+		'title': title, 
+		'contents': msg
+	})
 }
 
 
 function checkLoginState(){
-	return shortXHR({'loginCheck': 'yeah'})
+	return shortXHR({
+		'loginCheck': 'yeah'
+	})
 }
 
 // add a class of select to the current displayed menu
@@ -340,36 +401,49 @@ function getWindowHeight() {
 }
 
 function tbl_pagination(total_count, limit, offset) {
-    var ret = new Element('p', {'class':'paginatn pull-right'});
-    var pag_max = Math.floor(total_count / limit); var pag_lnks = new Elements();
-    for ( i = 0; i < (pag_max + 1); i++) {
-        var navObj = location.hash.parseQueryString(false, true);
-        navObj['offset'] = String(i*limit);
-        var request_url = location.protocol+'//'+location.host+location.pathname+Object.toQueryString(navObj);
-        pag_lnks.include( new Element('a',{'href': request_url, 
-            'class':'pag_lnk', 'text':(i+1)})
-        );
-    }
-    var ancs = new Elements(); var j = Math.floor(offset/limit);
-    if ( pag_max > 0 ) {
-        if (j == 0) {
-            ancs.append( [ pag_lnks[0].addClass('active'), pag_lnks[1].addClass('last'),
-                pag_lnks[1].clone().set('text','Next').addClass('cntrl').removeClass('last'),
-                pag_lnks[pag_max].clone().set('text', 'Last').addClass('cntrl')
-            ]);
-        } else if (j == pag_max) {
-            ancs.append( [ pag_lnks[0].clone().set('text','First').addClass('cntrl'), 
-                pag_lnks[j-1].clone().set('text','Prev').addClass('cntrl last'),
-                pag_lnks[j-1], pag_lnks[j].addClass('active') 
-            ]);
-        } else {
-            ancs.append( [ pag_lnks[0].clone().set('text','First').addClass('cntrl').removeClass('last'),
-                pag_lnks[j-1].clone().set('text','Prev').addClass('cntrl last'),
-                pag_lnks[j-1], pag_lnks[j].addClass('active'), pag_lnks[j+1],
-                pag_lnks[j+1].clone().set('text','Next').addClass('cntrl').removeClass('last'),
-                pag_lnks[pag_max].clone().set('text', 'Last').addClass('cntrl').removeClass('last')
-            ] );
-        }
-    }
-    return ret.adopt(ancs);
+	var pag_max = Math.floor(total_count / limit);
+	var pag_lnks = new Elements();
+	for ( i = 0; i < (pag_max + 1); i++) {
+		var navObj = location.hash.parseQueryString(false, true);
+		navObj['offset'] = String(i*limit);
+		var request_url = location.protocol+'//'+location.host+location.pathname+Object.toQueryString(navObj);
+		pag_lnks.include( new Element('a',{
+			'href': request_url, 
+			'class':'pag_lnk', 
+			'text':(i+1)
+			})
+		);
+	}
+	var ancs = new Elements();
+	var j = Math.floor(offset/limit);
+	if ( pag_max > 0 ) {
+		if (j == 0) {
+			ancs.append( [ pag_lnks[0].addClass('active'),
+				(pag_max > 2) ? pag_lnks[1] : pag_lnks[1].addClass('last'),
+				(pag_max > 2) ? pag_lnks[2].addClass('last') : null, 
+				pag_lnks[1].clone().set('text','Next').addClass('cntrl').removeClass('last'),
+				pag_lnks[pag_max].clone().set('text', 'Last').addClass('cntrl')
+				]);
+				
+		} else if (j == pag_max) {
+			ancs.append( [ pag_lnks[0].clone().set('text','First').addClass('cntrl'), 
+				pag_lnks[j-1].clone().set('text','Prev').addClass('cntrl last'),
+				pag_lnks[j-1], pag_lnks[j].addClass('active') 
+				]);
+		} else {
+			ancs.append( [ pag_lnks[0].clone().set('text','First').addClass('cntrl').removeClass('last'),
+				pag_lnks[j-1].clone().set('text','Prev').addClass('cntrl last'),
+				pag_lnks[j-1], pag_lnks[j].addClass('active'), pag_lnks[j+1].addClass('last'),
+				pag_lnks[j+1].clone().set('text','Next').addClass('cntrl').removeClass('last'),
+				pag_lnks[pag_max].clone().set('text', 'Last').addClass('cntrl').removeClass('last')
+				] );
+		}
+	}
+	
+	return new Element('p', { 'class':'paginatn pull-right'}).adopt(ancs,
+		// span to display no of pages created
+		new Element('span',{'style':'color:#888;padding-left:20px;',
+			'text': (pag_max > 0) ? '[ '+(pag_max+1)+' pages ]' : '[ 1 page ]' 
+		})
+	);
 }

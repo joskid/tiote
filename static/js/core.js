@@ -1,23 +1,12 @@
 var pg; var nav;
-var pageLoadSpinner; var ajaxSpinner;
+var pageLoadSpinner;
 var assets = new Hash({'xhrCount': 0});
 
 window.addEvent('domready', function() {
     // spinners 
     pageLoadSpinner = new Spinner(document.body, {'message': 'loading page...'});
-    ajaxSpinner = new Spinner(document.body, {'message': 'loading data...'});
     
 	nav = new Navigation();
-	
-// (function(){
-//		var winWidth = getWindowWidth();
-//		var winHeight = getWindowHeight();
-//		if (viewportSize[0] != winWidth || viewportSize[1] != winHeight) {
-//			viewportSize = [winWidth, winHeight];
-//			sizePage();
-//		}
-//	}).periodical(175);
-    
     
 	nav.addEvent('navigationChanged', function(navObject){
 		// do page initialization here
@@ -129,7 +118,7 @@ Page = new Class({
 		
 		var aggregate_links = new Elements();
 		order.each(function(item, key){
-			elmt = links[item];
+			var elmt = links[item];
 			elmt.href = prefix_str + '&view=' + elmt.text;
             if (data['section'] == 'database' || data['section'] == 'table'){
                 elmt.href += suffix[0] + data['database'];
@@ -157,9 +146,8 @@ Page = new Class({
                 var a_icon = new Element('a', {'class':'expand','href':'#'});
                 var eli = new Element('li',{'class':'tbl '+db});
                 var tbl_a = new Element('a',{text:row[0],'style':'display:block;overflow:hidden',
-                    href:"#section=table&view=browse&database="+db+"&table="+row[0]})
-                if (schema)
-                    tbl_a.href += '&schema=' + schema;
+                    href:"#section=table&view=browse&database="+db });
+                tbl_a.href += (schema) ? '&schema='+schema+"&table="+row[0] : "&table="+row[0];
                 ula.adopt(eli.adopt(a_icon, tbl_a));
             });
             return ula;
@@ -256,14 +244,30 @@ Page = new Class({
 	
     
     completeBrowseView: function(){
-        this.loadTable('browse_table','representation');
-        this.loadTableOptions('data');
+		var height = getWindowHeight() - 88;
+		var resizeTable = function(){
+			height = getWindowHeight() - 88;
+			document.getElement('table.sql').setStyle('height', height);
+			document.getElement('#sidebar').setStyle('height', height);
+		}
+		
+        this.loadTable('browse_table','representation',{},{'height':height});
+		document.getElement('#sidebar').setStyle('height', height);
+		
+		window.addEvent('resize', function(){
+			resizeTable();
+		});
     },
     
     
     completeOverview: function(){
         console.log('completeOverviewView()!');
-        this.loadTable('table_rpr', 'representation')
+		var h = getWindowHeight() * .45;
+        this.loadTable('table_rpr', 'representation',{'height': h, 'with_checkboxes':true})
+		window.addEvent('resize', function(){
+			console.log('widow resize');
+			$(data_table).setStyle('height', h);
+		});
         // varchar and set formats
         var updateSelectNeedsValues = function(){
             $$('#tt_form .compact-form select.needs-values').each(function(item){
@@ -275,7 +279,7 @@ Page = new Class({
                 });
             });
         }
-        
+		
         // new field event and handler
             $('newColumnForm').addEvent('click', function(e){
                 var temp_t = $('newColumnForm').getParent().getSiblings('.column-form');
@@ -308,7 +312,7 @@ Page = new Class({
                             inputi.value = '';
                         } else if ( tidi.getChildren('select')[0]){
                             var sel = tidi.getChildren('select')[0];
-                            var temp_name = sel.name.split('_');
+                            temp_name = sel.name.split('_');
                             sel.name = temp_name[0] +'_'+ String(form_count);
                             sel.id = 'id_'+sel.name; var cl = ''
                             // fix the select_requires class needed for validation
@@ -339,15 +343,13 @@ Page = new Class({
         this.loadTableOptions('table');
         updateSelectNeedsValues();
         this.completeForm();
-        
     },
 
 	updateUserView: function(){
-		// xhr request users table and load it
-		this.loadTable('user_rpr','representation');
-		this.loadTableOptions('user')
 		console.log('updateUserView() called!');
-	
+		// xhr request users table and load it
+		this.loadTable('user_rpr','representation',{'with_checkboxes':true},{});
+		this.loadTableOptions('user')
 		// hide some elmts
 		var sbls_1 = []; var sbls_2 = [];
 		var p1 = $$('.hide_1').getParent().getParent().getParent().getParent().getParent();
@@ -375,7 +377,7 @@ Page = new Class({
 		this.completeForm();
 	},
 	
-    loadTable: function(query, type){
+    loadTable: function(query, type, opts){
         console.log('loadTable() called!')
         // xhr request for table list
         var x = new XHR({'query':query, 'type':type,
@@ -388,8 +390,22 @@ Page = new Class({
                 self.startPageLoad();
                 if (JSON.validate(text)) {
                     var tbl_json = JSON.decode(text);
-                    this.data_table = create_data_table(tbl_json['columns'],
-                        tbl_json['rows'], 'sql-container');
+					// keys
+					if (Object.keys(tbl_json).contains('keys')){
+						if (tbl_json['keys']['count'] == 0 && self.options.navObj['view'] == 'browse') {
+							self.loadTableOptions('no_key');
+						} else {
+							var t = true;
+							self.loadTableOptions('data');
+							opts = Object.merge(opts, {'keys': tbl_json['keys']});
+						}
+					}
+					// table
+					if ( (t) || Object.keys(opts).contains('with_checkboxes'))
+						opts['with_checkboxes'] = true;
+                    self.data_table = create_data_table(tbl_json['columns'],
+                        tbl_json['rows'], opts);
+					// pagination
                     if (Object.keys(tbl_json).contains('total_count')) {
                         $('table-options').adopt(tbl_pagination(tbl_json['total_count'],
                             tbl_json['limit'], tbl_json['offset']) )
@@ -406,8 +422,13 @@ Page = new Class({
     
     
 	loadTableOptions: function(opt_type){
+		self = this; 
+		var whereToEdit = '';
 		var actions = function(e){ // basic router
-			var whereToEdit = generate_where(data_table, e) ;
+			if (self.options.navObj['view'] == 'browse')
+				whereToEdit = generate_where_using_pk(data_table)
+			else
+				whereToEdit = generate_where(data_table) ;
 			if ( whereToEdit ) {
 				var msg = 'Are you sure you want to ';
 				if (e.target.id == 'action_edit') msg += 'edit ';
@@ -436,7 +457,6 @@ Page = new Class({
 
         var do_action = function(e){
             console.log('do_action()');
-            var whereToEdit = generate_where( data_table, e) ;
             var navObj = location.hash.replace('#','').parseQueryString();
             var fail_msgs = {'action_delete': navObj['view']+' deletion failed!',
                 'action_drop': navObj['view']+' drop failed!'
@@ -449,11 +469,8 @@ Page = new Class({
                 else if (e.target.id == 'action_drop') request_url += '&update=drop';
                 else if (e.target.id == 'action_empty') request_url += '&update=empty';
                 // make action request
-                var actionSpinner = new Spinner(data_table)
                 var x = new XHR({'url':request_url,
-                    'onRequest':function(){
-                        actionSpinner.show(true);
-                    },
+                    'spinnerTarget': $(data_table),
                 	'onSuccess':function(){
                 		var resp = JSON.decode(this.response.text);
                 		if (resp.status == 'failed') {
@@ -461,49 +478,54 @@ Page = new Class({
                 		} else {
                 			reloadPage();
                 		}
-                	},
-                    'onComplete': function(){
-                        actionSpinner.hide();
-                    }
+                	}
+                    
                 }).post({'whereToEdit':whereToEdit});
             }
         }
 
 		// opt_type = user || table || data
 		console.log('loadTableOptions()!');
-		var diva = new Element('div#table-options');
-		var pipi = new Element('p',{'class':'pull-left'}).adopt(new Element('span',{'text':'Select: '}));
-        
-		var or = ['all', 'none']; var evnts = [true, false]
-		or.each(function(item, key){
-			var i = new Element('a',{'text':'select '+item,'id':'select_'+item,
-			'events': {
-					click: function(){ set_all_tr_state(data_table, evnts[key]) }
-				} 
-			});
-			pipi.adopt(i);
-		});
-		pipi.adopt(new Element('span',{'text':'With Selected: '}));
-		if (opt_type == 'user')
-            or = ['delete']
-        else if (opt_type == 'table')
-            or = ['empty', 'drop']
-        else if (opt_type == 'data')
-            or = ['edit', 'delete']
-		or.each(function(item, key){
-			var a = new Element('a',{'text':item,'id':'action_'+item,
+		var diva = new Element('div#table-options').inject($('sql-container'), 'top');
+		if (opt_type != 'no_key') {
+			var pipi = new Element('p',{'class':'pull-left'}).adopt(new Element('span',{'text':'Select: '}));
+
+			var or = ['all', 'none']; var evnts = [true, false]
+			or.each(function(item, key){
+				var i = new Element('a',{'text':'select '+item,'id':'select_'+item,
 				'events': {
-					click: actions
-				}
+						click: function(){ set_all_tr_state(data_table, evnts[key]) }
+					} 
+				});
+				pipi.adopt(i);
 			});
-			pipi.adopt(a);
-		});
-		diva.adopt( pipi ).inject( $('sql-container'), 'top');
+			pipi.adopt(new Element('span',{'text':'With Selected: '}));
+			if (opt_type == 'user')
+				or = ['delete'];
+			else if (opt_type == 'table')
+				or = ['empty', 'drop'];
+			else if (opt_type == 'data')
+				or = ['edit', 'delete'];
+			or.each(function(item, key){
+				var a = new Element('a',{'text':item,'id':'action_'+item,
+					'events': {
+						click: actions
+					}
+				});
+				pipi.adopt(a);
+			});
+			diva.adopt( pipi ).inject($('sql-container'), 'top');
+		} else {
+			diva.adopt(new Element('p',{'class':'pull-left'}).adopt(
+				new Element('span',{'text':'[No Primary Key defined]','style':'color:#888;'}))
+			).inject($('sql-container'), 'top');
+		}
+		
 	},
     
     
 	completeForm : function(){
-        form_name = 'tt_form';
+        var form_name = 'tt_form';
 		var form = $(form_name);
 		var undisplayed_result = $('undisplayed_result');
 		//validation
@@ -584,7 +606,7 @@ Page = new Class({
                     showDialog('Error!',
                         'An unexpected error was encountered. Please reload the page and try again',
                         {'overlayClick':false}
-                    )
+                    );
                 }
                 
 			}
@@ -640,24 +662,34 @@ var XHR = new Class({
 		this.parent(options);
 		
 		if (options && options.showLoader != false) {
+			var spinnerTarget = (options.spinnerTarget) ? options.spinnerTarget: document.body;
+			var ajaxSpinner = new Spinner(spinnerTarget, {'message': 'loading data...'});
 			show('header-load');
             ajaxSpinner.show(true);
 			
 			this.addEvent("onSuccess", function() {
-				hide('header-load');
-                ajaxSpinner.hide();
+//				hide('header-load');
+//				ajaxSpinner.hide();
 			});
+			
+			this.addEvent('onComplete', function(xhr){
+				hide('header-load');
+				ajaxSpinner.hide();
+				ajaxSpinner.destroy();
+			});
+			
 			
 			this.addEvent("onFailure", function(xhr) {
 				var msg = 'An unexpected error was encountered. Please reload the page and try again.';
 				if (xhr.status == 500 && xhr.statusText == "UNKNOWN STATUS CODE") msg = xhr.response;
-				hide('header-load');
-                ajaxSpinner.hide();
+//				hide('header-load');
+//                ajaxSpinner.hide();
                 if (msg == 'invalid ajax request!') 
                     location.reload()
                 else
                     showDialog('Error!', msg, {'draggable':false,'overlayClick':false})
 			});
+			
 		}
 	},
 	
@@ -672,9 +704,9 @@ var XHR = new Class({
 
 
 function shortXHR(data){
-	op = new Hash(data)
+	var op = new Hash(data)
 	op.extend({'method': 'get', 'async': false, 'timeout': 10000, 'showLoader':false})
-	x = new XHR(op).send();
+	var x = new XHR(op).send();
 	
 	if (x.isSuccess() ) {
 		return x.response.text;

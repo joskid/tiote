@@ -85,7 +85,7 @@ def ajax(request):
         return views.home.route(request)
     elif request.GET.get('section', False) == 'database':
         return views.database.route(request)
-    elif request.GET.get('view', False) == 'table':
+    elif request.GET.get('section', False) == 'table':
         return views.table.route(request)
     else:
         return functions.http_500('request corresponses to no function!')

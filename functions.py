@@ -57,22 +57,71 @@ def common_query(request, query_name):
         
 def rpr_query(request, query_type, query_data=None):
     conn_params = get_conn_params(request)
-    # queries common to both dialects
-    common_queries = ['create_user', 'drop_user', 'create_db','create_table',
-        'drop_table', 'empty_table']
-    if query_type in common_queries:
-        result = models.short_query(conn_params,
-            models.generate_query( query_type, dialect=conn_params['dialect'],
+    # common queries that returns success state as a dict only
+    no_return_queries = ['create_user', 'drop_user', 'create_db','create_table',
+        'drop_table', 'empty_table', 'delete_row']
+    
+    if query_type in no_return_queries:
+        conn_params['database'] = request.GET.get('database') if request.GET.get('database') else conn_params['database']
+        q = models.generate_query( query_type, dialect=conn_params['dialect'],
                 query_data=query_data)
-        )
+        result = models.short_query(conn_params, q)
         return HttpResponse( json.dumps(result) )
-    # uncommon queries
+    
+    # specific queries with implementations similar to both dialects
+    elif query_type == 'user_rpr':
+        if conn_params['dialect'] == 'mysql':
+            conn_params['database'] = 'mysql'
+        r = models.full_query(conn_params, 
+            models.stored_query(request.GET.get('query'),conn_params['dialect']) )
+        if type(r) == dict:
+            return jsonize_result(r)
+        else:
+            return http_500(r)
+    
+    elif query_type == 'table_rpr':
+        conn_params['database'] = request.GET.get('database')
+        sub_q_data = {'database': request.GET.get('database'),}
+        if request.GET.get('schema'):
+            sub_q_data['schema'] = request.GET.get('schema')
+            
+        r = models.full_query(conn_params,
+            models.generate_query(query_type, conn_params['dialect'], sub_q_data)[0] )
+        if type(r) == dict:
+            return jsonize_result(r)
+        else:
+            return http_500(r)
+        
+    elif query_type == 'browse_table':
+        # initializations        
+        sub_q_data = {'table': request.GET.get('table'),'database':request.GET.get('database')}
+        sub_q_data['offset'] = request.GET.get('offset') if request.GET.get('offset') else 0
+        sub_q_data['limit'] = request.GET.get('limit') if request.GET.get('limit') else 100
+        if request.GET.get('schema'):
+            sub_q_data['schema'] = request.GET.get('schema')
+        # retrieve and run queries
+        conn_params['database'] = request.GET.get('database')
+        q = models.generate_query('table_keys', conn_params['dialect'], sub_q_data)[0]
+        keys = models.full_query(conn_params,
+            q )
+        count = models.full_query(conn_params, 
+            models.generate_query('count_rows', conn_params['dialect'], sub_q_data)[0],
+            )['rows'][0][0]
+        r = models.full_query(conn_params,
+            models.generate_query(query_type, conn_params['dialect'], sub_q_data)[0]
+            )
+        # other needed display data
+        if type(r) == dict:
+            r.update({'total_count': count, 'offset': sub_q_data['offset'],
+                      'limit':sub_q_data['limit'], 'keys': keys})
+            return jsonize_result(r)
+        else:
+            return http_500(r)
+        
+    # queries with dissimilar implementations
     elif conn_params['dialect'] == 'postgresql':
         
-        if query_type == 'describe_databases':
-            return SortedDict()
-        
-        elif query_type == 'table_list':
+        if query_type == 'table_list':
             # change default database
             if 'db' in query_data:
                 conn_params['database'] = query_data['db']
@@ -84,32 +133,9 @@ def rpr_query(request, query_type, query_data=None):
             return models.full_query(conn_params,
                 models.stored_query(query_type, conn_params['dialect']))['rows']
 
-        elif query_type == 'user_rpr':
-            r = models.full_query(conn_params,
-                models.stored_query(query_type, conn_params['dialect']))
-            if type(r) == dict:
-                return jsonize_result(r)
-            else:
-                return http_500(r)
-            
-        elif query_type == 'table_rpr':
-            conn_params['database'] = request.GET.get('database')
-            q = models.generate_query(request.GET.get('query'), conn_params['dialect'],request.GET)[0]
-            r = models.full_query(conn_params, q)
-            if type(r) == dict:
-                return jsonize_result(r)
-            else:
-                return http_500(r)
-
-        elif query_type == 'browse_table':
-            conn_params['database'] = request.GET.get('database');
-            count = models.full_query(conn_params, 
-                models.generate_query('count_rows', conn_params['dialect'], {'table': request.GET.get('table')}),
-                )['rows'][0][0]
-            
-            assert False
         else:
             return http_500('query not implemented!')
+            
             
     elif conn_params['dialect'] == 'mysql':
         
@@ -117,41 +143,6 @@ def rpr_query(request, query_type, query_data=None):
             conn_params['database'] = 'INFORMATION_SCHEMA';
             query = models.stored_query(query_type, conn_params['dialect'])
             return models.full_query(conn_params, query)
-        
-        elif query_type == 'user_rpr':
-            conn_params['database'] = 'mysql'
-            q = models.stored_query(request.GET.get('query'),conn_params['dialect'])
-            r = models.full_query(conn_params, q);
-            if type(r) == dict:
-                return jsonize_result(r)
-            else:
-                return http_500(r)
-            
-        elif query_type == 'table_rpr':
-            q = models.generate_query(query_type, conn_params['dialect'], request.GET)[0]
-            r = models.full_query(conn_params, q)
-            if type(r) == dict:
-                return jsonize_result(r)
-            else:
-                return http_500(r)
-            
-        elif query_type == 'browse_table':
-            conn_params['database'] = request.GET.get('database')
-            dbtbl = {'table': request.GET.get('table'),'database':request.GET.get('database')}
-            dbtbl['offset'] = request.GET.get('offset') if request.GET.get('offset') else 0
-            dbtbl['limit'] = request.GET.get('limit') if request.GET.get('limit') else 100
-            count = models.full_query(conn_params, 
-                models.generate_query('count_rows', conn_params['dialect'], dbtbl)[0],
-                )['rows'][0][0]
-            r = models.full_query(conn_params,
-                models.generate_query(request.GET.get('query'), conn_params['dialect'], dbtbl)[0]
-                )
-            # other needed display data
-            r.update({'total_count': count, 'offset': dbtbl['offset'], 'limit':dbtbl['limit']})
-            if type(r) == dict:
-                return jsonize_result(r)
-            else:
-                return http_500(r)
         
         else:
             return http_500('feature not yet implemented!')
@@ -298,6 +289,27 @@ def get_conditions(l):
         conditions.append(d)
     return conditions
 
+def dict_conds(st):
+    '''returns a list of list containing the cond name and cond value'''
+    l = [s.strip() for s in st.split(';')]
+    l_d = []
+    for ii in range(len(l)):
+        ll = l[ii].split('=')
+        l_d.append([ll[0],ll[1]])
+    return l_d
+
+
+def construct_cond(k, v):
+    ''' fix cases where SQL WHERE expects quotes for strings and no quotes for ints and floats'''
+    st = k+'='
+    try:
+        st += int(v)
+    except Exception:
+        try:
+            st += float(v)
+        except Exception:
+            st += '\''+v+'\''
+    return st
 
 def response_shortcut(request, template = False, extra_vars=False ):
     # extra_vars are more context variables
