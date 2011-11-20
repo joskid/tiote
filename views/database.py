@@ -25,19 +25,17 @@ def overview(request):
         if request.GET.get('schema'):
             query_data['schema'] = request.GET.get('schema')
         return functions.rpr_query(request, q , query_data)
-        
-    
+    # new table creation
     if request.method == 'POST':
-        p = request.POST
-        sub_form_count = 0
-        for fi in p:
+        column_count = 0
+        for fi in request.POST:
             if len( fi.split('_') ) == 2:
-                if sub_form_count < int(fi.split('_')[1]):
-                    sub_form_count = int(fi.split('_')[1])
+                if column_count < int(fi.split('_')[1]):
+                    column_count = int(fi.split('_')[1])
         form = TableForm(engines=supported_engines, charsets=charset_list, data=request.POST,
-            sub_form_count=(sub_form_count+1), existing_tables=existing_tables)
+            column_count=(column_count+1), existing_tables=existing_tables)
         if form.is_valid():
-            query_data = {'sub_form_count':(sub_form_count+1), 'db': request.GET['database']}
+            query_data = {'column_count':(column_count+1), 'db': request.GET['database']}
             query_data.update(form.cleaned_data)
             return functions.rpr_query(request, 'create_table',
                 query_data)

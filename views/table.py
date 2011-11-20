@@ -26,8 +26,47 @@ def browse(request):
 
 
 def structure(request):
-    pass
-
+    TableForm = forms.get_dialect_form('TableForm', functions.get_conn_params(request)['dialect'])
+    params = request.GET
+    supported_engines = functions.common_query(request, 'supported_engines')
+    charset_list = functions.common_query(request, 'charset_list')
+    existing_tables = functions.rpr_query(request, 'existing_tables')
+    # column deletion
+    if request.method == 'POST' and request.GET.get('update'):
+        l = request.POST.get('whereToEdit').strip().split(';');
+        conditions = functions.get_conditions(l)
+        q = ''
+        if request.GET.get('update') == 'edit':
+            q = 'drop_table'
+            return HttpResponse('update not yet implemented!')
+        elif request.GET.get('update') == 'delete':
+            q = 'delete_column'
+            query_data = {'db': request.GET.get('database'), 'table': request.GET.get('table'),
+                          'conditions': conditions}
+            
+            return functions.rpr_query(request, q, query_data)
+            
+    # column creation
+    if request.method == 'POST':
+        column_count = 0
+        form = TableForm(engines=supported_engines, charsets=charset_list, data=request.POST, edit=True,
+            column_count=(column_count+1), existing_tables=existing_tables, column_form=True)
+        if form.is_valid():
+            query_data = {'column_count':(column_count+1), 'db': request.GET.get('database'),
+                          'table': request.GET.get('table')}
+            query_data.update(form.cleaned_data)
+            return functions.rpr_query(request, 'create_column', query_data)
+        else:
+            return functions.response_shortcut(request, template='form_errors',
+                extra_vars={'form':form,})
+    else:
+        form = TableForm(engines=supported_engines, charsets=charset_list, edit=True
+            , label_suffix=' ->', existing_tables=existing_tables, column_form=True)
+        
+    return functions.response_shortcut(request, extra_vars={'form': form, 'edit':False,
+        'table_fields': ['name', 'engine', 'charset', 'inherit', 'of_type'],
+        'odd_fields': ['type','key','charset',]}
+    )
 
 
 def insert(request):

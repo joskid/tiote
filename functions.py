@@ -8,58 +8,12 @@ from django.utils.datastructures import SortedDict
 from tiote import models
 
 ajaxKey = ''
-    
-def common_query(request, query_name):
-    conn_params = get_conn_params(request)
-    pgsql_redundant_queries = ['template_list', 'group_list', 'user_list', 'db_list']
-    mysql_redundant_queries = ['db_list','charset_list', 'supported_engines']
-    
-    if conn_params['dialect'] == 'postgresql':
-        if query_name == 'describe_databases':
-            db_list = models.full_query(conn_params, 
-                models.stored_query('db_list', conn_params['dialect']) )
-            dict_db = SortedDict()
-            for db in db_list['rows']:
-                r = rpr_query(request, 'table_list', {'db':db[0]})['rows']
-                d = SortedDict()
-                for tup in r:
-                    if tup[0] not in d:
-                        d[ tup[0] ] = []
-                    d[ tup[0] ].append((tup[1],))
-                dict_db[ db[0] ] = d
-            return json.dumps(dict_db)
-        
-        elif query_name in pgsql_redundant_queries :
-            # this kind of queries require no special attention
-            return models.full_query(conn_params,
-                models.stored_query(query_name, conn_params['dialect']))['rows']
-                
-    elif conn_params['dialect'] == 'mysql':
-        
-        if query_name == 'db_names':
-            db_names =  models.get_databases( get_conn_params(request) )
-            return result_to_json(db_names)
-        
-        elif query_name == 'describe_databases':
-            result = rpr_query(request, query_name)
-            d = SortedDict()
-            for tup in result['rows']:
-                if tup[0] not in d:
-                    d[ tup[0] ] = []
-                d[ tup[0] ].append((tup[1],tup[2]))
-            return json.dumps(d)
-        
-        elif query_name in mysql_redundant_queries :
-            # this kind of queries require no special attention
-            return models.full_query(conn_params,
-                models.stored_query(query_name, conn_params['dialect']))['rows']
-        
         
 def rpr_query(request, query_type, query_data=None):
     conn_params = get_conn_params(request)
     # common queries that returns success state as a dict only
     no_return_queries = ['create_user', 'drop_user', 'create_db','create_table',
-        'drop_table', 'empty_table', 'delete_row']
+        'drop_table', 'empty_table', 'delete_row', 'create_column', 'delete_column']
     
     if query_type in no_return_queries:
         conn_params['database'] = request.GET.get('database') if request.GET.get('database') else conn_params['database']
@@ -79,9 +33,11 @@ def rpr_query(request, query_type, query_data=None):
         else:
             return http_500(r)
     
-    elif query_type == 'table_rpr':
+    elif query_type in ['table_rpr', 'table_structure']:
         conn_params['database'] = request.GET.get('database')
         sub_q_data = {'database': request.GET.get('database'),}
+        if request.GET.get('table'):
+            sub_q_data['table'] = request.GET.get('table')
         if request.GET.get('schema'):
             sub_q_data['schema'] = request.GET.get('schema')
             
@@ -144,12 +100,64 @@ def rpr_query(request, query_type, query_data=None):
             query = models.stored_query(query_type, conn_params['dialect'])
             return models.full_query(conn_params, query)
         
+        elif query_type == 'existing_tables':
+            query_data = {'database':request.GET.get('database')}
+            return models.full_query(conn_params,
+                models.generate_query(query_type, conn_params['dialect'], query_data)[0])['rows']
+
         else:
-            return http_500('feature not yet implemented!')
+            return http_500('query not yet implemented!')
     else:
         return http_500('dialect not supported!')
 
 
+def common_query(request, query_name):
+    conn_params = get_conn_params(request)
+    pgsql_redundant_queries = ['template_list', 'group_list', 'user_list', 'db_list']
+    mysql_redundant_queries = ['db_list','charset_list', 'supported_engines']
+    
+    if conn_params['dialect'] == 'postgresql':
+        if query_name == 'describe_databases':
+            db_list = models.full_query(conn_params, 
+                models.stored_query('db_list', conn_params['dialect']) )
+            dict_db = SortedDict()
+            for db in db_list['rows']:
+                r = rpr_query(request, 'table_list', {'db':db[0]})['rows']
+                d = SortedDict()
+                for tup in r:
+                    if tup[0] not in d:
+                        d[ tup[0] ] = []
+                    d[ tup[0] ].append((tup[1],))
+                dict_db[ db[0] ] = d
+            return json.dumps(dict_db)
+        
+        elif query_name in pgsql_redundant_queries :
+            # this kind of queries require no special attention
+            return models.full_query(conn_params,
+                models.stored_query(query_name, conn_params['dialect']))['rows']
+                
+    elif conn_params['dialect'] == 'mysql':
+        
+        if query_name == 'db_names':
+            db_names =  models.get_databases( get_conn_params(request) )
+            return result_to_json(db_names)
+        
+        elif query_name == 'describe_databases':
+            result = rpr_query(request, query_name)
+            d = SortedDict()
+            for tup in result['rows']:
+                if tup[0] not in d:
+                    d[ tup[0] ] = []
+                d[ tup[0] ].append((tup[1],tup[2]))
+            return json.dumps(d)
+        
+        elif query_name in mysql_redundant_queries :
+            # this kind of queries require no special attention
+            return models.full_query(conn_params,
+                models.stored_query(query_name, conn_params['dialect']))['rows']
+        
+        
+        
 # returns page templates for each view
 def skeleton(which, section=None ):
     s = section+'/' if section != None else ''
@@ -250,13 +258,15 @@ def get_home_variables(request):
             return http_500(result)
     
     
-def make_choices(choices, begin_empty=False):
-    ret = [] if begin_empty else [('', ''),]
+def make_choices(choices, begin_empty=False, begin_value='', append_label=''):
+    ret = [] if begin_empty else [('',
+                        begin_value if begin_value else ''),]
     for i in range( len(choices) ):
         if type(choices[i]) == str or type(choices[i])== int:
             ret.append( (choices[i], choices[i]) )
         elif type(choices[i]) == tuple or type(choices[i]) == list:
-            ret.append( (choices[i][0], choices[i][0]) )
+            ret.append( (choices[i][0],
+                append_label+' '+choices[i][0] if append_label else choices[i][0]) )
     return ret
 
 def site_proc(request):
@@ -319,5 +329,7 @@ def response_shortcut(request, template = False, extra_vars=False ):
     )
     if extra_vars:
         context.update(extra_vars)
-    return HttpResponse(template.render(context))
-
+    h =  HttpResponse(template.render(context))
+    if template == 'form_errors':
+        h.set_cookie('tt_formContainsErrors','true')
+    return h

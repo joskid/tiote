@@ -162,7 +162,7 @@ class pgsqlUserForm(forms.BaseForm):
 # table and columns creation form
 class pgsqlTableForm(forms.BaseForm):
     
-    def __init__(self, engines=None, charsets=None, edit=False, sub_form_count=1,
+    def __init__(self, engines=None, charsets=None, edit=False, column_count=1, column_form=False,
         existing_tables = None, **kwargs):
         f = SortedDict()
         wdg = forms.Select(attrs={}) if existing_tables else forms.Select
@@ -178,7 +178,7 @@ class pgsqlTableForm(forms.BaseForm):
                 required = False, widget = wdg
                 )
         # variable number of columns
-        for i in range( sub_form_count ):
+        for i in range( column_count ):
             fi = str(i)
             f['name_'+fi] = forms.CharField(
                 widget=forms.TextInput(attrs={'class':'required'}),
@@ -219,7 +219,7 @@ class pgsqlTableForm(forms.BaseForm):
     
 class mysqlTableForm(forms.BaseForm):
     
-    def __init__(self, engines=None, charsets=None, edit=False, sub_form_count=1,
+    def __init__(self, engines=None, charsets=None, edit=False, column_count=1, column_form=False,
         existing_tables = None, **kwargs):
         f = SortedDict()
         engine_list = []
@@ -239,55 +239,63 @@ class mysqlTableForm(forms.BaseForm):
                 choices = functions.make_choices( engine_list ),
                 initial = default_engine
             )
-        # variable amount of sub_form_count
+        # variable amount of column_count
         # field label's are directly tied to the corresponding template
-        for i in range( sub_form_count ):
-            fi = str(i)
-            f['name_'+fi] = forms.CharField(
+        for i in range( column_count ):
+            sfx = '_' + str(i)
+            f['name'+sfx] = forms.CharField(
                 widget=forms.TextInput(attrs={'class':'required'}),
                 label = 'name')
-            f['type_'+fi] = forms.ChoiceField(
+            f['type'+sfx] = forms.ChoiceField(
                 choices = functions.make_choices(mysql_types),
-                widget = forms.Select(attrs={'class':'required needs-values select_requires:values_'
-                    +str(i)+':set|enum select_requires:size_'+str(i)+':varchar'}),
+                widget = forms.Select(attrs={'class':'required needs-values select_requires:values'
+                    +sfx+':set|enum select_requires:size'+sfx+':varchar'}),
                 initial = 'varchar',
                 label = 'type',
             )
-            f['values_'+fi] = forms.CharField(
+            f['values'+sfx] = forms.CharField(
                 label = 'values', required = False, 
                 help_text="Enter in the format: ('yes','false')",
             )
-            f['size_'+fi] = forms.IntegerField(
+            f['size'+sfx] = forms.IntegerField(
                 widget=forms.TextInput(attrs={'class':'validate-integer'}),
                 label = 'size', required=False, )
-            f['key_'+fi] = forms.ChoiceField(
+            f['key'+sfx] = forms.ChoiceField(
                 required = False,
                 widget = forms.Select(attrs={'class':'even'}),
                 choices = functions.make_choices(mysql_key_choices),
                 label = 'key',
             )
-            f['default_'+fi] = forms.CharField(
+            f['default'+sfx] = forms.CharField(
                 required = False,
                 label = 'default',
                 widget=forms.TextInput
             )
-            f['charset_'+fi] = forms.ChoiceField(
+            f['charset'+sfx] = forms.ChoiceField(
                 choices = functions.make_choices(charsets), 
                 initial='latin1',
                 label = 'charset',
                 widget=forms.Select(attrs={'class':'required'})
             )
-            f['other_'+fi] = forms.MultipleChoiceField(
+            f['other'+sfx] = forms.MultipleChoiceField(
                 choices = functions.make_choices(mysql_other_choices, True),
                 widget = forms.CheckboxSelectMultiple(attrs={'class':'occupy'}),
                 required = False,
                 label = 'other',
             )
+        if column_form:
+            f['insert_position'] = forms.ChoiceField(
+                choices = functions.make_choices(['at the end of the table', 'at the beginining'], True)
+                    + functions.make_choices(existing_tables,False,'--------','after'),
+                label = 'insert this column',
+                initial = 'at the end of the table',
+                widget = forms.Select(attrs={'class':'required'}),
+            )
         # complete form creation process
         self.base_fields = f
         forms.BaseForm.__init__(self, **kwargs)
-   
- 
+
+
 class LoginForm(forms.Form):
     
     database_choices = ( ('', 'select database driver'),('postgresql', 'PostgreSQL'), ('mysql', 'MySQL'))

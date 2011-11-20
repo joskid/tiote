@@ -221,20 +221,22 @@ Page = new Class({
                     $('tt-content').set('html', viewData['text']);
                     // further individual page processing
                     if ( data['view'] == 'users') {
-                        self.updateUserView();
+                        self.userView();
                     } else {
                         self.completeForm();
                     }
                 } else if (data['section'] == 'database'){
                     $('tt-content').set('html', viewData['text']);
                     if (data['view'] == 'overview') {
-                        self.completeOverview();
+                        self.overviewView();
                     }
                 } else if (data['section'] == 'table'){
                     $('tt-content').set('html', viewData['text']);
                     if (data['view'] == 'browse'){
-                        self.completeBrowseView();
-                    }
+                        self.browseView();
+                    } else if (data['view'] == 'structure') {
+						self.structureView();
+					}
                 }
                 runXHRJavascript();
             }
@@ -243,30 +245,64 @@ Page = new Class({
 	},
 	
     
-    completeBrowseView: function(){
+	structureView: function(){
+		// varchar and set formats
+        var updateSelectNeedsValues = function(){
+            $$('#tt_form .compact-form select.needs-values').each(function(item){
+                item.addEvent('change', function(e){
+                    if (e.target.value == 'set' || e.target.value == 'enum')
+                        e.target.getParent('table').getElements('.values-needed').removeClass('hidden');
+                    else
+                        e.target.getParent('table').getElements('.values-needed').addClass('hidden');
+                });
+            });
+        }
+		
+		console.log('structureView()!');
+        this.loadTable('table_structure', 'representation',
+			{'height': getWindowHeight() * .45, 'with_checkboxes':true})
+		window.addEvent('resize', function(){
+			$(this.data_table).setStyle('height', 'auto')
+			$(this.data_table).setStyle('max-height', getWindowHeight() * .45);
+		});
+		
+		this.loadTableOptions('data');
+        updateSelectNeedsValues();
+        this.completeForm();
+	},
+	
+	
+    browseView: function(){
 		var height = getWindowHeight() - 88;
 		var resizeTable = function(){
 			height = getWindowHeight() - 88;
-			document.getElement('table.sql').setStyle('height', height);
-			document.getElement('#sidebar').setStyle('height', height);
+			$(this.data_table).setStyle('height', height);
+			$('sidebar').setStyle('max-height', height);
+			$(this.data_table).setStyle('max-height', height);
 		}
-		
+		// heights
         this.loadTable('browse_table','representation',{},{'height':height});
-		document.getElement('#sidebar').setStyle('height', height);
-		
+		$('sidebar').setStyle('max-height', height);
+
 		window.addEvent('resize', function(){
 			resizeTable();
 		});
+		
+		window.addEvent('unload', function(){
+			console.log('window unloads()!');
+		})
     },
     
     
-    completeOverview: function(){
-        console.log('completeOverviewView()!');
+    overviewView: function(){
+        console.log('overviewView()!');
 		var h = getWindowHeight() * .45;
-        this.loadTable('table_rpr', 'representation',{'height': h, 'with_checkboxes':true})
+        this.loadTable('table_rpr', 'representation',
+			{'height': h, 'with_checkboxes':true})
 		window.addEvent('resize', function(){
-			console.log('widow resize');
-			$(data_table).setStyle('height', h);
+			h = getWindowHeight() * .45;
+			$(this.data_table).setStyle('height', 'auto');
+			$(this.data_table).setStyle('max-height', h);
 		});
         // varchar and set formats
         var updateSelectNeedsValues = function(){
@@ -345,10 +381,18 @@ Page = new Class({
         this.completeForm();
     },
 
-	updateUserView: function(){
-		console.log('updateUserView() called!');
+
+	userView: function(){
+		console.log('userView() called!');
 		// xhr request users table and load it
-		this.loadTable('user_rpr','representation',{'with_checkboxes':true},{});
+		var h = getWindowHeight() * .45;
+		this.loadTable('user_rpr','representation',
+			{'height': h, 'with_checkboxes':true},{});
+		window.addEvent('resize', function(){
+			h = getWindowHeight() * .45;
+			$(this.data_table).setStyle('height', 'auto');
+			$(this.data_table).setStyle('max-height', h);
+		});
 		this.loadTableOptions('user')
 		// hide some elmts
 		var sbls_1 = []; var sbls_2 = [];
@@ -422,9 +466,8 @@ Page = new Class({
     
     
 	loadTableOptions: function(opt_type){
-		
 		var get_where = function(){
-			var w = ''
+			var w = '';
 			if (location.hash.replace('#','').parseQueryString(false, true)['view'] == 'browse')
 				w = generate_where_using_pk(data_table)
 			else
@@ -531,6 +574,7 @@ Page = new Class({
     
     
 	completeForm : function(){
+		console.log('completeForm()!');
         var form_name = 'tt_form';
 		var form = $(form_name);
 		var undisplayed_result = $('undisplayed_result');
@@ -595,7 +639,7 @@ Page = new Class({
                         $('msg-placeholder').adopt($(undisplayed_result).getChildren());
                         Cookie.dispose('tt_formContainsErrors');
                     } else {
-                        resp = JSON.decode( result_holder.childNodes[0].nodeValue)
+                        var resp = JSON.decode( result_holder.childNodes[0].nodeValue)
                         if (resp.status == 'failed') {
                             showDialog('Error!', resp.msg, {'overlayClick':false});
                         } else {

@@ -197,72 +197,50 @@ WHERE table_catalog='{database}' AND table_schema='{schema}' AND table_name='{ta
                 q += " CHARACTER SET {charset}".format(**query_data)
             return (q, )
         
+        elif query_type == 'create_column':
+            queries = []
+            d = {'primary':'PRIMARY KEY', 'unique':'UNIQUE', 'index':"INDEX"}
+            q0 = "ALTER TABLE {db}.{table} ADD" + col_defn(query_data, str(0))
+            q0 = q0.format(**query_data)
+            queries.append(q0)
+            # handle key
+            if query_data['key_0']:
+                q1 = "ALTER TABLE {table} ADD "+d[ query_data['key_0'] ] +'('+query_data['name_0']+')'
+                queries.append(q1.format(**query_data))
+            return queries
+            
+        elif query_type == 'delete_column':
+            queries = []
+            q_sfx = "ALTER TABLE {db}.{table} DROP ".format(**query_data)
+            for cond in query_data['conditions']:
+                queries.append(q_sfx + cond['field'])
+            return queries
+        
         elif query_type == 'create_table':
             q = "CREATE TABLE `{db}`.`{name}`".format(**query_data)
             
-            sub_form_count = query_data.pop('sub_form_count')
-            if sub_form_count != 0:
+            column_count = query_data.pop('column_count')
+            if column_count != 0:
                 q += ' ('
-                l_primary = []
-                l_index = []
-                l_unique = []
-                for fi in range(sub_form_count):
+                d_indexes = {}
+                for fi in range(column_count):
+                    # store keys for later inclusion
                     if query_data['key_'+str(fi)]:
-                        if query_data['key_'+str(fi)] == 'primary':
-                            l_primary.append( query_data['name_'+str(fi)] )
-                        elif query_data['key_'+str(fi)] == 'unique':
-                            l_unique.append( query_data['name_'+str(fi)] )
-                        elif query_data['key_'+str(fi)] == 'index':
-                            l_index.append( query_data['name_'+str(fi)] )
-                    sub_q = ' {name_'+str(fi)+'} {type_'+str(fi)+'}'
-                    # types with binary
-                    if query_data['type_'+str(fi)] in ['tinytext','text','mediumtext','longtext']:
-                        sub_q += ' BINARY' if 'binary' in query_data['other_'+str(fi)] else ''
-                    # types with length
-                    if query_data['type_'+str(fi)] in ['bit','tinyint','smallint','mediumint','int','integer','bigint',
-                                      'real','double','float','decimal','numeric','char','varchar',
-                                      'binary','varbinary']:
-                        sub_q += '({size_'+str(fi)+'})' if query_data['size_'+str(fi)] else ''
-                    # types with unsigned
-                    if query_data['type_'+str(fi)] in ['tinyint','smallint','mediumint','int','integer','bigint',
-                                      'real','double','float','decimal','numeric']:
-                        sub_q += ' UNSIGNED' if 'unsigned' in query_data['other_'+str(fi)] else ''
-                    # types needing values
-                    if query_data['type_'+str(fi)] in ['set','enum']:
-                        sub_q += ' {values_'+str(fi)+'}' if query_data['values_'+str(fi)] else ''
-                    # types needing charsets
-                    if query_data['type_'+str(fi)] in ['char','varchar','tinytext','text',
-                                            'mediumtext','longtext','enum','set']:
-                        sub_q += ' CHARACTER SET {charset_'+str(fi)+'}'
-                    # some options
-                    sub_q += ' NOT NULL' if 'not null' in query_data['other_'+str(fi)] else ' NULL'
-                    s_d = query_data['default_'+str(fi)]
-                    if s_d:
-                        if query_data['type_'+str(fi)] not in ['tinyint','smallint','mediumint','int','integer','bigint',
-                                          'bit','real','double','float','decimal','numeric']:
-                            sub_q += ' DEFAULT \''+s_d+'\''
-                        else:
-                            sub_q += ' DEFAULT '+s_d+''
-#                    sub_q += ' DEFAULT {default_'+str(fi)+'}' if query_data['default_'+str(fi)] else ''
-                    sub_q += ' AUTO_INCREMENT' if 'auto increment' in query_data['other_'+str(fi)] else ''
+                        d = {'primary':'PRIMARY KEY', 'unique':'UNIQUE', 'index':"INDEX"}
+                        if d_indexes.keys().count( d[ query_data['key_'+str(fi)] ] ) == 0:
+                            d_indexes[ d[ query_data['key_'+str(fi)] ] ] = []
+                        d_indexes[ d[ query_data['key_'+str(fi)] ] ].append( query_data['name_'+str(fi)] )
+                    sub_q = col_defn(query_data, str(fi))
                     # append to query
-                    q += sub_q if fi == sub_form_count-1 else sub_q + ','
-            
+                    q += sub_q if fi == column_count-1 else sub_q + ','
                 # handle keys: primary, index and unique
-                if l_index:
-                    sub_q = ', INDEX ('
-                    for i in range(len(l_index)):
-                        sub_q += ' '+l_index[i] +')' if i == len(l_index) - 1 else ' '+l_index[i]+','
+                if d_indexes:
+                    for index in d_indexes:
+                        sub_q = ', '+index+' ('
+                        for i in range( len(d_indexes[index]) ):
+                            sub_q += ' ' + d_indexes[index][i] + ')' if i == len(d_indexes[index]) - 1 else ' ' + d_indexes[index][i] + ','
                         q += sub_q
-                if l_unique:
-                    sub_q = ', UNIQUE ('
-                    for i in range(len(l_unique)):
-                        sub_q += ' '+l_unique[i] +')' if i == len(l_unique) - 1 else ' '+l_unique[i]+','
-                        q += sub_q
-                if l_primary:
-                    sub_q = ', PRIMARY KEY ('+l_primary[0]+')'
-                    q += sub_q
-            q += ')' if sub_form_count != 0 else ''
+            q += ')' if column_count != 0 else ''
             q += " CHARACTER SET {charset} ENGINE {engine}"
             q = q.format(**query_data)
             return (q, )
@@ -314,13 +292,55 @@ WHERE table_catalog='{database}' AND table_schema='{schema}' AND table_name='{ta
             return (q0,)
         
         elif query_type == 'table_keys':
-            
             q0 = "SELECT CONSTRAINT_NAME, COLUMN_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE \
                 WHERE TABLE_SCHEMA='{database}' AND TABLE_NAME='{table}' AND CONSTRAINT_NAME='PRIMARY'".format(**query_data)
             return (q0, )
-        else:
-            return None
+        
+        elif query_type == 'table_structure':
+            q0 = "DESCRIBE {database}.{table}".format(**query_data)
+            return (q0, )
+        
+        elif query_type == 'existing_tables':
+            q0 = "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='{database}'".format(**query_data)
+            return (q0, )
 
+
+def col_defn(col_data, sfx):
+    '''used with iterations, sfx = str(i) where i is index of current iterations
+    returns individual column creation statement; excludes indexes and keys '''
+    
+    sub_q = ' {name_'+sfx+'} {type_'+sfx+'}'
+    # types with binary
+    if col_data['type_'+sfx] in ['tinytext','text','mediumtext','longtext']:
+        sub_q += ' BINARY' if 'binary' in col_data['other_'+sfx] else ''
+    # types with length
+    if col_data['type_'+sfx] in ['bit','tinyint','smallint','mediumint','int','integer','bigint',
+                      'real','double','float','decimal','numeric','char','varchar',
+                      'binary','varbinary']:
+        sub_q += '({size_'+sfx+'})' if col_data['size_'+sfx] else ''
+    # types with unsigned
+    if col_data['type_'+sfx] in ['tinyint','smallint','mediumint','int','integer','bigint',
+                      'real','double','float','decimal','numeric']:
+        sub_q += ' UNSIGNED' if 'unsigned' in col_data['other_'+sfx] else ''
+    # types needing values
+    if col_data['type_'+sfx] in ['set','enum']:
+        sub_q += ' {values_'+sfx+'}' if col_data['values_'+sfx] else ''
+    # types needing charsets
+    if col_data['type_'+sfx] in ['char','varchar','tinytext','text',
+                            'mediumtext','longtext','enum','set']:
+        sub_q += ' CHARACTER SET {charset_'+sfx+'}'
+    # some options
+    sub_q += ' NOT NULL' if 'not null' in col_data['other_'+sfx] else ' NULL'
+    s_d = col_data['default_'+sfx]
+    if s_d:
+        if col_data['type_'+sfx] not in ['tinyint','smallint','mediumint','int','integer','bigint',
+                          'bit','real','double','float','decimal','numeric']:
+            sub_q += ' DEFAULT \''+s_d+'\''
+        else:
+            sub_q += ' DEFAULT '+s_d+''
+#                    sub_q += ' DEFAULT {default_'+sfx+'}' if col_data['default_'+sfx] else ''
+    sub_q += ' AUTO_INCREMENT' if 'auto increment' in col_data['other_'+sfx] else ''
+    return sub_q
 
 
 def full_query(conn_params, query):
