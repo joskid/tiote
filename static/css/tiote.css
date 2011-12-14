@@ -1,3 +1,33 @@
+#sidebar h6 {
+     color: #AAAAAA;
+     font-size: 14px;
+     font-weight: normal;
+     line-height: 18px;
+     text-transform: lowercase;
+}
+#sidebar h6 {
+padding-bottom: 0px;
+margin: 5px 0px 5px 0px;
+}
+#sidebar select {
+    width: 180px;
+}
+#sidebar ul {
+     font-size: 12px;
+     list-style-type: none;
+     margin: 0pt 0pt 0pt 10px;
+}
+
+#sidebar ul a { color: #777777; }
+#sidebar ul li.active { font-weight: bold;}
+.icon-table{ background: url('../img/table.png') no-repeat;}
+.icon-databases{ background: url('../img/databases.png') no-repeat;}
+.icon-database{	background: url('../img/database.png') no-repeat;}
+.icon-schemas{ background: url('../img/schemas.png') no-repeat; }
+.icon-schemas, .icon-databases, .icon-table, .icon-database {
+	padding: 0px 0px 10px 20px;
+	vertical-align: middle;
+}
 a:hover {
     color: #404040;
     text-decoration: none;
@@ -7,17 +37,21 @@ a:hover {
     padding-right: 10px;
 }
 .tt-content {
-    border-left: 1px solid #DDDDDD;
-    float: none;
-    margin-left: 200px;
-    max-width: 1180px;
-    min-width: 700px;
-    padding: 0 10px 0 20px;
+     float: none;
+     margin: 10px 0px 0px 200px;
+     max-width: 1180px;
+     min-width: 700px;
+     padding: 0pt 10px 0pt 15px;
 }
+
 #sidebar {
-    overflow-x: hidden;
-    overflow-y: auto;
-    width: 200px;
+     background: none repeat scroll 0pt 0pt #EFEFEF;
+     border-right: 1px solid #DDDDDD;
+     margin: 40px 0px 0px -20px;
+     overflow: auto;
+     padding: 10px 0px 0px 10px;
+     position: fixed;
+     width: 200px;
 }
 #sidebar ul {
     margin-bottom: 0;
@@ -81,6 +115,7 @@ table.sql thead th {
     max-width: 300px;
     min-width: 150px;
     padding: 2px;
+	text-align: center;
 }
 table.sql thead div span {
     margin: 0;
@@ -115,7 +150,7 @@ input[type="text"], textarea, select {
     font-size: 12px;
 }
 h5.heading {
-    margin-bottom: 20px;
+    margin-bottom: 10px;
     text-transform: uppercase;
 }
 .heading {
@@ -151,4 +186,8 @@ div.validation-advice {
 }
 .hidden {
     display: none;
+}
+fieldset {
+	margin-bottom: 0px;
+	padding-top: 0px;
 }
