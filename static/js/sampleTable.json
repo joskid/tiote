@@ -1,5 +1,5 @@
 {
-    'var thead_rows' : ['link_id', 'link_url', 'link_name', 'link_image', 'link_target', 'link_description'],
+    'thead_rows' : ['link_id', 'link_url', 'link_name', 'link_image', 'link_target', 'link_description'],
     'tbody_rows' : [
         ['1', 'http://codex.widow.org/', 'Documentation','','',''],
         ['2', 'http://widow.org/news', 'widow Blog','','',''],

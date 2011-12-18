@@ -1,8 +1,9 @@
-import datetime
-# sqlaclehemy modules
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine.url import URL
-from sqlalchemy.exceptions import OperationalError, ProgrammingError, DatabaseError
+from sqlalchemy.exceptions import OperationalError, ProgrammingError, \
+    DatabaseError
+import datetime
+# sqlaclehemy modules
 
 def stored_query(query, dialect):
     # db of stored queries
@@ -11,20 +12,20 @@ def stored_query(query, dialect):
             'variables':
                 "SHOW server_version",
             'template_list':
-                "SELECT datname FROM pg_database",
+                "SELECT datname FROM pg_catalog.pg_database",
             'group_list':
-                "SELECT rolname FROM pg_roles WHERE rolcanlogin=False",
+                "SELECT rolname FROM pg_catalog.pg_roles WHERE rolcanlogin=False",
             'db_list':
-                "SELECT datname FROM pg_database WHERE datistemplate = 'f';",
-            'user_rpr': 
-                "SELECT rolname, rolcanlogin, rolsuper, rolinherit, rolvaliduntil FROM pg_roles",
+                "SELECT datname FROM pg_catalog.pg_database WHERE datistemplate = 'f' ORDER BY datname ASC;",
+            'user_rpr':
+                "SELECT rolname, rolcanlogin, rolsuper, rolinherit, rolvaliduntil FROM pg_catalog.pg_roles",
             'user_list':
-                "SELECT rolname FROM pg_roles",
+                "SELECT rolname FROM pg_catalog.pg_roles",
             'table_list':
-                "SELECT schemaname, tablename FROM pg_tables ORDER BY schemaname DESC",
-            'existing_tables':
-                "SELECT tablename FROM pg_tables WHERE \
-                NOT schemaname='information_schema' AND NOT schemaname='pg_catalog'",
+                "SELECT schemaname, tablename FROM pg_catalog.pg_tables ORDER BY schemaname DESC",
+            'schema_list':
+                "SELECT schema_name, schema_owner FROM information_schema.schemata \
+WHERE schema_name NOT LIKE '%pg_toast%' AND schema_name NOT LIKE '%pg_temp%'"
         },
 
         'mysql': {
@@ -81,6 +82,7 @@ def generate_query(query_type, dialect='postgresql', query_data=None):
 #                queries.append(q1)
             queries = (q0, )
             return queries
+        
         elif query_type == 'drop_user':
             queries = []
             for cond in query_data:
@@ -104,44 +106,71 @@ def generate_query(query_type, dialect='postgresql', query_data=None):
             return (q, )
         
         elif query_type == 'count_rows':
-            added_q0 = 'information_schema.' if query_data['schema'] =='information_schema' else ''
-            q0 = "SELECT count(*) FROM "+added_q0+"{table}".format(**query_data)
+            q0 = "SELECT count(*) FROM {schema}.{table}".format(**query_data)
             return (q0,)
         
         elif query_type == 'browse_table':
-            added_q0 = 'information_schema.' if query_data['schema'] =='information_schema' else ''
-            q0 = "SELECT * FROM "+added_q0+"{table} LIMIT {limit} OFFSET {offset}".format(**query_data)
+            q0 = "SELECT * FROM {schema}.{table} LIMIT {limit} OFFSET {offset}".format(**query_data)
             return (q0,)
         
         elif query_type == 'delete_row':
             queries = []
+            sch = query_data.pop('schema')
             for whereCond in query_data['conditions']:
-                added_q0 = 'information_schema.' if query_data['schema'] == 'information_schema' else ''
-                q0 = "DELETE FROM "+added_q0+"{table}".format(**query_data) + " WHERE "+whereCond
+                q0 = "DELETE FROM "+sch+".{table}".format(**query_data) + " WHERE "+whereCond
                 queries.append(q0)
             return tuple(queries)
         
         elif query_type == 'table_keys':
-            q0 = "SELECT constraint_name, column_name FROM information_schema.key_column_usage \
-WHERE table_catalog='{database}' AND table_schema='{schema}' AND table_name='{table}'\
- AND constraint_name like '%_pkey%'".format(**query_data)
+            q0 = "SELECT kcu.column_name, kcu.constraint_name, tc.constraint_type \
+FROM information_schema.key_column_usage AS kcu LEFT OUTER JOIN information_schema.table_constraints \
+AS tc on (kcu.constraint_name = tc.constraint_name) WHERE kcu.table_name='{table}' \
+AND kcu.table_schema='{schema}' AND kcu.table_catalog='{database}'".format(**query_data)
             return (q0,)
+        
+        elif query_type == 'primary_keys':
+            q0 = "SELECT kcu.column_name, kcu.constraint_name, tc.constraint_type \
+FROM information_schema.key_column_usage AS kcu LEFT OUTER JOIN information_schema.table_constraints \
+AS tc on (kcu.constraint_name = tc.constraint_name) WHERE kcu.table_name='{table}' \
+AND kcu.table_schema='{schema}' AND kcu.table_catalog='{database}' AND \
+(tc.constraint_type='PRIMARY KEY' OR tc.constraint_type='UNIQUE')".format(**query_data)
+            return (q0, )
         
         elif query_type == 'drop_table':
             queries = []
-            db = query_data.pop('db')
+            sch = query_data.pop('schema')
             for where in query_data['conditions']:
-                added_q0 = 'information_schema.' if query_data['schema'] == 'information_schema' else ''
-                queries.append( "DROP TABLE "+added_q0+"{table_name}".format(**where))
+                queries.append( "DROP TABLE "+sch+".{table_name}".format(**where))
             return tuple(queries)
         
         elif query_type == 'empty_table':
             queries = []
-            db = query_data.pop('db')
+            sch = query_data.pop('schema')
             for where in query_data['conditions']:
-                added_q0 = 'information_schema.' if query_data['schema'] == 'information_schema' else ''
-                queries.append( "TRUNCATE "+added_q0+"{table_name}".format(**where) )
+                queries.append( "TRUNCATE "+sch+".{table_name}".format(**where) )
             return queries
+        
+        elif query_type == 'existing_columns':
+            q0 = "SELECT column_name FROM information_schema.columns WHERE \
+table_catalog='{database}' AND table_schema='{schema}' AND table_name='{table}'".format(**query_data)
+            return (q0, )
+        
+        elif query_type == 'table_structure':
+            q0 = "SELECt column_name as column, data_type as type, is_nullable as null, \
+column_default as default, character_maximum_length, numeric_precision, numeric_scale, \
+datetime_precision, interval_type, interval_precision FROM information_schema.columns \
+WHERE table_catalog='{database}' AND table_schema='{schema}' AND table_name='{table}' ".format(**query_data)
+            return (q0, )
+        
+        elif query_type == 'table_with_columns':
+            q0 = "SELECT table_name, column_name FROM information_schema.columns WHERE \
+table_catalog='{database}' AND table_schema='{schema}'".format(**query_data)
+            return (q0, )
+        
+        elif query_type == 'existing_tables':
+            q0 = "SELECT table_name FROM information_schema.tables WHERE table_schema='{schema}'".format(**query_data)
+            return (q0, )
+        
         
     elif dialect == 'mysql': # mysql-only statements
 
@@ -200,8 +229,13 @@ WHERE table_catalog='{database}' AND table_schema='{schema}' AND table_name='{ta
         elif query_type == 'create_column':
             queries = []
             d = {'primary':'PRIMARY KEY', 'unique':'UNIQUE', 'index':"INDEX"}
-            q0 = "ALTER TABLE {db}.{table} ADD" + col_defn(query_data, str(0))
+            q0 = "ALTER TABLE {database}.{table} ADD" + col_defn(query_data, str(0))
             q0 = q0.format(**query_data)
+            # handle column placement
+            if query_data['insert_position'] == 'at the beginning':
+                q0 += ' FIRST'
+            elif query_data['insert_position'].count('after '):
+                q0 += ' AFTER ' + query_data['insert_position'].split(' ')[1].strip()
             queries.append(q0)
             # handle key
             if query_data['key_0']:
@@ -211,13 +245,13 @@ WHERE table_catalog='{database}' AND table_schema='{schema}' AND table_name='{ta
             
         elif query_type == 'delete_column':
             queries = []
-            q_sfx = "ALTER TABLE {db}.{table} DROP ".format(**query_data)
+            q_sfx = "ALTER TABLE {database}.{table} DROP ".format(**query_data)
             for cond in query_data['conditions']:
                 queries.append(q_sfx + cond['field'])
             return queries
         
         elif query_type == 'create_table':
-            q = "CREATE TABLE `{db}`.`{name}`".format(**query_data)
+            q = "CREATE TABLE `{database}`.`{name}`".format(**query_data)
             
             column_count = query_data.pop('column_count')
             if column_count != 0:
@@ -247,20 +281,19 @@ WHERE table_catalog='{database}' AND table_schema='{schema}' AND table_name='{ta
         
         elif query_type == 'drop_table':
             queries = []
-            db = query_data.pop('db')
+            db = query_data.pop('database')
             for where in query_data['conditions']:
                 queries.append( "DROP TABLE "+db+".{table_name}".format(**where))
             return tuple(queries)
         
         elif query_type == 'empty_table':
             queries = []
-            db = query_data.pop('db')
             for where in query_data['conditions']:
-                queries.append( "TRUNCATE "+db+".{table_name}".format(**where) )
+                queries.append( "TRUNCATE "+query_data['database']+".{table_name}".format(**where) )
             return queries
         
         elif query_type == 'column_list':
-            return ("SELECT column_name FROM information_schema.columns WHERE table_schema='{db}' AND table_name='{table}")
+            return ("SELECT column_name FROM information_schema.columns WHERE table_schema='{database}' AND table_name='{table}")
         
         elif query_type == 'drop_user':
             queries = []
@@ -292,8 +325,20 @@ WHERE table_catalog='{database}' AND table_schema='{schema}' AND table_name='{ta
             return (q0,)
         
         elif query_type == 'table_keys':
-            q0 = "SELECT CONSTRAINT_NAME, COLUMN_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE \
-                WHERE TABLE_SCHEMA='{database}' AND TABLE_NAME='{table}' AND CONSTRAINT_NAME='PRIMARY'".format(**query_data)
+#            q0 = "SELECT CONSTRAINT_NAME, COLUMN_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE \
+#                WHERE TABLE_SCHEMA='{database}' AND TABLE_NAME='{table}' AND CONSTRAINT_NAME='PRIMARY'".format(**query_data)
+#                
+            q0 = "SELECT DISTINCT kcu.column_name, kcu.constraint_name, tc.constraint_type \
+from information_schema.key_column_usage as kcu, information_schema.table_constraints as tc WHERE \
+kcu.constraint_name = tc.constraint_name AND kcu.table_schema='{database}' AND tc.table_schema='{database}'".format(**query_data)
+            return (q0, )
+        
+        elif query_type == 'primary_keys':
+            q0 = "SELECT DISTINCT kcu.column_name, kcu.constraint_name, tc.constraint_type \
+from information_schema.key_column_usage as kcu, information_schema.table_constraints as tc WHERE \
+kcu.constraint_name = tc.constraint_name AND kcu.table_schema='{database}' AND tc.table_schema='{database}' \
+AND kcu.table_name='{table}' AND tc.table_name='{table}' \
+AND (tc.constraint_type='PRIMARY KEY' OR tc.constraint_type='UNIQUE')".format(**query_data)
             return (q0, )
         
         elif query_type == 'table_structure':
@@ -302,6 +347,15 @@ WHERE table_catalog='{database}' AND table_schema='{schema}' AND table_name='{ta
         
         elif query_type == 'existing_tables':
             q0 = "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='{database}'".format(**query_data)
+            return (q0, )
+        
+        elif query_type == 'existing_columns':
+            q0 = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='{database}' AND TABLE_NAME='{table}'".format(**query_data)
+            return (q0, )
+        
+        elif query_type == 'table_with_columns':
+            q0 = "SELECT table_name, column_name FROM information_schema.columns WHERE \
+table_schema='{database}'".format(**query_data)
             return (q0, )
 
 

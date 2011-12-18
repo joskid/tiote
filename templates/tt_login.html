@@ -39,7 +39,15 @@
 	</form>
 </div>
 <div id="undisplayed_result" style="display:none"></div>
-<script type="text/javascript" ajaxKey='{{ajaxKey}}' charset="utf-8">            
+<script type="text/javascript" ajaxKey='{{ajaxKey}}' charset="utf-8">
+	// give focus to username field
+	window.addEvent('domready', function(){
+		$('id_username').focus();
+	});
+	// form validation
+	var form_validator = new Form.Validator.Inline($('tt_form'), {
+		'evaluateFieldsOnBlur':false, 'evaluateFieldsOnChange': false}
+		);
 </script>
 {% endblock %}
 

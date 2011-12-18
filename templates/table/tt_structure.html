@@ -11,13 +11,20 @@
 				<table class='compact-form' style='margin-top:-10px;'><tbody>
 			  	{% for field in form %}
 			  		{% if field.name == 'insert_position' %}{% else %}
-			    	{% if field.label == 'values' or field.label == 'references' %}
+			  		{% if field.label in foreign_key_fields %}
+			  			{% if field.label not in odd_fields %}
+			  			<tr class='hidden foreign-fields-needed'><td>{{field.label_tag}}</td><td>{{field}}</td>
+			  			{% else %}
+			  			<td>{{field.label_tag}}</td><td>{{field}}</td></tr>
+			  			{% endif %}
+			  		{% endif %}
+			    	{% if field.label == 'values' %}
 			    	<tr class='hidden values-needed'><td>{{field.label_tag}}</td><td>{{field}}</td><td colspan='2'>{{field.help_text}}</td></tr>
 			    	{% else %}
-							{% if field.name not in table_fields and field.label not in odd_fields %}
+							{% if field.name not in table_fields and field.label not in odd_fields and field.label not in foreign_key_fields %}
 							<tr><td class="input-header">{{field.label_tag}}<td class="contains-input">{{field}}</td>
 							{% endif %}
-							{% if field.name not in table_fields and field.label in odd_fields %}
+							{% if field.name not in table_fields and field.label in odd_fields and field.label not in foreign_key_fields %}
 							<td class="input-header">{{field.label_tag}}</td><td class="contains-input">{{field}}</td></tr>
 							  {% endif %}
 						{% endif %}{% endif %}
@@ -34,7 +41,6 @@
 		</div>
 	</div>
 </div>
-<div id='undisplayed_result' class='hidden' style="display:none;"></div>
 
 <script type="text/javascript" ajaxKey="{{ajaxKey}}" charset="utf-8">
 	if($$('table.compact-form td ul')) {
@@ -50,3 +56,10 @@
 		j.getParent().destroy();
 	}
 </script>
+
+{% if table_with_columns %}
+<div id='table_with_columns' class='hidden'>{{table_with_columns}}</div>
+{% endif %}
+
+<div id='undisplayed_result' class='hidden' style="display:none;"></div>
+<div id='sidebar_data' class='hidden'>{{sidebar|safe}}</div>

@@ -1,3 +1,6 @@
+import json
+from lxml import etree
+
 from django.http import HttpResponse, Http404
 from django.template import loader, RequestContext, Template
 from django.views.decorators.http import require_http_methods
@@ -7,13 +10,15 @@ from tiote import forms, functions
 
 
 def home(request):
-    params = request.GET
-    DbForm = forms.get_dialect_form('DbForm', 
-        functions.get_conn_params(request)['dialect']
-    )
+    # queries and initializations
     template_list = functions.common_query(request, 'template_list')
     user_list = functions.common_query(request, 'user_list');
     charset_list = functions.common_query(request, 'charset_list');
+    
+    DbForm = forms.get_dialect_form('DbForm', 
+        functions.get_conn_params(request)['dialect']
+    )
+    
     if request.method == 'POST':
         form = DbForm(templates=template_list, users=user_list,
             charsets=charset_list, data=request.POST)
@@ -23,11 +28,13 @@ def home(request):
         form = DbForm(templates=template_list, users=user_list, charsets=charset_list)
         
     return functions.response_shortcut(request,
-        extra_vars={'form':form, 'variables':functions.get_home_variables(request)})
+        extra_vars={'form':form, 'variables':functions.get_home_variables(request),
+                    'sidebar':functions.generate_sidebar(request)})
+
 
 
 def users(request):
-    params = request.GET
+    # queries and intializations
     conn_params = functions.get_conn_params(request)
     db_list = functions.common_query(request, 'db_list')
     group_list = functions.common_query(request, 'group_list')

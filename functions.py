@@ -1,8 +1,4 @@
 import hashlib, random, json
-from lxml import etree
-
-etree.El = etree.Element
-etree.SubEl = etree.SubElement
 
 from django.http import HttpResponse, Http404
 from django.contrib.sessions.models import Session
@@ -12,7 +8,7 @@ from django.utils.datastructures import SortedDict
 from tiote import sql
 
 ajaxKey = ''
-        
+
 def rpr_query(request, query_type, query_data=None):
     conn_params = get_conn_params(request)
     # common queries that returns success state as a dict only
@@ -197,7 +193,7 @@ def skeleton(which, section=None ):
 
 def check_login(request):
     return request.session.get('TT_LOGIN', '')
-        
+
 def do_login(request, cleaned_data):
     host = cleaned_data['host']
     username = cleaned_data['username']
@@ -235,7 +231,6 @@ def get_conn_params(request):
         data['database'] = '' if data['dialect'] =='mysql' else 'postgres'
     return data    
 
-    
 def set_ajax_key(request):
     if not request.session.get('ajaxKey', False):
         sessid = hashlib.md5( str(random.random()) ).hexdigest()
@@ -247,7 +242,6 @@ def validateAjaxRequest(request):
         return True
     else:
         return False
-        
         
 def inside_query(request, query_name):
     if query_name == 'db_names':
@@ -286,7 +280,6 @@ def get_home_variables(request):
             return variables
         else:
             return http_500(result)
-    
     
 def make_choices(choices, begin_empty=False, begin_value='', append_label=''):
     ret = [] if begin_empty else [('',
@@ -388,23 +381,18 @@ def generate_sidebar(request):
     
     conn_params = get_conn_params(request)
     db_list = common_query(request, 'db_list')
-#    # common links
-#    p = etree.fromstring("<div><h6>Quick Links</h6><ul></ul></div>")
-#    for r in ['home','query']:
-#        li = etree.SubEl(p.getchildren()[1], 'li')
-#        etree.SubEl(li, 'a', attrib={'href':'#section=home&view=' + r}).text = r
-#    ret_string += etree.tostring(p, method='html')
-#    
-    s = ''
     if request.GET.get('section') == 'home':
+        li_list = []
         for db_row in db_list:
             sufx = "&schema=public" if conn_params['dialect'] == 'postgresql' else ''
-            s += "<li><a class='icon-database' href='#section=database&view=overview&database=" +db_row[0]+sufx+"'>" + db_row[0] + "</a></li>"
-        ret_string += '<h6>Databases</h6><ul>' + s + '</ul>'
+            a = "<a class='icon-database' href='#section=database&view=overview&database={0}{1}'>{0}</a>".format(db_row[0],sufx)
+            li_list.append('<li>{0}</li>'.format(a))
+        ret_string += '<h6>Databases</h6><ul>' + ''.join(li_list) + '</ul>'
     
-    elif request.GET.get('database'):
+    elif request.GET.get('database') or request.GET.get('table'):
         d = {'database': request.GET.get('database')}
         db_selection_form = select_input(db_list, desc={'id':'db_select'}, initial=d['database'])
+        s = ''
         if conn_params['dialect'] == 'postgresql':
             d['schema'] = request.GET.get('schema')
             # append schema selection with default to public
@@ -417,13 +405,16 @@ def generate_sidebar(request):
         sfx_list = []
         pg_sfx = '&schema=' + d['schema'] if conn_params['dialect']=='postgresql' else ''
         for tbl_row in table_list:
-            sfx_list.append(
-                "<li><a class='icon-table' href='#section=table&view=browse&database={0}{1}&table={2}'>{2}</a></li>".format(
+            # decide selected table
+            li_pfx = " class='active'" if request.GET.get('table') == tbl_row[0] else ''
+            a = "<a class='icon-table' href='#section=table&view=browse&database={0}{1}&table={2}'>{2}</a>".format(
                     d['database'], pg_sfx, tbl_row[0]
                 )
-            )
+            sfx_list.append("<li{0}>{1}</li>".format(li_pfx, a))
+            
         sfx = "<ul>{0}</ul>".format( ''.join(sfx_list) )
         ret_string += "<h6 class='icon-databases'>databases</h6>"+ db_selection_form + s + sfx
+
     return ret_string
 
 
@@ -440,12 +431,13 @@ class HtmlTable():
         self.tbody_chldrn = []
         self.attribs = attribs
         # build attributes
-        self.attribs_list = self.build_attribs_list(attribs)
+        self.attribs_list = self._build_attribs_list(attribs)
         # build <thead><tr> children
         if headers is not None:
             hd_list = []
-            if self.props is not None and self.props['with_checkboxes'] == True:
-                hd_list.append("<th class='selector'></th>")
+            if self.props is not None:
+                if self.props.keys().count('with_checkboxes') > 0 and self.props['with_checkboxes'] == True:
+                    hd_list.append("<th class='selector'></th>")
             for head in headers:
                 hd_list.append('<th>'+head+'</th>')
             self.thead_chldrn = hd_list
@@ -454,7 +446,7 @@ class HtmlTable():
             for row in rows:
                 self.push(row)
         
-    def build_attribs_list(self, attribs=None):
+    def _build_attribs_list(self, attribs=None):
         attribs_list = []
         if attribs is not None:
             for k in attribs.keys():
@@ -466,10 +458,11 @@ class HtmlTable():
     def push(self, row, props=None):
         count = len(self.tbody_chldrn)
         row_list = ["<tr id='row_{0}'>".format(str(count))]
-        if self.props is not None and self.props['with_checkboxes'] == True:
-            anc_chk = "<input class='checker' id='check_{0} type='checkbox' />".format(count)
-            tida = "<td class='selector'>{0}</td>".format(anc_chk)
-            row_list.append(tida)
+        if self.props is not None:
+            if self.props.keys().count('with_checkboxes') > 0 and self.props['with_checkboxes'] == True:
+                anc_chk = "<input class='checker' id='check_{0}' type='checkbox' />".format(count)
+                tida = "<td class='selector'>{0}</td>".format(anc_chk)
+                row_list.append(tida)
         for col in row:
             row_list.append("<td>{0}</td>".format(col))
         row_list.append("</tr>")

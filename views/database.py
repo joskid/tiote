@@ -1,9 +1,27 @@
+import json
+
 from django.http import HttpResponse, Http404
 from django.template import loader, RequestContext, Template
 from django.views.decorators.http import require_http_methods
 
 from tiote import forms, functions
-
+#
+#
+#def schemas(request):
+#    # make queries
+#    conn_params = functions.get_conn_params(request)
+#    db_list = functions.common_query(request, 'db_list')
+#    schema_list = functions.common_query(request, 'schema_list')
+#    
+#    if request.method == 'POST':
+#        pass
+#    
+#    else:
+#        pass
+#
+#    return functions.response_shortcut(request, extra_vars={
+#            'schema_list': json.dumps(schema_list),}
+#        )
 
 def overview(request):
     TableForm = forms.get_dialect_form('TableForm', 
@@ -21,7 +39,7 @@ def overview(request):
             q = 'drop_table'
         elif request.GET.get('update') == 'empty':
             q = 'empty_table'
-        query_data = {'db':request.GET['database'],'conditions':functions.get_conditions(l)}
+        query_data = {'database':request.GET['database'],'conditions':functions.get_conditions(l)}
         if request.GET.get('schema'):
             query_data['schema'] = request.GET.get('schema')
         return functions.rpr_query(request, q , query_data)
@@ -49,7 +67,8 @@ def overview(request):
 
     return functions.response_shortcut(request, extra_vars={'form': form, 'edit':False,
         'table_fields': ['name', 'engine', 'charset', 'inherit', 'of_type'],
-        'odd_fields': ['type','key','charset',]}
+        'odd_fields': ['type','key','charset',],
+        'sidebar': functions.generate_sidebar(request)}
     )
     
 
@@ -65,7 +84,9 @@ def export(request):
     pass
 
 def route(request):
-    if request.GET['view'] == 'overview':
+    if request.GET.get('view') == 'schemas':
+        return schemas(request)
+    elif request.GET['view'] == 'overview':
         return overview(request)
     elif request.GET['view'] == 'query':
         return query(request)

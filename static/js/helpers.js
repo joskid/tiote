@@ -63,7 +63,7 @@ function serializeForm(context){
 	// hidden input
 	$$('#'+context+' input[type=hidden]').each(function(item){
 		form_data[item.name] = item.value;
-	})
+	});
 	// input[type=password]
 	$$('#' + context +' input[type=password]').each(function(item, key){
 		form_data[item.get('name')] = item.get('value');
@@ -92,7 +92,7 @@ function serializeForm(context){
 function generate_ajax_url(withAjaxKey,extra_data) {
 	extra_data = extra_data || {};
 	withAjaxKey = withAjaxKey || false;
-	var n = new Hash( location.hash.replace('#','').parseQueryString(false, true) );
+	var n = new Hash( page_hash() );
 	n.extend(extra_data);
 	var request_url = 'ajax/?';
 	n.each(function(item,key){
@@ -131,9 +131,7 @@ function create_data_table(thead_rows, tbody_rows, options) {
 	}
 	// checkboxes
 	if (options['markable']) {
-		var th_rows = ['']
-		th_rows.append(thead_rows)
-		thead_rows = th_rows;        
+		thead_rows = [''].append(thead_rows);        
 	}
 	// create tbl
 	data_table = new HtmlTable(options['tbl'], {
@@ -211,7 +209,7 @@ function create_data_table(thead_rows, tbody_rows, options) {
 					checker_status = false;
 				}
 				// (un)check the checkboxes
-				var start_i; var end_i;
+				var start_i;var end_i;
 				var sel_tr_index = parseInt(id.split('_')[1])
 				var last_sel_tr_index = parseInt(last_selected_tr.id.split('_')[1])
 				if (sel_tr_index > last_sel_tr_index) {
@@ -252,8 +250,8 @@ function generate_where_using_pk(wrk_table) {
 		var col_titles = [];
 		wrk_table['keys']['rows'].each(function(obj,obj_in){
 			$(wrk_table).getElements('thead th').each(function(th, th_i){
-				if (th.getElement('div').get('text').trim() == obj[1] )
-					col_titles.include({'title':obj[1], 'index':th_i});
+				if (th.getElement('div').get('text').trim() == obj[0] )
+					col_titles.include({'title':obj[0], 'index':th_i});
 			});
 		});
 		// generate where stmt
@@ -285,12 +283,14 @@ function generate_where(wrk_table) {
 		selected_rows.each(function(tiri,tiri_index){
 			var where = '';
 			tiri.getChildren('td[class!=selector]').each(function(tida,tida_index){
-				if (! tida.hasChildNodes())
-					where += ' ' + cols[tida_index] + '=' + '';
-				else
-					where += ' ' + cols[tida_index] + '=' + tida.childNodes[0].nodeValue +'';
-				if (tida != tiri.getLast() )
-					where += ' AND';
+				if (cols[tida_index] != undefined) { // condition skips the last empty td
+					if (! tida.hasChildNodes())
+						where += ' ' + cols[tida_index] + '=' + '';
+					else
+						where += ' ' + cols[tida_index] + '=' + tida.childNodes[0].nodeValue +'';
+					if (tida_index != tiri.getChildren('td[class!=selector]').length - 1 ) // last td before empty td
+						where += ' AND';
+				}
 			});
 			whereToEdit += where
 			if (tiri != selected_rows.getLast() ) whereToEdit += '; ';
@@ -333,6 +333,10 @@ var $E = function(selector, filter) {
 var $ES = function(selector, filter) {
 	return ($(filter) || document).getElements(selector);
 };
+
+function redirectPage(context){
+	location.hash = '#' + Object.toQueryString(context);
+}
 
 function reloadPage(){
 	var context = new Hash();
@@ -440,10 +444,76 @@ function tbl_pagination(total_count, limit, offset) {
 		}
 	}
 	
-	return new Element('p', { 'class':'paginatn pull-right'}).adopt(ancs,
+	return new Element('p', {'class':'paginatn pull-right'}).adopt(ancs,
 		// span to display no of pages created
 		new Element('span',{'style':'color:#888;padding-left:20px;',
 			'text': (pag_max > 0) ? '[ '+(pag_max+1)+' pages ]' : '[ 1 page ]' 
 		})
 	);
+}
+
+var updateSelectNeedsValues = function(){
+	console.log('updateSelectNeedsValues');
+	$$('#tt_form .compact-form select').each(function(sel_item){
+		if (sel_item.get('class').contains('needs:')) {
+			// find definition statement
+			var stmt = '';
+			sel_item.get('class').split(' ').each(function(class_item){
+				if (class_item.contains('needs') )
+					stmt = class_item;
+			});
+			//
+			var stmt_cond = stmt.split(':');
+			sel_item.addEvent('change', function(e){
+				if (stmt_cond[2].split('|').contains(e.target.value))
+					e.target.getParent('table').getElements('.'+stmt_cond[1]+'-needed').removeClass('hidden');
+				else
+					e.target.getParent('table').getElements('.'+stmt_cond[1]+'-needed').addClass('hidden');
+			});
+		}
+	});
+}
+
+function updateForeignKeyColumns(){
+	console.log('updateForeingKeyColumns');
+	var tbl_nd_cols = JSON.decode($('table_with_columns').get('text'));
+	// events
+	$$('#tt_form .compact-form select').each(function(sel_item){
+		if (sel_item.id.contains('references') ) 
+			sel_item.addEvent('change', function(e){
+				var template = "<option value='{column}'>{column}</option>";
+				var childEls = ''
+				if (e.target.value != '')
+					tbl_nd_cols[e.target.value].each(function(column){
+						childEls += template.substitute({'column': column})
+					});
+				$('id_column_' + sel_item.id.split('_')[2]).set('html', '');
+				$('id_column_' + sel_item.id.split('_')[2]).set('html', childEls );
+			});
+	});
+}
+
+
+function disable_unimplemented_links(){
+	var implemented = {
+		'home': ['home', 'users'],
+		'database': ['overview'],
+		'table': ['browse', 'structure']
+	}
+	var section = page_hash()['section']
+	$$('.nav a').each(function(nav_link){
+		if ( ! implemented[section].contains( nav_link.get('html').toLowerCase() ) ){
+			new Element('span', {
+				'style': 'display: block;float: none;line-height: 19px;padding: 10px 10px 11px;text-decoration: none;',
+				'text': nav_link.get('html'),
+				'alt': 'feature not yet implemented',
+				'help': 'feature not yet implemented'
+				}
+			).replaces(nav_link)
+		}
+	});	
+}
+
+function page_hash(){
+	return location.hash.replace('#','').parseQueryString(false, true);
 }
