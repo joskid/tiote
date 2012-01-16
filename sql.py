@@ -102,7 +102,7 @@ def generate_query(query_type, dialect='postgresql', query_data=None):
         
         elif query_type == 'table_rpr':
             q = "SELECT table_name, table_type, table_schema FROM \
-                information_schema.tables WHERE table_schema='{schema}'".format(**query_data)
+information_schema.tables WHERE table_schema='{schema}' ORDER BY table_name ASC".format(**query_data)
             return (q, )
         
         elif query_type == 'count_rows':
@@ -156,7 +156,7 @@ table_catalog='{database}' AND table_schema='{schema}' AND table_name='{table}'"
             return (q0, )
         
         elif query_type == 'table_structure':
-            q0 = "SELECt column_name as column, data_type as type, is_nullable as null, \
+            q0 = "SELECT column_name as column, data_type as type, is_nullable as null, \
 column_default as default, character_maximum_length, numeric_precision, numeric_scale, \
 datetime_precision, interval_type, interval_precision FROM information_schema.columns \
 WHERE table_catalog='{database}' AND table_schema='{schema}' AND table_name='{table}' ".format(**query_data)
@@ -168,7 +168,7 @@ table_catalog='{database}' AND table_schema='{schema}'".format(**query_data)
             return (q0, )
         
         elif query_type == 'existing_tables':
-            q0 = "SELECT table_name FROM information_schema.tables WHERE table_schema='{schema}'".format(**query_data)
+            q0 = "SELECT table_name FROM information_schema.tables WHERE table_schema='{schema}' ORDER BY table_name ASC".format(**query_data)
             return (q0, )
         
         
