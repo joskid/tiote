@@ -110,6 +110,52 @@ function generate_ajax_url(withAjaxKey,extra_data) {
 
 // table related functions
 // uses moo
+function complete_table(tbl, options){
+	var tabl = new HtmlTable(tbl);
+	if ($(tabl).getElements(input.checker)) {
+		make_checkable();
+	}
+}
+
+function make_checkable(data_table) {
+	// select a tr element or a range of tr elements when the shift key is pressed
+	selected_tr = ''
+	$$('input.checker').addEvent('click', function(e) {
+		last_selected_tr = selected_tr || '';
+		var id =  e.target.getProperty('id');
+		id = id.replace('check', 'row'); // id of equivalent <tr>
+		selected_tr = $(id)
+		if (e.shift && typeof(last_selected_tr == 'element')){
+			var checker_status;
+			if (data_table.isSelected(last_selected_tr)) {
+				data_table.selectRange(last_selected_tr, selected_tr);
+				checker_status = true;
+			}else if (data_table.isSelected(selected_tr)) {
+				data_table.deselectRange(last_selected_tr, selected_tr);
+				checker_status = false;
+			}
+			// (un)check the checkboxes
+			var start_i;var end_i;
+			var sel_tr_index = parseInt(id.split('_')[1])
+			var last_sel_tr_index = parseInt(last_selected_tr.id.split('_')[1])
+			if (sel_tr_index > last_sel_tr_index) {
+				start_i = last_sel_tr_index;
+				end_i = sel_tr_index;
+			} else {
+				start_i = sel_tr_index;
+				end_i = last_sel_tr_index;
+			}
+			for (var j = start_i; j < (end_i + 1); j++){
+				$('check_'+String(j)).setProperty('checked', checker_status);
+			}
+		} else {
+			data_table.toggleRow(e.target.getParent('tr'));
+		}		
+
+	});
+}
+
+
 function create_data_table(thead_rows, tbody_rows, options) {
 	var default_options = {
 		'tbl': new Element('table', {
@@ -192,41 +238,7 @@ function create_data_table(thead_rows, tbody_rows, options) {
 			});
 		})
 
-		// select a tr element or a range of tr elements when the shift key is pressed
-		selected_tr = ''
-		$$('input.checker').addEvent('click', function(e) {
-			last_selected_tr = selected_tr || '';
-			var id =  e.target.getProperty('id');
-			id = id.replace('check', 'row'); // id of equivalent <tr>
-			selected_tr = $(id)
-			if (e.shift && typeof(last_selected_tr == 'element')){
-				var checker_status;
-				if (data_table.isSelected(last_selected_tr)) {
-					data_table.selectRange(last_selected_tr, selected_tr);
-					checker_status = true;
-				}else if (data_table.isSelected(selected_tr)) {
-					data_table.deselectRange(last_selected_tr, selected_tr);
-					checker_status = false;
-				}
-				// (un)check the checkboxes
-				var start_i;var end_i;
-				var sel_tr_index = parseInt(id.split('_')[1])
-				var last_sel_tr_index = parseInt(last_selected_tr.id.split('_')[1])
-				if (sel_tr_index > last_sel_tr_index) {
-					start_i = last_sel_tr_index;
-					end_i = sel_tr_index;
-				} else {
-					start_i = sel_tr_index;
-					end_i = last_sel_tr_index;
-				}
-				for (var j = start_i; j < (end_i + 1); j++){
-					$('check_'+String(j)).setProperty('checked', checker_status);
-				}
-			} else {
-				data_table.toggleRow(e.target.getParent('tr'));
-			}		
-
-		});
+		make_checkable(data_table);
 	}
 	return data_table;
 }
@@ -265,7 +277,7 @@ function generate_where_using_pk(wrk_table) {
 				});
 			});
 		}
-		return where_stmt.trim(); // empty string indeicateds no row was selected
+		return where_stmt.trim(); // empty string indicates no row was selected
 	}
 }
 

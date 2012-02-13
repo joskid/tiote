@@ -48,7 +48,6 @@ def rpr_query(request, query_type, query_data=None):
         return r[0]
         
     
-    
     elif query_type in ['table_rpr', 'table_structure']:
         conn_params['database'] = request.GET.get('database')
         sub_q_data = {'database': request.GET.get('database'),}
@@ -76,10 +75,7 @@ def rpr_query(request, query_type, query_data=None):
             # change r['rows']
             r['rows'] = rwz
             r['columns'] = [ r['columns'][0], r['columns'][1], r['columns'][2], r['columns'][3] ]
-        if type(r) == dict:
-            return jsonize_result(r)
-        else:
-            return http_500(r)
+        return r
         
     elif query_type == 'browse_table':
         # initializations        
@@ -357,6 +353,25 @@ def response_shortcut(request, template = False, extra_vars=False ):
         h.set_cookie('tt_formContainsErrors','true')
     return h
 
+def table_options(opt_type):
+    # opt_type = "users || tbls || data
+    l = ['<div id="table-options">'] # unclosed tag
+    ctrls = ['all', 'none']
+    # selection html
+    l.append('<p class="pull-left">') # unclosed tag
+    l.append('<span>{0}</span>'.format("Columns:" if opt_type=='tbls' else "Select: "))
+    for ctrl in ctrls:
+        l.append('<a id="select_{0}" class="selecters">select {0}</a>'.format(ctrl))
+    l.append("<span>With Selected: </span>")
+    # action(ctrls) html
+    if opt_type == 'users' or opt_type == 'data': 
+        ctrls = ['edit', 'delete']
+    elif opt_type == 'tbls':
+        ctrls = ['empty', 'drop']
+    for ctrl in ctrls:
+        l.append('<a id="action_{0}" class="doers">{0}</a>'.format(ctrl))
+    l.append("</p></div>") # closing unopen tags
+    return "".join(l)
 
 def generate_sidebar(request):
 
@@ -381,15 +396,8 @@ def generate_sidebar(request):
     
     conn_params = get_conn_params(request)
     db_list = common_query(request, 'db_list')
-    if request.GET.get('section') == 'home':
-        li_list = []
-        for db_row in db_list:
-            sufx = "&schema=public" if conn_params['dialect'] == 'postgresql' else ''
-            a = "<a class='icon-database' href='#section=database&view=overview&database={0}{1}'>{0}</a>".format(db_row[0],sufx)
-            li_list.append('<li>{0}</li>'.format(a))
-        ret_string += '<h6>Databases</h6><ul>' + ''.join(li_list) + '</ul>'
     
-    elif request.GET.get('database') or request.GET.get('table'):
+    if request.GET.get('database') or request.GET.get('table'):
         d = {'database': request.GET.get('database')}
         db_selection_form = select_input(db_list, desc={'id':'db_select'}, initial=d['database'])
         s = ''
@@ -415,7 +423,15 @@ def generate_sidebar(request):
         sfx = "<ul>{0}</ul>".format( ''.join(sfx_list) )
         ret_string += "<h6 class='icon-databases'>databases</h6>"+ db_selection_form + s + sfx
 
-    return ret_string
+    else: # home section
+        li_list = []
+        for db_row in db_list:
+            sufx = "&schema=public" if conn_params['dialect'] == 'postgresql' else ''
+            a = "<a class='icon-database' href='#section=database&view=overview&database={0}{1}'>{0}</a>".format(db_row[0],sufx)
+            li_list.append('<li>{0}</li>'.format(a))
+        ret_string += '<h6>Databases</h6><ul>' + ''.join(li_list) + '</ul>'
+#    return ret_string
+    return HttpResponse(ret_string)
 
 
 
@@ -437,15 +453,14 @@ class HtmlTable():
             hd_list = []
             if self.props is not None:
                 if self.props.keys().count('with_checkboxes') > 0 and self.props['with_checkboxes'] == True:
-                    hd_list.append("<th class='selector'></th>")
+                    hd_list.append("<th class='controls'></th>")
             for head in headers:
                 hd_list.append('<th>'+head+'</th>')
             self.thead_chldrn = hd_list
         # build <tbody> children
         if rows is not None:
-            for row in rows:
-                self.push(row)
-        
+            [self.push(row) for row in rows]       
+
     def _build_attribs_list(self, attribs=None):
         attribs_list = []
         if attribs is not None:
@@ -474,4 +489,7 @@ class HtmlTable():
             ''.join([ ''.join(row) for row in self.tbody_chldrn])
         )
         return el
+
+    def __str__(self):
+        return self.to_element()
     

@@ -1,4 +1,4 @@
-var pg;var nav;
+var pg; var nav;
 var pageLoadSpinner;
 var assets = new Hash({'xhrCount': 0});
 
@@ -10,7 +10,7 @@ window.addEvent('domready', function() {
     
 	nav.addEvent('navigationChanged', function(navObject){
 		// do page initialization here
-        loginState = checkLoginState();
+        var loginState = checkLoginState();
 		console.log('navigationChanged event fired');
 		if (loginState) {
 			if (Cookie.read('TT_NEXT')){
@@ -35,8 +35,11 @@ window.addEvent('domready', function() {
 	
 });
 
-function clearPage(){
-	$('sidebar').getChildren().destroy();
+function clearPage(clear_sidebar){
+	clear_sidebar = clear_sidebar || false; // init
+	if (clear_sidebar && $('sidebar').getChildren()) {
+		$('sidebar').getChildren().destroy();
+	}
 	$('tt-content').getChildren().destroy();
 }
 
@@ -45,17 +48,13 @@ function Page(obj){
 	console.log('new Page() object created');
 	this.options = new Hash();
 	this.updateOptions({'navObj': obj, 'hash': location.hash});
-	this.setTitle('here');
+	this.setTitle();
 	this.generateTopMenu(obj);
 	disable_unimplemented_links();
 	self = this; 
-	if (Cookie.read('dont_touch')) {
-		console.log('The page returned contains errors!');
-		Cookie.dispose('dont_touch');
-	} else {
-		clearPage();
-		this.generateView(obj); 
-	}
+	
+	clearPage();
+	this.generateView(obj);
 }
 
 	
@@ -69,17 +68,22 @@ Page.prototype.endPageLoad =  function() {
         pageLoadSpinner.hide();
 }
 
-Page.prototype.setTitle = function(){
-	var title = 'tiote';
-	var r = location.hash.replace('#','').parseQueryString();
-	Object.each(r, function(item, key){
-		if (key == 'view' && r[key] == r['section']) {
-		} else {
-            if (key == 'view' || key =='section') { /* skip */ } 
-            else {title += ' / ' + item;}
-		}
-	});
-    title += ' / ' + r['view'];
+Page.prototype.setTitle = function(new_title){
+	new_title = new_title || false;
+	if (! new_title) {
+		var title = 'tiote';
+		var r = location.hash.replace('#','').parseQueryString();
+		Object.each(r, function(item, key){
+			if (key == 'view' && r[key] == r['section']) {
+			} else {
+				if (key == 'view' || key =='section') { /* skip */ } 
+				else {title += ' / ' + item;}
+			}
+		});
+		title += ' / ' + r['view'];
+	} else {
+		title = new_title;
+	}
 	document.title = title
 	this.updateOptions({'title': title});
 }
@@ -134,35 +138,49 @@ Page.prototype.generateTopMenu = function(data){
 
 Page.prototype.generateSidebar = function(data) {
 	console.log('generateSidebar()!');
-	$('sidebar').adopt( $('sidebar_data').getChildren() );
-//		$('sidebar_data').dispose();
-	window.addEvent('resize', function(){
-		$('sidebar').setStyle('height', getHeight() - 40);
-	});
-	$('sidebar').setStyle('height', getHeight() - 40);
-	// handle events
-	if ($('db_select')) {
-		$('db_select').addEvent('change', function(e){
-			if (e.target.value != page_hash()['database']) {
-				var context = {'section':'database','view':'overview',
-					'database': e.target.value
-				}
-				if (Object.keys(page_hash()).contains('schema'))
-					context['schema'] = 'public';
-				redirectPage(context);
+	// xhr request for table list
+    var x = new XHR({'query':'sidebar', 'type':'representation',
+		'section': this.options.navObj.section,
+        'schema': this.options.navObj.schema, 
+        'database': this.options.navObj.database,
+        'table': this.options.navObj.table,
+        'offset': this.options.navObj.offset,
+        'method': 'get',
+        'onSuccess': function(text,xml){
+			// if there is already sidebar data clear it
+			if ($('sidebar').getChildren())
+				$('sidebar').getChildren().destroy();
+			$('sidebar').set('html', text);
+			window.addEvent('resize', function(){
+				$('sidebar').setStyle('height', getHeight() - 40);
+			});
+			$('sidebar').setStyle('height', getHeight() - 40);
+			// handle events
+			if ($('db_select')) {
+				$('db_select').addEvent('change', function(e){
+					if (e.target.value != page_hash()['database']) {
+						var context = {'section':'database','view':'overview',
+							'database': e.target.value
+						}
+						if (Object.keys(page_hash()).contains('schema'))
+							context['schema'] = 'public';
+						redirectPage(context);
+					}
+				});
 			}
-		});
-	}
-	if ($('schema_select')) {
-		$('schema_select').addEvent('change', function(e){
-			if (e.target.value != page_hash()['schema']) {
-				var context = {'section':'database','view':'overview',
-					'database': page_hash()['database'], 'schema': e.target.value
-				}
-				redirectPage(context);
+			if ($('schema_select')) {
+				$('schema_select').addEvent('change', function(e){
+					if (e.target.value != page_hash()['schema']) {
+						var context = {'section':'database','view':'overview',
+							'database': page_hash()['database'], 'schema': e.target.value
+						}
+						redirectPage(context);
+					}
+				});
 			}
-		});
-	}
+		}
+	}).send();
+	
 }
 
 
@@ -180,8 +198,10 @@ Page.prototype.generateView = function(data){
                 nav.state.empty()
                 nav.set({'section': 'home','view': 'home'});
             } else {
+				$('tt-content').set('html', viewData['text']);
+				self.completeTableView();
+				self.completeTableOptions();
 				if (data['section'] == 'home') {
-					$('tt-content').set('html', viewData['text']);
 					// further individual page processing
 					if ( data['view'] == 'users') {
 						self.userView();
@@ -189,14 +209,10 @@ Page.prototype.generateView = function(data){
 						self.completeForm();
 					}
 				} else if (data['section'] == 'database'){
-					$('tt-content').set('html', viewData['text']);
 					if (data['view'] == 'overview') {
 						self.overviewView();
-					} else if (data['view'] == 'schemas'){
-						self.schemasView();
 					}
 				} else if (data['section'] == 'table'){
-					$('tt-content').set('html', viewData['text']);
 					if (data['view'] == 'browse'){
 						self.browseView();
 					} else if (data['view'] == 'structure') {
@@ -243,81 +259,16 @@ Page.prototype.browseView = function(){
 //		});
 }
 
-
 Page.prototype.overviewView = function(){
     console.log('overviewView()!');
 	var h = getWindowHeight() * .7;
-    this.loadTable('table_rpr', 'representation',
-		{'height': h, 'with_checkboxes':true})
+//    this.loadTable('table_rpr', 'representation',
+//		{'height': h, 'with_checkboxes':true})
 	window.addEvent('resize', function(){
 		h = getWindowHeight() * .7;
 		$(this.data_table).setStyle('height', 'auto');
 		$(this.data_table).setStyle('max-height', h);
 	});
-	
-    // new field event and handler
-        $('newColumnForm').addEvent('click', function(e){
-            var temp_t = $('newColumnForm').getParent().getSiblings('.column-form');
-            var newForm = temp_t[temp_t.length - 1].clone();
-            var form_count = temp_t.length;
-            var trs = newForm.getChildren()[1].getChildren()[0].getChildren();
-            trs.each(function(tira,tira_index){
-                var tds = tira.getChildren();
-                tds.each(function(tidi, tid_index){
-                    if( tidi.getChildren('label')[0] &&  tidi.getChildren('label')[0].getChildren('input')[0]){
-                        tidi.getChildren('label').each(function(lab,key){
-                            tt = lab.get('for').split('_');
-                            lab.set('for',tt[0]+'_'+tt[1]+'_'+String(form_count)+'_'+String(key));
-                            var lab_input = lab.getChildren('input')[0];
-                            if (lab_input.checked) {
-                                lab_input.removeAttribute('checked');
-                            }
-                            lab_input.name = tt[1]+'_'+String(form_count);
-                            lab_input.id = tt[0]+'_'+tt[1]+'_'+String(form_count)+'_'+String(key);                                
-                        });
-                    }else if( tidi.getChildren('label')[0] ){
-                        var labi = tidi.getChildren('label')[0];
-                        var att = labi.get('for').split('_');
-                        labi.set('for',att[0]+'_'+att[1]+'_'+String(form_count));
-                    } else if ( tidi.getChildren('input')[0]){
-                        var inputi = tidi.getChildren('input')[0];
-                        var temp_name = inputi.name.split('_');
-                        inputi.name = temp_name[0] +'_'+ String(form_count);
-                        inputi.id = 'id_'+inputi.name;
-                        inputi.value = '';
-                    } else if ( tidi.getChildren('select')[0]){
-                        var sel = tidi.getChildren('select')[0];
-                        temp_name = sel.name.split('_');
-                        sel.name = temp_name[0] +'_'+ String(form_count);
-                        sel.id = 'id_'+sel.name;var cl = ''
-                        // fix the select_requires class needed for validation
-                        sel.get('class').split(' ').each(function(item){
-                            if (item.contains('select_requires:')){
-                                var ar_t = item.split(':');
-                                cl += ar_t[0]+':'+ar_t[1].split('_')[0]+'_'+String(form_count)+':'+ar_t[2]+' ';
-                            } else {
-                                cl += item + ' ';
-                            }
-                        });
-                        sel.removeProperty('class').set('class', cl);
-                    }
-                });
-            });
-            newForm.inject($$('div.form-controls')[0], 'before');
-            var delete_form = new Element('a',{'text':'delete column',
-                'class':'delete-form pull-right pointer'});
-            // delete form event and handler
-            delete_form.inject(newForm, 'top').addEvent('click',function(e){
-                e.target.getParent().destroy();
-            });
-            // delete all validation advice
-            newForm.getElements('.validation-advice').destroy();
-            updateSelectNeedsValues();
-
-        });
-    this.loadTableOptions('table');
-    updateSelectNeedsValues();
-    this.completeForm();
 }
 
 
@@ -404,111 +355,26 @@ Page.prototype.loadTable = function(query, type, opts){
 }
 
 
-Page.prototype.loadTableOptions = function(opt_type){
-	var get_where = function(){
-		var w = '';
-		if (page_hash()['view'] == 'browse')
-			w = generate_where_using_pk(data_table)
-		else
-			w = generate_where(data_table) ;
-		return w;
-	};
-	
-	var actions = function(e){ // basic router
-		var whereToEdit = get_where();
-		if ( whereToEdit ) {
-			var msg = 'Are you sure you want to ';
-			if (e.target.id == 'action_edit') msg += 'edit ';
-			else if (e.target.id == 'action_delete') msg += 'delete ';
-            else if (e.target.id == 'action_drop') msg += 'drop ';
-            else if (e.target.id == 'action_empty') msg += 'empty ';
-			msg += ' selected rows?';
-            var confirmDiag = new SimpleModal({'btn_ok': 'Yes',
-                'overlayClick': false, 'draggable':false, 'offsetTop': 0.2 * screen.availHeight
-            });
-            confirmDiag.show({
-                'model': 'confirm',
-                'callback': function(){
-//                        if (e.target.id == 'action_edit' ) return action_edit(e);
-//						else if (e.target.id == 'action_delete') return action_delete(e);
-//                        else if (e.target.id == 'action_drop') return action_drop(e);
-//                        else if (e.target.id == 'action_empty') return action_empty(e);
-                    return do_action(e);
-                    this.hide();
-                },
-                'title': 'Confirm Action!',
-                'contents': msg
-            });
-		} else {console.log('nothing to work on!')}
+Page.prototype.completeTableView = function() {
+	console.log('completeTableView()!')
+	if ($('sql_table') != null ) {
+		Page.prototype.data_table = new HtmlTable($('sql_table'));
+		make_checkable(this.data_table);
+	}
+}
+
+
+Page.prototype.completeTableOptions = function() {
+	// #table-options processing : row selection
+	if ($('table-options') != null && $('table-options').getElements('a.selecters')) {
+		$('table-options').getElements('a.selecters').each(function(a_sel){
+			a_sel.addEvent('click', function() {
+				var option = a_sel.id.replace('select_', '');
+				set_all_tr_state(self.data_table, (option == 'all') ? true : false);
+			});
+		});
 	}
 
-    var do_action = function(e){
-		var whereToEdit = get_where();
-        console.log('do_action()');
-        var navObj = location.hash.replace('#','').parseQueryString();
-        var fail_msgs = {'action_delete': navObj['view']+' deletion failed!',
-            'action_drop': navObj['view']+' drop failed!'
-        }
-        
-        if (whereToEdit) {
-            var request_url = generate_ajax_url(true,{});
-            if (e.target.id == 'action_delete') request_url += '&update=delete';
-            else if (e.target.id == 'action_edit') request_url += '&update=edit';
-            else if (e.target.id == 'action_drop') request_url += '&update=drop';
-            else if (e.target.id == 'action_empty') request_url += '&update=empty';
-            // make action request
-            var x = new XHR({'url':request_url,
-                'spinnerTarget': $(data_table),
-            	'onSuccess':function(){
-            		var resp = JSON.decode(this.response.text);
-            		if (resp.status == 'failed') {
-            			showDialog(fail_msgs[e.target.id], resp.msg, {});
-            		} else {
-            			reloadPage();
-            		}
-            	}
-                
-            }).post({'whereToEdit':whereToEdit});
-        }
-    }
-
-	// opt_type = user || table || data
-	console.log('loadTableOptions()!');
-	var diva = new Element('div#table-options').inject($('sql-container'), 'top');
-	if (opt_type != 'no_key') {
-		var pipi = new Element('p',{'class':'pull-left'}).adopt(new Element('span',{'text':'Select: '}));
-
-		var or = ['all', 'none'];var evnts = [true, false]
-		or.each(function(item, key){
-			var i = new Element('a',{'text':'select '+item,'id':'select_'+item,
-			'events': {
-					click: function(){set_all_tr_state(data_table, evnts[key])}
-				} 
-			});
-			pipi.adopt(i);
-		});
-		pipi.adopt(new Element('span',{'text':'With Selected: '}));
-		if (opt_type == 'user')
-			or = ['delete'];
-		else if (opt_type == 'table')
-			or = ['empty', 'drop'];
-		else if (opt_type == 'data')
-			or = ['edit', 'delete'];
-		or.each(function(item, key){
-			var a = new Element('a',{'text':item,'id':'action_'+item,
-				'events': {
-					click: actions
-				}
-			});
-			pipi.adopt(a);
-		});
-		diva.adopt( pipi ).inject($('sql-container'), 'top');
-	} else {
-		diva.adopt(new Element('p',{'class':'pull-left'}).adopt(
-			new Element('span',{'text':'[No Primary Key defined]','style':'color:#888;'}))
-		).inject($('sql-container'), 'top');
-	}
-	
 }
 
 
@@ -638,6 +504,8 @@ var XHR = new Class({
             options.url += 'query=' + options.query;
             if (options.type)
                 options.url += '&type=' + options.type;
+			if (options.section)
+				options.ulr += '&section' + options.section;
             if (options.schema)
                 options.url += '&schema=' + options.schema;
             if (options.database)

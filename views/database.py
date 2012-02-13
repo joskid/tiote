@@ -5,31 +5,9 @@ from django.template import loader, RequestContext, Template
 from django.views.decorators.http import require_http_methods
 
 from tiote import forms, functions
-#
-#
-#def schemas(request):
-#    # make queries
-#    conn_params = functions.get_conn_params(request)
-#    db_list = functions.common_query(request, 'db_list')
-#    schema_list = functions.common_query(request, 'schema_list')
-#    
-#    if request.method == 'POST':
-#        pass
-#    
-#    else:
-#        pass
-#
-#    return functions.response_shortcut(request, extra_vars={
-#            'schema_list': json.dumps(schema_list),}
-#        )
+
 
 def overview(request):
-    TableForm = forms.get_dialect_form('TableForm', 
-        functions.get_conn_params(request)['dialect'])
-    params = request.GET
-    supported_engines = functions.common_query(request, 'supported_engines')
-    charset_list = functions.common_query(request, 'charset_list')
-    existing_tables = functions.rpr_query(request, 'existing_tables')
     # table deletion or emptying request catching and handling
     if request.method == 'POST' and request.GET.get('update'):
         l = request.POST.get('whereToEdit').strip().split(';');
@@ -43,33 +21,15 @@ def overview(request):
         if request.GET.get('schema'):
             query_data['schema'] = request.GET.get('schema')
         return functions.rpr_query(request, q , query_data)
-    # new table creation
-    if request.method == 'POST':
-        column_count = 0
-        for fi in request.POST:
-            if len( fi.split('_') ) == 2:
-                if column_count < int(fi.split('_')[1]):
-                    column_count = int(fi.split('_')[1])
-        form = TableForm(engines=supported_engines, charsets=charset_list, data=request.POST,
-            column_count=(column_count+1), existing_tables=existing_tables)
-        if form.is_valid():
-            query_data = {'column_count':(column_count+1), 'db': request.GET['database']}
-            query_data.update(form.cleaned_data)
-            return functions.rpr_query(request, 'create_table',
-                query_data)
-        else:
-            return functions.response_shortcut(request, template='form_errors',
-                extra_vars={'form':form,})
     else:
-        form = TableForm(engines=supported_engines, charsets=charset_list
-            , label_suffix=' ->', existing_tables=existing_tables)
-            
-
-    return functions.response_shortcut(request, extra_vars={'form': form, 'edit':False,
-        'table_fields': ['name', 'engine', 'charset', 'inherit', 'of_type'],
-        'odd_fields': ['type','key','charset',],
-        'sidebar': functions.generate_sidebar(request)}
-    )
+        tbl_data = functions.rpr_query(request, 'table_rpr')
+        tables_html = functions.HtmlTable(headers=tbl_data['columns'], 
+            rows=tbl_data['rows'], attribs={'class':'sql zebra-striped', 'id':'sql_table'},
+            props={'count':tbl_data['count'],'with_checkboxes': True,}
+            ).to_element()
+        table_options_html = functions.table_options('data')
+        return HttpResponse(table_options_html + tables_html)
+    return functions.response_shortcut(request, extra_vars={})
     
 
 def query(request):
