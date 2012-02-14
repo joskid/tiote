@@ -231,7 +231,7 @@ def set_ajax_key(request):
     if not request.session.get('ajaxKey', False):
         sessid = hashlib.md5( str(random.random()) ).hexdigest()
         d = request.META['PWD']
-        request.session['ajaxKey'] = hashlib.md5(sessid + d).hexdigest()
+        request.session['ajaxKey'] = hashlib.md5(sessid + d).hexdigest()[0:10]
         
 def validateAjaxRequest(request):
     if request.GET.get('ajaxKey', False) and request.GET.get('ajaxKey', False) == request.session.get('ajaxKey',''):
@@ -474,10 +474,16 @@ class HtmlTable():
         count = len(self.tbody_chldrn)
         row_list = ["<tr id='row_{0}'>".format(str(count))]
         if self.props is not None:
+            l_props = []
             if self.props.keys().count('with_checkboxes') > 0 and self.props['with_checkboxes'] == True:
-                anc_chk = "<input class='checker' id='check_{0}' type='checkbox' />".format(count)
-                tida = "<td class='selector'>{0}</td>".format(anc_chk)
-                row_list.append(tida)
+                l_props.append("<input class='checker' id='check_{0}' type='checkbox' />".format(count))
+            if self.props.keys().count('go_link') > 0 and self.props['go_link'] == True:
+                l_props.append(
+                    '<a href="{0}={1}" class="go_link icon-go">&nbsp;</a>'.format(
+                        self.props['go_link_dest'],row[0])
+                )
+            tida = "<td class='controls'>{0}</td>".format("".join(l_props))
+            row_list.append(tida)
         for col in row:
             row_list.append("<td>{0}</td>".format(col))
         row_list.append("</tr>")

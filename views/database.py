@@ -23,9 +23,15 @@ def overview(request):
         return functions.rpr_query(request, q , query_data)
     else:
         tbl_data = functions.rpr_query(request, 'table_rpr')
+        from urllib import urlencode
+        dest_url = {'section':'table','view':'browse',
+            'database':request.GET.get('database'), 'schema':request.GET.get('schema')
+        }
         tables_html = functions.HtmlTable(headers=tbl_data['columns'], 
             rows=tbl_data['rows'], attribs={'class':'sql zebra-striped', 'id':'sql_table'},
-            props={'count':tbl_data['count'],'with_checkboxes': True,}
+            props={'count':tbl_data['count'],'with_checkboxes': True,
+                'go_link': True, 'go_link_dest': '#'+urlencode(dest_url)+'&table',
+            }
             ).to_element()
         table_options_html = functions.table_options('data')
         return HttpResponse(table_options_html + tables_html)
