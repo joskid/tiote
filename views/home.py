@@ -28,8 +28,8 @@ def home(request):
         form = DbForm(templates=template_list, users=user_list, charsets=charset_list)
         
     return functions.response_shortcut(request,
-        extra_vars={'form':form, 'variables':functions.get_home_variables(request),
-                    'sidebar':functions.generate_sidebar(request)})
+        extra_vars={'form':form, 'variables':functions.get_home_variables(request)}
+    )
 
 
 

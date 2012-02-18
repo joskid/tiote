@@ -74,30 +74,30 @@ a:hover {
 div#sql-container {
     padding-left: 20px;
 }
-div#table-options {
+div.table-options {
     clear: right;
 }
-#table-options span {
+div.table-options span {
     padding-left: 30px;
 }
-#table-options a {
+div.table-options a {
     cursor: pointer;
     padding-left: 5px;
 }
-#table-options a, #table-options span, #table-options p {
+div.table-options a, div.table-options span, div.table-options p {
     font-size: 12px;
     margin-bottom: 3px;
 }
-#table-options .paginatn a.last {
+div.table-options .paginatn a.last {
     padding-right: 6px;
 }
-#table-options .paginatn a.active {
+div.table-options .paginatn a.active {
     font-weight: bold;
 }
-#table-options .paginatn a {
+div.table-options .paginatn a {
     color: #404040;
 }
-#table-options .paginatn a.cntrl {
+div.table-options .paginatn a.cntrl {
     color: #0069D6;
 }
 table.sql {

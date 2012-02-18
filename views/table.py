@@ -9,9 +9,6 @@ from tiote import forms, functions
 
 def browse(request):
     # row(s) deletion request handling
-    tbl_data = functions.rpr_query(request, 'browse_table')
-    tbl_data = json.loads(tbl_data)
-
     if request.method == 'POST' and request.GET.get('update') == 'delete':
         # might be needed for future corrections
 #        l = request.POST.get('whereToEdit').strip().split(';');
@@ -27,37 +24,22 @@ def browse(request):
     elif request.method == 'POST' and request.GET.get('update') == 'edit':
         return functions.http_500('feature not yet implemented!')
     
-    return functions.response_shortcut(request, extra_vars = {
-            'table': functions.HtmlTable(headers=tbl_data['columns'],
-                rows=tbl_data['rows'],
-                props={'count':tbl_data['count'], 'keys': tbl_data['keys'],
-                    'with_checkboxes': True,
-                },
-                attribs={'class':'sql zebra-stripped'}
-            ).to_element(),
-            'sidebar': functions.generate_sidebar(request)
-        }
-    )
+    tbl_data = functions.rpr_query(request, 'browse_table')
+    browse_table_html = functions.HtmlTable(
+        props={'count':tbl_data['count'], 'keys': tbl_data['keys'],
+            'with_checkboxes': True,
+        }, 
+        store = {'total_count':tbl_data['total_count'], 'offset': tbl_data['offset'],
+            'limit': tbl_data['limit']
+        }, **tbl_data
+    ).to_element()
+    table_options_html = functions.table_options('data', pagination=True)
+
+    return HttpResponse(table_options_html + browse_table_html)
 
 
 def structure(request):
-    TableForm = forms.get_dialect_form('TableForm', functions.get_conn_params(request)['dialect'])
-    params = request.GET
-    # database queries
-    supported_engines = functions.common_query(request, 'supported_engines')
-    charset_list = functions.common_query(request, 'charset_list')
-    existing_tables = functions.rpr_query(request, 'existing_tables')
-    existing_columns = functions.rpr_query(request, 'existing_columns')
-    
-    table_with_columns = functions.rpr_query(request, 'table_with_columns')
-    tb_nd_cols = {}
-    for row in table_with_columns:
-        if tb_nd_cols.keys().count(row[0]) == 0 :
-            tb_nd_cols[ row[0] ] = []
-        tb_nd_cols[ row[0] ].append(row[1])
-        
-    table_with_columns = json.dumps(tb_nd_cols)
-    
+
     # column deletion
     if request.method == 'POST' and request.GET.get('update'):
         l = request.POST.get('whereToEdit').strip().split(';');
@@ -72,31 +54,18 @@ def structure(request):
                           'conditions': conditions}
             
             return functions.rpr_query(request, q, query_data)
-            
-    # column creation
-    if request.method == 'POST':
-        column_count = 0
-        form = TableForm(engines=supported_engines, charsets=charset_list, data=request.POST, edit=True, column_form=True,
-            column_count=(column_count+1), existing_tables=existing_tables, existing_columns=existing_columns)
-        if form.is_valid():
-            query_data = {'column_count':(column_count+1), 'db': request.GET.get('database'),
-                          'table': request.GET.get('table')}
-            query_data.update(form.cleaned_data)
-            return functions.rpr_query(request, 'create_column', query_data)
-        else:
-            return functions.response_shortcut(request, template='form_errors',
-                extra_vars={'form':form,})
-    else:
-        form = TableForm(engines=supported_engines, charsets=charset_list, edit=True, column_form=True,
-            label_suffix=' ->', existing_tables=existing_tables, existing_columns=existing_columns)
-        
-    return functions.response_shortcut(request, extra_vars={'form': form, 'edit':False,
-        'table_fields': ['name', 'engine', 'charset', 'inherit', 'of_type'],
-        'odd_fields': ['type','key','charset', 'column', 'on delete'],
-        'foreign_key_fields': ['references', 'column', 'on update', 'on delete'],
-        'table_with_columns': table_with_columns,
-        'sidebar': functions.generate_sidebar(request) }
-    )
+    # view data
+    tbl_struct_data = functions.rpr_query(request, 'table_structure')
+    columns_table_html = functions.HtmlTable(attribs = {'id': 'tbl_columns'},
+        props = {'count': tbl_struct_data['count'], 'with_checkboxes': True,},
+        **tbl_struct_data
+    ).to_element()
+    indexes_data = functions.rpr_query(request, 'indexes')
+    indexes_table_html = functions.HtmlTable(
+        props = {'count': indexes_data['count'], 'with_checkboxes': True},
+        **indexes_data
+    ).to_element()
+    return HttpResponse(columns_table_html+indexes_table_html)
 
 
 def edit(request):

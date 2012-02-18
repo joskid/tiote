@@ -50,9 +50,11 @@ function Page(obj){
 	this.updateOptions({'navObj': obj, 'hash': location.hash});
 	this.setTitle();
 	this.generateTopMenu(obj);
+	this.tbls = [];
 	disable_unimplemented_links();
 	self = this; 
-	
+	// unset all window resize events
+	window.removeEvents(['resize']);
 	clearPage();
 	this.generateView(obj);
 }
@@ -209,15 +211,9 @@ Page.prototype.generateView = function(data){
 						self.completeForm();
 					}
 				} else if (data['section'] == 'database'){
-					if (data['view'] == 'overview') {
-						self.overviewView();
-					}
+				
 				} else if (data['section'] == 'table'){
-					if (data['view'] == 'browse'){
-						self.browseView();
-					} else if (data['view'] == 'structure') {
-						self.structureView();
-					}
+				
 				}
 				self.generateSidebar();
 			}
@@ -225,50 +221,6 @@ Page.prototype.generateView = function(data){
         }
     },data)
     ).send()
-}
-
-
-Page.prototype.structureView = function(){
-	console.log('structureView()!');
-    this.loadTable('table_structure', 'representation',
-		{'height': getWindowHeight() * .7, 'with_checkboxes':true})
-	window.addEvent('resize', function(){
-		$(this.data_table).setStyle('height', 'auto')
-		$(this.data_table).setStyle('max-height', getWindowHeight() * .45);
-	});
-	
-	this.loadTableOptions('data');
-    updateSelectNeedsValues();
-	updateForeignKeyColumns();
-    this.completeForm();
-}
-
-
-Page.prototype.browseView = function(){
-	var height = getWindowHeight() - 88;
-//		var resizeTable = function(){
-//			height = getWindowHeight() - 88;
-//			$(this.data_table).setStyle('height', height);
-//			$(this.data_table).setStyle('max-height', height);
-//		}
-	// heights
-//        this.loadTable('browse_table','representation',{'height':height});
-
-//		window.addEvent('resize', function(){
-//			resizeTable();
-//		});
-}
-
-Page.prototype.overviewView = function(){
-    console.log('overviewView()!');
-	var h = getWindowHeight() * .7;
-//    this.loadTable('table_rpr', 'representation',
-//		{'height': h, 'with_checkboxes':true})
-	window.addEvent('resize', function(){
-		h = getWindowHeight() * .7;
-		$(this.data_table).setStyle('height', 'auto');
-		$(this.data_table).setStyle('max-height', h);
-	});
 }
 
 
@@ -311,70 +263,49 @@ Page.prototype.userView = function(){
 	this.completeForm();
 }
 
-Page.prototype.loadTable = function(query, type, opts){
-    console.log('loadTable() called!')
-    // xhr request for table list
-    var x = new XHR({'query':query, 'type':type,
-        'schema': this.options.navObj.schema, 
-        'database': this.options.navObj.database,
-        'table': this.options.navObj.table,
-        'offset': this.options.navObj.offset,
-        'method': 'get',
-        'onSuccess': function(text,xml){
-            self.startPageLoad();
-            if (JSON.validate(text)) {
-                var tbl_json = JSON.decode(text);
-				// keys
-				if (Object.keys(tbl_json).contains('keys')){
-					if (tbl_json['keys']['count'] == 0 && self.options.navObj['view'] == 'browse') {
-						self.loadTableOptions('no_key');
-					} else {
-						var t = true;
-						self.loadTableOptions('data');
-						opts = Object.merge(opts, {'keys': tbl_json['keys']});
-					}
-				}
-				// table
-				if ( (t) || Object.keys(opts).contains('with_checkboxes'))
-					opts['with_checkboxes'] = true;
-                self.data_table = create_data_table(tbl_json['columns'],
-                    tbl_json['rows'], opts);
-				// pagination
-                if (Object.keys(tbl_json).contains('total_count')) {
-                    $('table-options').adopt(tbl_pagination(tbl_json['total_count'],
-                        tbl_json['limit'], tbl_json['offset']) )
-                }
-            } else {
-                $('sql-container').set('text','!! invalid JSON data !!');
-            }
-
-            self.endPageLoad();
-        }
-    }).send()
-            
-}
-
 
 Page.prototype.completeTableView = function() {
 	console.log('completeTableView()!')
-	if ($('sql_table') != null ) {
-		Page.prototype.data_table = new HtmlTable($('sql_table'));
-		make_checkable(this.data_table);
+	if ($$('table.sql') != null ) {
+		$$('table.sql').each(function(tbl, tbl_index){
+			self.tbls.include(new HtmlTable($(tbl)));
+			make_checkable(self.tbls[tbl_index]);
+		});
+		
 	}
 }
 
 
 Page.prototype.completeTableOptions = function() {
-	// #table-options processing : row selection
-	if ($('table-options') != null && $('table-options').getElements('a.selecters')) {
-		$('table-options').getElements('a.selecters').each(function(a_sel){
-			a_sel.addEvent('click', function() {
-				var option = a_sel.id.replace('select_', '');
-				set_all_tr_state(self.data_table, (option == 'all') ? true : false);
+	// .table-options processing : row selection
+	if ($$('.table-options') != null) {
+		$$('.table-options').each(function(tbl_opt, tbl_opt_index){
+			// enable selection of rows
+			$(tbl_opt).getElements('a.selecters').each(function(a_sel){
+				a_sel.addEvent('click', function() {
+					a_sel.get('class').split(' ').each(function(cl){
+						if (cl.contains('select_')) {
+							var option = cl.replace('select_', '');
+							set_all_tr_state(self.tbls[tbl_opt_index], (option == 'all') ? true : false);
+						}
+					});
+				});
 			});
+			
+			// table's needing pagination
+			if ($(self.tbls[tbl_opt_index]).get('data')) {
+				var data = {}
+				$(self.tbls[tbl_opt_index]).get('data').split(';').each(function(d){
+					var ar = d.split(':');
+					data[ar[0]] = ar[1];
+				});
+				console.log(data);
+				$(tbl_opt).adopt(tbl_pagination(data['total_count'], data['limit'], data['offset']));
+				data= {};
+			}
 		});
 	}
-
+	
 }
 
 
@@ -504,29 +435,21 @@ var XHR = new Class({
             options.url += 'query=' + options.query;
             if (options.type)
                 options.url += '&type=' + options.type;
-			if (options.section)
-				options.ulr += '&section' + options.section;
-            if (options.schema)
-                options.url += '&schema=' + options.schema;
-            if (options.database)
-                options.url += '&database=' + options.database;
-            if (options.table)
-                options.url += '&table=' + options.table;
-            if (options.offset)
-                options.url += '&offset=' + options.offset;
         }
-		else {
-			if (options.section)
-				options.url += 'section=' + options.section;
-			if (options.view)
-				options.url += '&view=' + options.view;
-			if (options.database)
-				options.url += '&database=' + options.database
-            if (options.schema)
-                options.url += '&schema=' + options.schema
-			if (options.table)
-				options.url += '&table=' + options.table
-		}
+		if (options.section)
+			options.url += 'section=' + options.section;
+		if (options.view)
+			options.url += '&view=' + options.view;
+		if (options.database)
+			options.url += '&database=' + options.database
+		if (options.schema)
+			options.url += '&schema=' + options.schema
+		if (options.table)
+			options.url += '&table=' + options.table
+		if (options.table)
+			options.url += '&table=' + options.table;
+		if (options.offset)
+			options.url += '&offset=' + options.offset;
 		// append ajax validation key
 		options.url += '&ajaxKey=' + ajaxKey;
 		this.parent(options);

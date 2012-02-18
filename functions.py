@@ -33,7 +33,7 @@ def rpr_query(request, query_type, query_data=None):
             return http_500(r)
         
         
-    elif query_type in ['table_keys', 'primary_keys']:
+    elif query_type in ['indexes', 'primary_keys']:
         if query_data is None:
             query_data = {'database':request.GET.get('database'),'table':request.GET.get('table')}
             if request.GET.get('schema'):
@@ -89,20 +89,20 @@ def rpr_query(request, query_type, query_data=None):
         keys = rpr_query(request, 'primary_keys', sub_q_data)
         count = sql.full_query(conn_params, 
             sql.generate_query('count_rows', conn_params['dialect'], sub_q_data)[0],
-            )
+            )['rows']
         r = sql.full_query(conn_params,
             sql.generate_query(query_type, conn_params['dialect'], sub_q_data)[0]
             )
         # format and return data
         if type(r) == dict:
-            r.update({'total_count': count, 'offset': sub_q_data['offset'],
+            r.update({'total_count': count[0][0], 'offset': sub_q_data['offset'],
                       'limit':sub_q_data['limit'], 'keys': keys})
-            return jsonize_result(r)
+            return r
         else:
             return http_500(r)
         
     # queries that just asks formats and return result
-    elif query_type in ['existing_columns', 'existing_tables', 'table_with_columns']:
+    elif query_type in ['existing_tables',]:
         query_data = {'database':request.GET.get('database'),'table':request.GET.get('table')}
         if conn_params['dialect'] == 'postgresql':
             query_data['schema'] = request.GET.get('schema')
@@ -353,15 +353,15 @@ def response_shortcut(request, template = False, extra_vars=False ):
         h.set_cookie('tt_formContainsErrors','true')
     return h
 
-def table_options(opt_type):
+def table_options(opt_type, pagination=False):
     # opt_type = "users || tbls || data
-    l = ['<div id="table-options">'] # unclosed tag
+    l = ['<div class="table-options">'] # unclosed tag
     ctrls = ['all', 'none']
     # selection html
     l.append('<p class="pull-left">') # unclosed tag
     l.append('<span>{0}</span>'.format("Columns:" if opt_type=='tbls' else "Select: "))
     for ctrl in ctrls:
-        l.append('<a id="select_{0}" class="selecters">select {0}</a>'.format(ctrl))
+        l.append('<a class="selecters select_{0}">select {0}</a>'.format(ctrl))
     l.append("<span>With Selected: </span>")
     # action(ctrls) html
     if opt_type == 'users' or opt_type == 'data': 
@@ -369,7 +369,7 @@ def table_options(opt_type):
     elif opt_type == 'tbls':
         ctrls = ['empty', 'drop']
     for ctrl in ctrls:
-        l.append('<a id="action_{0}" class="doers">{0}</a>'.format(ctrl))
+        l.append('<a class="doers action_{0}">{0}</a>'.format(ctrl))
     l.append("</p></div>") # closing unopen tags
     return "".join(l)
 
@@ -439,22 +439,25 @@ class HtmlTable():
     '''
     creates a html table from the given arguments
         - properties - a dict of table attributes
-        - headers - an iterable containing the table heads
+        - columns - an iterable containing the table heads
         - rows - and iterable containing some iterables
     '''
-    def __init__(self, headers=None, rows=None, attribs=None, props=None):
+    def __init__(self, columns=None, rows=None, attribs={}, props=None, store={}, **kwargs):
         self.props = props
         self.tbody_chldrn = []
-        self.attribs = attribs
         # build attributes
-        self.attribs_list = self._build_attribs_list(attribs)
+        default_attribs = {'class':'sql zebra-striped', 'id':'sql_table'}
+        self.attribs = default_attribs
+        self.attribs.update(attribs)
+        self.store_list = self._build_store(store)
+        self.attribs_list = self._build_attribs_list(self.attribs)
         # build <thead><tr> children
-        if headers is not None:
+        if columns is not None:
             hd_list = []
             if self.props is not None:
                 if self.props.keys().count('with_checkboxes') > 0 and self.props['with_checkboxes'] == True:
                     hd_list.append("<th class='controls'></th>")
-            for head in headers:
+            for head in columns:
                 hd_list.append('<th>'+head+'</th>')
             self.thead_chldrn = hd_list
         # build <tbody> children
@@ -469,6 +472,15 @@ class HtmlTable():
                     str(k).lower(), str(attribs[k]) )
                 )
         return attribs_list
+
+    def _build_store(self, store):
+        store_list = []
+        if store != {}:
+            for key in store.keys():
+                store_list.append("{0}:{1};".format(
+                    str(key), str(store[key])
+                    ))
+        return store_list
 
     def push(self, row, props=None):
         count = len(self.tbody_chldrn)
@@ -490,9 +502,11 @@ class HtmlTable():
         self.tbody_chldrn.append(row_list)
     
     def to_element(self):
-        el = "<table{0}><thead><tr>{1}</tr></thead><tbody>{2}</tbody></table>".format(
-            ''.join(self.attribs_list), ''.join(self.thead_chldrn), 
-            ''.join([ ''.join(row) for row in self.tbody_chldrn])
+        el = "<table{0}{1}><thead><tr>{2}</tr></thead><tbody>{3}</tbody></table>".format(
+            ''.join(self.attribs_list), # {0}
+            ' data="' + ''.join(self.store_list) +'"' if bool(self.store_list) else '', #{1}
+            ''.join(self.thead_chldrn),  #{2}
+            ''.join([ ''.join(row) for row in self.tbody_chldrn]) #{3}
         )
         return el
 

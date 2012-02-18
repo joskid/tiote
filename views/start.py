@@ -66,7 +66,9 @@ def ajax(request):
     # medium GET request queries
     if request.GET.get('query'):
         q = request.GET.get('query')
-        if request.GET.get('type') == 'representation':
+        if q == 'sidebar':
+            return functions.generate_sidebar(request)
+        elif request.GET.get('type') == 'representation':
             return HttpResponse( functions.rpr_query(request, q) )
         elif request.GET.get('type') == 'full':
             return HttpResponse( functions.full_query(request, q) )

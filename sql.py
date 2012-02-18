@@ -121,7 +121,7 @@ information_schema.tables WHERE table_schema='{schema}' ORDER BY table_name ASC"
                 queries.append(q0)
             return tuple(queries)
         
-        elif query_type == 'table_keys':
+        elif query_type == 'indexes':
             q0 = "SELECT kcu.column_name, kcu.constraint_name, tc.constraint_type \
 FROM information_schema.key_column_usage AS kcu LEFT OUTER JOIN information_schema.table_constraints \
 AS tc on (kcu.constraint_name = tc.constraint_name) WHERE kcu.table_name='{table}' \
@@ -150,11 +150,6 @@ AND kcu.table_schema='{schema}' AND kcu.table_catalog='{database}' AND \
                 queries.append( "TRUNCATE "+sch+".{table_name}".format(**where) )
             return queries
         
-        elif query_type == 'existing_columns':
-            q0 = "SELECT column_name FROM information_schema.columns WHERE \
-table_catalog='{database}' AND table_schema='{schema}' AND table_name='{table}'".format(**query_data)
-            return (q0, )
-        
         elif query_type == 'table_structure':
             q0 = "SELECT column_name as column, data_type as type, is_nullable as null, \
 column_default as default, character_maximum_length, numeric_precision, numeric_scale, \
@@ -162,10 +157,6 @@ datetime_precision, interval_type, interval_precision FROM information_schema.co
 WHERE table_catalog='{database}' AND table_schema='{schema}' AND table_name='{table}' ".format(**query_data)
             return (q0, )
         
-        elif query_type == 'table_with_columns':
-            q0 = "SELECT table_name, column_name FROM information_schema.columns WHERE \
-table_catalog='{database}' AND table_schema='{schema}'".format(**query_data)
-            return (q0, )
         
         elif query_type == 'existing_tables':
             q0 = "SELECT table_name FROM information_schema.tables WHERE table_schema='{schema}' ORDER BY table_name ASC".format(**query_data)
@@ -226,58 +217,12 @@ table_catalog='{database}' AND table_schema='{schema}'".format(**query_data)
                 q += " CHARACTER SET {charset}".format(**query_data)
             return (q, )
         
-        elif query_type == 'create_column':
-            queries = []
-            d = {'primary':'PRIMARY KEY', 'unique':'UNIQUE', 'index':"INDEX"}
-            q0 = "ALTER TABLE {database}.{table} ADD" + col_defn(query_data, str(0))
-            q0 = q0.format(**query_data)
-            # handle column placement
-            if query_data['insert_position'] == 'at the beginning':
-                q0 += ' FIRST'
-            elif query_data['insert_position'].count('after '):
-                q0 += ' AFTER ' + query_data['insert_position'].split(' ')[1].strip()
-            queries.append(q0)
-            # handle key
-            if query_data['key_0']:
-                q1 = "ALTER TABLE {table} ADD "+d[ query_data['key_0'] ] +'('+query_data['name_0']+')'
-                queries.append(q1.format(**query_data))
-            return queries
-            
         elif query_type == 'delete_column':
             queries = []
             q_sfx = "ALTER TABLE {database}.{table} DROP ".format(**query_data)
             for cond in query_data['conditions']:
                 queries.append(q_sfx + cond['field'])
             return queries
-        
-        elif query_type == 'create_table':
-            q = "CREATE TABLE `{database}`.`{name}`".format(**query_data)
-            
-            column_count = query_data.pop('column_count')
-            if column_count != 0:
-                q += ' ('
-                d_indexes = {}
-                for fi in range(column_count):
-                    # store keys for later inclusion
-                    if query_data['key_'+str(fi)]:
-                        d = {'primary':'PRIMARY KEY', 'unique':'UNIQUE', 'index':"INDEX"}
-                        if d_indexes.keys().count( d[ query_data['key_'+str(fi)] ] ) == 0:
-                            d_indexes[ d[ query_data['key_'+str(fi)] ] ] = []
-                        d_indexes[ d[ query_data['key_'+str(fi)] ] ].append( query_data['name_'+str(fi)] )
-                    sub_q = col_defn(query_data, str(fi))
-                    # append to query
-                    q += sub_q if fi == column_count-1 else sub_q + ','
-                # handle keys: primary, index and unique
-                if d_indexes:
-                    for index in d_indexes:
-                        sub_q = ', '+index+' ('
-                        for i in range( len(d_indexes[index]) ):
-                            sub_q += ' ' + d_indexes[index][i] + ')' if i == len(d_indexes[index]) - 1 else ' ' + d_indexes[index][i] + ','
-                        q += sub_q
-            q += ')' if column_count != 0 else ''
-            q += " CHARACTER SET {charset} ENGINE {engine}"
-            q = q.format(**query_data)
-            return (q, )
         
         elif query_type == 'drop_table':
             queries = []
@@ -293,7 +238,7 @@ table_catalog='{database}' AND table_schema='{schema}'".format(**query_data)
             return queries
         
         elif query_type == 'column_list':
-            return ("SELECT column_name FROM information_schema.columns WHERE table_schema='{database}' AND table_name='{table}")
+            return ("SELECT column_name FROM information_schema.columns WHERE table_schema='{database}' AND table_name='{table}'")
         
         elif query_type == 'drop_user':
             queries = []
@@ -324,10 +269,7 @@ table_catalog='{database}' AND table_schema='{schema}'".format(**query_data)
             q0 = "SELECT * FROM `{database}`.`{table}` LIMIT {limit} OFFSET {offset}".format(**query_data)
             return (q0,)
         
-        elif query_type == 'table_keys':
-#            q0 = "SELECT CONSTRAINT_NAME, COLUMN_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE \
-#                WHERE TABLE_SCHEMA='{database}' AND TABLE_NAME='{table}' AND CONSTRAINT_NAME='PRIMARY'".format(**query_data)
-#                
+        elif query_type == 'indexes':
             q0 = "SELECT DISTINCT kcu.column_name, kcu.constraint_name, tc.constraint_type \
 from information_schema.key_column_usage as kcu, information_schema.table_constraints as tc WHERE \
 kcu.constraint_name = tc.constraint_name AND kcu.table_schema='{database}' AND tc.table_schema='{database}'".format(**query_data)
@@ -349,52 +291,6 @@ AND (tc.constraint_type='PRIMARY KEY' OR tc.constraint_type='UNIQUE')".format(**
             q0 = "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='{database}'".format(**query_data)
             return (q0, )
         
-        elif query_type == 'existing_columns':
-            q0 = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='{database}' AND TABLE_NAME='{table}'".format(**query_data)
-            return (q0, )
-        
-        elif query_type == 'table_with_columns':
-            q0 = "SELECT table_name, column_name FROM information_schema.columns WHERE \
-table_schema='{database}'".format(**query_data)
-            return (q0, )
-
-
-def col_defn(col_data, sfx):
-    '''used with iterations, sfx = str(i) where i is index of current iterations
-    returns individual column creation statement; excludes indexes and keys '''
-    
-    sub_q = ' {name_'+sfx+'} {type_'+sfx+'}'
-    # types with binary
-    if col_data['type_'+sfx] in ['tinytext','text','mediumtext','longtext']:
-        sub_q += ' BINARY' if 'binary' in col_data['other_'+sfx] else ''
-    # types with length
-    if col_data['type_'+sfx] in ['bit','tinyint','smallint','mediumint','int','integer','bigint',
-                      'real','double','float','decimal','numeric','char','varchar',
-                      'binary','varbinary']:
-        sub_q += '({size_'+sfx+'})' if col_data['size_'+sfx] else ''
-    # types with unsigned
-    if col_data['type_'+sfx] in ['tinyint','smallint','mediumint','int','integer','bigint',
-                      'real','double','float','decimal','numeric']:
-        sub_q += ' UNSIGNED' if 'unsigned' in col_data['other_'+sfx] else ''
-    # types needing values
-    if col_data['type_'+sfx] in ['set','enum']:
-        sub_q += ' {values_'+sfx+'}' if col_data['values_'+sfx] else ''
-    # types needing charsets
-    if col_data['type_'+sfx] in ['char','varchar','tinytext','text',
-                            'mediumtext','longtext','enum','set']:
-        sub_q += ' CHARACTER SET {charset_'+sfx+'}'
-    # some options
-    sub_q += ' NOT NULL' if 'not null' in col_data['other_'+sfx] else ' NULL'
-    s_d = col_data['default_'+sfx]
-    if s_d:
-        if col_data['type_'+sfx] not in ['tinyint','smallint','mediumint','int','integer','bigint',
-                          'bit','real','double','float','decimal','numeric']:
-            sub_q += ' DEFAULT \''+s_d+'\''
-        else:
-            sub_q += ' DEFAULT '+s_d+''
-#                    sub_q += ' DEFAULT {default_'+sfx+'}' if col_data['default_'+sfx] else ''
-    sub_q += ' AUTO_INCREMENT' if 'auto increment' in col_data['other_'+sfx] else ''
-    return sub_q
 
 
 def full_query(conn_params, query):

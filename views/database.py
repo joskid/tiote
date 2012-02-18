@@ -27,11 +27,10 @@ def overview(request):
         dest_url = {'section':'table','view':'browse',
             'database':request.GET.get('database'), 'schema':request.GET.get('schema')
         }
-        tables_html = functions.HtmlTable(headers=tbl_data['columns'], 
-            rows=tbl_data['rows'], attribs={'class':'sql zebra-striped', 'id':'sql_table'},
+        tables_html = functions.HtmlTable(
             props={'count':tbl_data['count'],'with_checkboxes': True,
                 'go_link': True, 'go_link_dest': '#'+urlencode(dest_url)+'&table',
-            }
+            }, **tbl_data
             ).to_element()
         table_options_html = functions.table_options('data')
         return HttpResponse(table_options_html + tables_html)
