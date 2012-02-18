@@ -9,6 +9,7 @@ sqlalchemy >= 0.6.8
 django >= 1.3 
 python-psycopg2 ( enables support for PostgreSQL databases)
 python-mysqldb ( enables support for MySQL databases)
+static-files app for Django versions less than 1.3
 
 Installation
 ============
