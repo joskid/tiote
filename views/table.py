@@ -4,7 +4,7 @@ from django.http import HttpResponse, Http404
 from django.template import loader, RequestContext, Template
 from django.views.decorators.http import require_http_methods
 
-from tiote import forms, functions
+from tiote import forms, utils
 
 
 def browse(request):
@@ -12,20 +12,20 @@ def browse(request):
     if request.method == 'POST' and request.GET.get('update') == 'delete':
         # might be needed for future corrections
 #        l = request.POST.get('whereToEdit').strip().split(';');
-#        conditions = functions.get_conditions(l)
-        conditions = [functions.construct_cond(item[0], item[1]) 
-            for item in functions.dict_conds(request.POST.get('whereToEdit')) ]
+#        conditions = utils.fns.get_conditions(l)
+        conditions = [utils.fns.construct_cond(item[0], item[1]) 
+            for item in utils.fns.dict_conds(request.POST.get('whereToEdit')) ]
         query_data = {'database': request.GET.get('database'),'table': request.GET.get('table'),
              'conditions': conditions}
         if request.GET.get('schema'):
             query_data['schema'] = request.GET.get('schema')
-        return functions.rpr_query(request, 'delete_row', query_data)
+        return utils.db.rpr_query(request, 'delete_row', query_data)
     # row(s) edit/updating request handling
     elif request.method == 'POST' and request.GET.get('update') == 'edit':
-        return functions.http_500('feature not yet implemented!')
+        return utils.fns.http_500('feature not yet implemented!')
     
-    tbl_data = functions.rpr_query(request, 'browse_table')
-    browse_table_html = functions.HtmlTable(
+    tbl_data = utils.db.rpr_query(request, 'browse_table')
+    browse_table_html = utils.fns.HtmlTable(
         props={'count':tbl_data['count'], 'keys': tbl_data['keys'],
             'with_checkboxes': True,
         }, 
@@ -33,7 +33,7 @@ def browse(request):
             'limit': tbl_data['limit']
         }, **tbl_data
     ).to_element()
-    table_options_html = functions.table_options('data', pagination=True)
+    table_options_html = utils.fns.table_options('data', pagination=True)
 
     return HttpResponse(table_options_html + browse_table_html)
 
@@ -43,7 +43,7 @@ def structure(request):
     # column deletion
     if request.method == 'POST' and request.GET.get('update'):
         l = request.POST.get('whereToEdit').strip().split(';');
-        conditions = functions.get_conditions(l)
+        conditions = utils.fns.get_conditions(l)
         q = ''
         if request.GET.get('update') == 'edit':
             q = 'drop_table'
@@ -53,43 +53,26 @@ def structure(request):
             query_data = {'database': request.GET.get('database'), 'table': request.GET.get('table'),
                           'conditions': conditions}
             
-            return functions.rpr_query(request, q, query_data)
+            return utils.db.rpr_query(request, q, query_data)
+        
     # view data
-    tbl_struct_data = functions.rpr_query(request, 'table_structure')
-    columns_table_html = functions.HtmlTable(attribs = {'id': 'tbl_columns'},
+    tbl_struct_data = utils.db.rpr_query(request, 'table_structure')
+    columns_table_html = utils.fns.HtmlTable(attribs = {'id': 'tbl_columns'},
         props = {'count': tbl_struct_data['count'], 'with_checkboxes': True,},
         **tbl_struct_data
     ).to_element()
-    indexes_data = functions.rpr_query(request, 'indexes')
-    indexes_table_html = functions.HtmlTable(
+    indexes_data = utils.db.rpr_query(request, 'indexes')
+    indexes_table_html = utils.fns.HtmlTable(
         props = {'count': indexes_data['count'], 'with_checkboxes': True},
         **indexes_data
     ).to_element()
     return HttpResponse(columns_table_html+indexes_table_html)
 
 
-def edit(request):
-    pass
-
-
-
-def import_(request):
-    pass
-
-
-def export(request):
-    pass
-
 def route(request):
     if request.GET.get('view') == 'browse':
         return browse(request)
     elif request.GET.get('view') == 'structure':
         return structure(request)
-#    elif request.GET.get('view') == 'insert':
-#        return insert(request)
-#    elif request.GET.get('view') == 'import':
-#        return import_(request)
-#    elif request.GET.get('view') == 'export':
-#        return export(request)
     else:
-        return functions.http_500('malformed URL')
+        return utils.fns.http_500('malformed URL')

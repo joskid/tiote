@@ -4,21 +4,21 @@ from django.template import loader, RequestContext, Template
 from django.views.decorators.http import require_http_methods
 from django.core import serializers
 
-from tiote import forms, functions, views
+from tiote import forms, utils, views
 
 
 def index(request):
-    functions.set_ajax_key(request)
+    utils.fns.set_ajax_key(request)
     request.session.set_expiry(1800)
     
-    if not functions.check_login(request):
+    if not utils.fns.check_login(request):
         return HttpResponseRedirect('login/')
     
     # return empty template
     c = {}
-    template = functions.skeleton('start')
+    template = utils.fns.skeleton('start')
     context = RequestContext(request, {
-        }, [functions.site_proc]
+        }, [utils.fns.site_proc]
     )
     context.update(c)
     return HttpResponse(template.render(context))
@@ -31,7 +31,7 @@ def login(request):
     if request.method == 'POST':
         form = forms.LoginForm(request.POST)
         if form.is_valid():
-            dict_cd = functions.do_login(request, form.cleaned_data)
+            dict_cd = utils.db.do_login(request, form.cleaned_data)
             if dict_cd['login'] == True:
                 return HttpResponseRedirect(redi)
             else:
@@ -44,15 +44,16 @@ def ajax(request):
     #check XmlHttpRequest
     if not request.is_ajax():
         # return 500 error
-        return functions.http_500('not an ajax request!')
+        return utils.fns.http_500('not an ajax request!')
     
-    if not functions.validateAjaxRequest(request):
-        return functions.http_500('invalid ajax request!')
+    if not utils.fns.validateAjaxRequest(request):
+        # might change this to send back the login page
+        return utils.fns.http_500('invalid ajax request!')
     # ajax request is okay
     
         
     if request.GET.get('check', False) and request.GET.get('check', False) == 'login':
-        bool_cd = functions.check_login(request)
+        bool_cd = utils.fns.check_login(request)
         if bool_cd == 'true':
             return HttpResponse('true')
         else:
@@ -60,24 +61,24 @@ def ajax(request):
     
     # short GET request queries
     if request.GET.get('commonQuery'):
-        return HttpResponse( functions.common_query(request, 
+        return HttpResponse( utils.sql.common_query(request, 
             request.GET.get('commonQuery')) ) 
     
     # medium GET request queries
     if request.GET.get('query'):
         q = request.GET.get('query')
         if q == 'sidebar':
-            return functions.generate_sidebar(request)
+            return utils.fns.generate_sidebar(request)
         elif request.GET.get('type') == 'representation':
-            return HttpResponse( functions.rpr_query(request, q) )
+            return HttpResponse( utils.fns.rpr_query(request, q) )
         elif request.GET.get('type') == 'full':
-            return HttpResponse( functions.full_query(request, q) )
+            return HttpResponse( utils.fns.full_query(request, q) )
         else:
-            return functions.http_500('feature not yet implemented!')
+            return utils.fns.http_500('feature not yet implemented!')
         
         
     if not request.GET.get('view', False) and not request.GET.get('section', False):
-        return functions.http_500('not a complete ajax request!')
+        return utils.fns.http_500('not a complete ajax request!')
     
     # call corresponding function as request.GET.get('view', False)
     
@@ -90,7 +91,7 @@ def ajax(request):
     elif request.GET.get('section', False) == 'table':
         return views.table.route(request)
     else:
-        return functions.http_500('request corresponses to no function!')
+        return utils.fns.http_500('request corresponses to no function!')
    
 
 
@@ -104,9 +105,9 @@ def begin(request, page, **kwargs):
             c.update({'form': forms.LoginForm(request.POST)})
         else:
             c.update({'form': forms.LoginForm()})
-    t = functions.skeleton(page)
+    t = utils.fns.skeleton(page)
     context = RequestContext(request, {
-        }, [functions.site_proc]
+        }, [utils.fns.site_proc]
     )
     context.update(c)
     h =  HttpResponse(t.render(context))

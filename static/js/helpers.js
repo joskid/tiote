@@ -508,7 +508,7 @@ function updateForeignKeyColumns(){
 
 function disable_unimplemented_links(){
 	var implemented = {
-		'home': ['home', 'users'],
+		'home': ['home'],
 		'database': ['overview'],
 		'table': ['browse', 'structure']
 	}

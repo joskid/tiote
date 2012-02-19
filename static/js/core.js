@@ -301,7 +301,6 @@ Page.prototype.completeTableOptions = function() {
 				});
 				console.log(data);
 				$(tbl_opt).adopt(tbl_pagination(data['total_count'], data['limit'], data['offset']));
-				data= {};
 			}
 		});
 	}
