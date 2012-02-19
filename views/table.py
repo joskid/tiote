@@ -25,15 +25,17 @@ def browse(request):
         return utils.fns.http_500('feature not yet implemented!')
     
     tbl_data = utils.db.rpr_query(request, 'browse_table')
+    # assert False
     browse_table_html = utils.fns.HtmlTable(
-        props={'count':tbl_data['count'], 'keys': tbl_data['keys'],
+        props={'count':tbl_data['count'], 'keys': tbl_data['keys']['rows'],
             'with_checkboxes': True,
         }, 
         store = {'total_count':tbl_data['total_count'], 'offset': tbl_data['offset'],
             'limit': tbl_data['limit']
         }, **tbl_data
     ).to_element()
-    table_options_html = utils.fns.table_options('data', pagination=True)
+    table_options_html = utils.fns.table_options('data', pagination=True,
+        with_keys=bool(tbl_data['keys']['rows']))
 
     return HttpResponse(table_options_html + browse_table_html)
 

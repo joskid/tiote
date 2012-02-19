@@ -137,23 +137,26 @@ def get_conn_params(request):
     return data    
 
 
-def table_options(opt_type, pagination=False):
+def table_options(opt_type, pagination=False, with_keys=True):
     # opt_type = "users || tbls || data
     l = ['<div class="table-options">'] # unclosed tag
     ctrls = ['all', 'none']
     # selection html
     l.append('<p class="pull-left">') # unclosed tag
-    l.append('<span>{0}</span>'.format("Columns:" if opt_type=='tbls' else "Select: "))
-    for ctrl in ctrls:
-        l.append('<a class="selecters select_{0}">select {0}</a>'.format(ctrl))
-    l.append("<span>With Selected: </span>")
-    # action(ctrls) html
-    if opt_type == 'users' or opt_type == 'data': 
-        ctrls = ['edit', 'delete']
-    elif opt_type == 'tbls':
-        ctrls = ['empty', 'drop']
-    for ctrl in ctrls:
-        l.append('<a class="doers action_{0}">{0}</a>'.format(ctrl))
+    if not with_keys:
+        l.append('<span style="color:#888;">[No primary keys defined]</span>')
+    else:
+        l.append('<span>{0}</span>'.format("Columns:" if opt_type=='tbls' else "Select: "))
+        for ctrl in ctrls:
+            l.append('<a class="selecters select_{0}">select {0}</a>'.format(ctrl))
+        l.append("<span>With Selected: </span>")
+        # action(ctrls) html
+        if opt_type == 'users' or opt_type == 'data': 
+            ctrls = ['edit', 'delete']
+        elif opt_type == 'tbls':
+            ctrls = ['empty', 'drop']
+        for ctrl in ctrls:
+            l.append('<a class="doers action_{0}">{0}</a>'.format(ctrl))
     l.append("</p></div>") # closing unopen tags
     return "".join(l)
 
@@ -230,17 +233,17 @@ class HtmlTable():
         self.props = props
         self.tbody_chldrn = []
         # build attributes
-        default_attribs = {'class':'sql zebra-striped', 'id':'sql_table'}
-        self.attribs = default_attribs
-        self.attribs.update(attribs)
-        self.store_list = self._build_store(store)
-        self.attribs_list = self._build_attribs_list(self.attribs)
+        _attribs = {'class':'sql zebra-striped', 'id':'sql_table'}
+        _attribs.update(attribs)
+        self.attribs_list = self._build_attribs_list(_attribs)
+        self.store_list = self._build_store_list(store)
+        # store the keys in the table's markup
+        self.keys_list = []
+        if self.props.keys().count('keys') > 0:
+            self.keys_list = self._build_keys_list(self.props['keys'])
         # build <thead><tr> children
         if columns is not None:
-            hd_list = []
-            if self.props is not None:
-                if self.props.keys().count('with_checkboxes') > 0 and self.props['with_checkboxes'] == True:
-                    hd_list.append("<th class='controls'></th>")
+            hd_list = ["<th class='controls'></th>"]
             for head in columns:
                 hd_list.append('<th>'+head+'</th>')
             self.thead_chldrn = hd_list
@@ -257,40 +260,55 @@ class HtmlTable():
                 )
         return attribs_list
 
-    def _build_store(self, store):
-        store_list = []
+    def _build_store_list(self, store):
+        _l = []
         if store != {}:
             for key in store.keys():
-                store_list.append("{0}:{1};".format(
-                    str(key), str(store[key])
-                    ))
-        return store_list
+                _l.append("{0}:{1};".format(str(key), str(store[key])  ))
+        return _l
+
+    def _build_keys_list(self, keys):
+        _l = []
+        if _l is not []:
+            for tup in keys:
+                _l.append("{0}:{1};".format(tup[0], tup[len(tup) - 1]) )
+        return _l
 
     def push(self, row, props=None):
         count = len(self.tbody_chldrn)
         row_list = ["<tr id='row_{0}'>".format(str(count))]
-        if self.props is not None:
-            l_props = []
-            if self.props.keys().count('with_checkboxes') > 0 and self.props['with_checkboxes'] == True:
-                l_props.append("<input class='checker' id='check_{0}' type='checkbox' />".format(count))
+        l_props = []
+        if self.props is not None and self.props.keys().count('keys') > 0 \
+                and len(self.props['keys']) > 0 :
+            # els a.checkers would be added for all tables with self.props['keys'] set
+            l_props.append("<input class='checker' id='check_{0}' type='checkbox' />".format(count))
+            # go_link adds anchors in every row 
+            # go_link_type determines the characteristics of the anchor: href || onclick
             if self.props.keys().count('go_link') > 0 and self.props['go_link'] == True:
-                l_props.append(
-                    '<a href="{0}={1}" class="go_link icon-go">&nbsp;</a>'.format(
-                        self.props['go_link_dest'],row[0])
-                )
-            tida = "<td class='controls'>{0}</td>".format("".join(l_props))
-            row_list.append(tida)
+                if self.props['go_link_type'] == 'href':
+                    l_props.append(
+                        '<a href="{0}={1}" class="go_link icon-go">&nbsp;</a>'.format(
+                            self.props['go_link_dest'],row[0])
+                    )
+                elif self.props['go_link_type'] == 'onclick':
+                    l_props.append(
+                        '<a onclick="{0}()" class="go_link icon-go">&nbsp;</a>'.format(
+                            self.props['go_link_dest'])
+                    )
+        tida = "<td class='controls'>{0}</td>".format("".join(l_props))
+        row_list.append(tida)
         for col in row:
             row_list.append("<td>{0}</td>".format(col))
         row_list.append("</tr>")
         self.tbody_chldrn.append(row_list)
     
     def to_element(self):
-        el = "<table{0}{1}><thead><tr>{2}</tr></thead><tbody>{3}</tbody></table>".format(
+        el = "<table{0}{1}{2}><thead><tr>{3}</tr></thead><tbody>{4}</tbody></table>".format(
             ''.join(self.attribs_list), # {0}
             ' data="' + ''.join(self.store_list) +'"' if bool(self.store_list) else '', #{1}
-            ''.join(self.thead_chldrn),  #{2}
-            ''.join([ ''.join(row) for row in self.tbody_chldrn]) #{3}
+            ' keys="' + ''.join(self.keys_list) + '"' if bool(self.keys_list) else '' , #{2}
+            ''.join(self.thead_chldrn),  #{3}
+            ''.join([ ''.join(row) for row in self.tbody_chldrn]) #{4}
         )
         return el
 

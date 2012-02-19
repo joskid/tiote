@@ -270,6 +270,25 @@ Page.prototype.completeTableView = function() {
 		$$('table.sql').each(function(tbl, tbl_index){
 			self.tbls.include(new HtmlTable($(tbl)));
 			make_checkable(self.tbls[tbl_index]);
+			// attach the variables passed down as javascript objects to the 
+			// table object
+			self.tbls[tbl_index]['vars'] = {}; // container
+			if ($(self.tbls[tbl_index]).get('data')) {
+				var data = {}
+				$(self.tbls[tbl_index]).get('data').split(';').each(function(d){
+					var ar = d.split(':');
+					data[ar[0]] = ar[1];
+				});
+				self.tbls[tbl_index]['vars']['data'] = data; // schema: [key: value]
+			}
+			if ($(self.tbls[tbl_index]).get('keys')) {
+				var data = {}
+				$(self.tbls[tbl_index]).get('keys').split(';').each(function(d){
+					var ar = d.split(':');
+					data[ar[0]] = ar[1];
+				});
+				self.tbls[tbl_index]['vars']['keys'] = data; // schema: [column: key_type]
+			}
 		});
 		
 	}
@@ -293,14 +312,11 @@ Page.prototype.completeTableOptions = function() {
 			});
 			
 			// table's needing pagination
-			if ($(self.tbls[tbl_opt_index]).get('data')) {
-				var data = {}
-				$(self.tbls[tbl_opt_index]).get('data').split(';').each(function(d){
-					var ar = d.split(':');
-					data[ar[0]] = ar[1];
-				});
-				console.log(data);
-				$(tbl_opt).adopt(tbl_pagination(data['total_count'], data['limit'], data['offset']));
+			if (Object.keys(self.tbls[tbl_opt_index]['vars']).contains('data')) {
+				$(tbl_opt).adopt(tbl_pagination(
+					self.tbls[tbl_opt_index]['vars']['data']['total_count'],
+					self.tbls[tbl_opt_index]['vars']['data']['limit'], 
+					self.tbls[tbl_opt_index]['vars']['data']['offset']));
 			}
 		});
 	}

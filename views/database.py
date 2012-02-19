@@ -28,9 +28,14 @@ def overview(request):
     dest_url = SortedDict({'section':'table','view':'browse'})
     dest_url['database'] = request.GET.get('database')
     dest_url['schema'] = request.GET.get('schema')
+    props_keys = [('table_name', 'key')]
+    if utils.fns.get_conn_params(request)['dialect'] == 'postgresql':
+        props_keys.append(('table_schema', 'key'))
     tables_html = utils.fns.HtmlTable(
         props={'count':tbl_data['count'],'with_checkboxes': True,
-            'go_link': True, 'go_link_dest': '#'+urlencode(dest_url)+'&table',
+            'go_link': True, 'go_link_type': 'href', 
+            'go_link_dest': '#'+urlencode(dest_url)+'&table',
+            'keys': props_keys
         }, **tbl_data
         ).to_element()
     table_options_html = utils.fns.table_options('data')

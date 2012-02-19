@@ -1,0 +1,35 @@
+=> forms.IntegerField
+bigint
+bigserial
+bit
+bit varying
+bigserial
+serial
+smallint
+integer
+
+
+=> forms.DecimalField
+double precision
+numeric
+real
+money
+
+
+
+=> forms.BooleanField
+boolean
+
+=> forms.CharField(n)
+character varying
+character
+text
+uuid
+
+=> forms.DateField
+date
+
+=> forms.DateTimeField
+all timestamps
+
+
