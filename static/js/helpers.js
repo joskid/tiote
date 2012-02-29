@@ -108,15 +108,6 @@ function generate_ajax_url(withAjaxKey,extra_data) {
 }
 
 
-// table related functions
-// uses moo
-function complete_table(tbl, options){
-	var tabl = new HtmlTable(tbl);
-	if ($(tabl).getElements(input.checker)) {
-		make_checkable();
-	}
-}
-
 function make_checkable(data_table) {
 	// select a tr element or a range of tr elements when the shift key is pressed
 	selected_tr = ''
@@ -156,94 +147,6 @@ function make_checkable(data_table) {
 }
 
 
-function create_data_table(thead_rows, tbody_rows, options) {
-	var default_options = {
-		'tbl': new Element('table', {
-			'class': 'sql zebra-striped',
-			'id': 'query_results',
-			'summary': 'items returned from table'
-		}),
-		'insertion_point': 'sql-container'
-	}
-	options = Object.merge(default_options, options);
-	// table height
-	if (Object.keys(options).contains('height'))
-		options['tbl'] = options['tbl'].setStyle('max-height', options['height']);
-	// force markable
-	if (options['with_checkboxes'])
-		options['markable'] = true;
-	else {
-		
-	}
-	// checkboxes
-	if (options['markable']) {
-		thead_rows = [''].append(thead_rows);        
-	}
-	// create tbl
-	data_table = new HtmlTable(options['tbl'], {
-		properties: {},
-		headers: thead_rows,
-		zebra: true, 
-		selectable:false,
-		sortable:true
-	});
-	// add primary keys
-	if (Object.keys(options).contains('keys'))
-		data_table['keys'] = options['keys'];
-	// create ids for the generated table
-	for (var i = 0; i < tbody_rows.length; i++) {
-		data_table.push(tbody_rows[i], {
-			'id': 'row_'+ i
-		});
-	}
-	
-	if (options['markable']) {
-		// add checkboxes to the table
-		var trs = $(data_table).getElements('tr')
-		var tdd = new Element('th', {
-			'id': 'selector'
-		});
-		for (var i=1; i < trs.length; i++) {
-			var td_select = new Element('td', {
-				'class': 'selector'
-			});
-			var anc_check = new Element('input', {
-				'class': 'checker',	
-				'id': 'check_' + (i-1),	
-				'type': 'checkbox'
-			});
-			anc_check.inject(td_select)
-			td_select.inject(trs[i], 'top')
-		}
-	}
-	
-	if ( $('query_results') == null) {
-		data_table.inject($(options['insertion_point']) );
-	}
-	else {
-		data_table.replaces( $('query_results') );
-		data_table.id = 'query_results';
-	}
-	
-	if (options['markable']) {
-		//reduce the width of the first tr element
-		var sels = $$('table.sql tbody td.selector')
-		sels.include($$('.sql thead tr th')[0].addClass('selector'));
-		sels.each(function(item){
-			item.setStyles({
-				'max-width': '25px',
-				'min-width': '25px',
-				'width': '25px',
-				'padding': '0px 0px 0px 4px'
-			});
-		})
-
-		make_checkable(data_table);
-	}
-	return data_table;
-}
-
-
 // for selecting and deselecting all the trs of a table
 // state = true : ticks all checkboxes and selects all rows
 // state = false : unticks all checkboxes and deselects all rows
@@ -254,62 +157,7 @@ function set_all_tr_state(context, state) {
 	}
 }
 
-function generate_where_using_pk(wrk_table) {
-	if (! Object.keys(wrk_table).contains('keys'))
-		return '';
-	else {
-		// index of cols with primary key
-		var col_titles = [];
-		wrk_table['keys']['rows'].each(function(obj,obj_in){
-			$(wrk_table).getElements('thead th').each(function(th, th_i){
-				if (th.getElement('div').get('text').trim() == obj[0] )
-					col_titles.include({'title':obj[0], 'index':th_i});
-			});
-		});
-		// generate where stmt
-		var where_stmt = '';
-		if (wrk_table.getSelected().length > 0) {
-			wrk_table.getSelected().each(function(row,row_in){
-				var cols = row.getElements('td');
-				col_titles.each(function(obj){
-					where_stmt += ' ' + obj['title'] +'='+cols[obj['index']].get('text');
-					where_stmt += (row_in == wrk_table.getSelected().length - 1) ? '' : ';';
-				});
-			});
-		}
-		return where_stmt.trim(); // empty string indicates no row was selected
-	}
-}
 
-function generate_where(wrk_table) {
-	var selected_rows = wrk_table.getSelected();
-	var whereToEdit = '';
-	if (! selected_rows) {
-		return whereToEdit;
-	}else {
-		var th_divs = $(wrk_table).getElements('th div');
-		var cols = [];
-		th_divs.each(function(diva, diva_index){
-			if (diva_index != 0) cols.push(diva.childNodes[1].nodeValue);
-		})
-		selected_rows.each(function(tiri,tiri_index){
-			var where = '';
-			tiri.getChildren('td[class!=selector]').each(function(tida,tida_index){
-				if (cols[tida_index] != undefined) { // condition skips the last empty td
-					if (! tida.hasChildNodes())
-						where += ' ' + cols[tida_index] + '=' + '';
-					else
-						where += ' ' + cols[tida_index] + '=' + tida.childNodes[0].nodeValue +'';
-					if (tida_index != tiri.getChildren('td[class!=selector]').length - 1 ) // last td before empty td
-						where += ' AND';
-				}
-			});
-			whereToEdit += where
-			if (tiri != selected_rows.getLast() ) whereToEdit += '; ';
-		});
-		return whereToEdit;
-	}
-}
 
 function runXHRJavascript(){
 	console.log('runXHRJavaxript() called!');
@@ -464,47 +312,6 @@ function tbl_pagination(total_count, limit, offset) {
 	);
 }
 
-var updateSelectNeedsValues = function(){
-	console.log('updateSelectNeedsValues');
-	$$('#tt_form .compact-form select').each(function(sel_item){
-		if (sel_item.get('class').contains('needs:')) {
-			// find definition statement
-			var stmt = '';
-			sel_item.get('class').split(' ').each(function(class_item){
-				if (class_item.contains('needs') )
-					stmt = class_item;
-			});
-			//
-			var stmt_cond = stmt.split(':');
-			sel_item.addEvent('change', function(e){
-				if (stmt_cond[2].split('|').contains(e.target.value))
-					e.target.getParent('table').getElements('.'+stmt_cond[1]+'-needed').removeClass('hidden');
-				else
-					e.target.getParent('table').getElements('.'+stmt_cond[1]+'-needed').addClass('hidden');
-			});
-		}
-	});
-}
-
-function updateForeignKeyColumns(){
-	console.log('updateForeingKeyColumns');
-	var tbl_nd_cols = JSON.decode($('table_with_columns').get('text'));
-	// events
-	$$('#tt_form .compact-form select').each(function(sel_item){
-		if (sel_item.id.contains('references') ) 
-			sel_item.addEvent('change', function(e){
-				var template = "<option value='{column}'>{column}</option>";
-				var childEls = ''
-				if (e.target.value != '')
-					tbl_nd_cols[e.target.value].each(function(column){
-						childEls += template.substitute({'column': column})
-					});
-				$('id_column_' + sel_item.id.split('_')[2]).set('html', '');
-				$('id_column_' + sel_item.id.split('_')[2]).set('html', childEls );
-			});
-	});
-}
-
 
 function disable_unimplemented_links(){
 	var implemented = {
@@ -528,4 +335,16 @@ function disable_unimplemented_links(){
 
 function page_hash(){
 	return location.hash.replace('#','').parseQueryString(false, true);
+}
+
+// get's a where statement for the selected table
+function generate_where(tbl, row_in) {
+	if (!tbl.vars.keys) return stmt;		// the table must have keys stored
+	var stmt = "", keys = tbl.vars.keys;
+	for (var i = 0; i < keys.length; i++) {
+		if (keys[i][0] == "") continue;
+		stmt += keys[i][0] + '=\'' + $(tbl).getElements('tr')[row_in].getElements('td')[keys[i][2]].get('text');
+		stmt += (i != keys.length - 1) ? "\' & " : "\'"; // -1 becos the 
+	}
+	return stmt;
 }

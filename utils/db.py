@@ -41,7 +41,30 @@ def rpr_query(request, query_type, query_data=None):
         
         return r[0]
         
-    
+    elif query_type in ['get_row']:
+        sub_q_data = {'table': request.GET.get('table'),'database':request.GET.get('database')}
+        sub_q_data['offset'] = request.GET.get('offset') if request.GET.get('offset') else 0
+        sub_q_data['limit'] = request.GET.get('limit') if request.GET.get('limit') else 100
+        if request.GET.get('schema'):
+            sub_q_data['schema'] = request.GET.get('schema')
+        # generate where statement
+        sub_q_data['where'] = ""
+        for ind in range(len(request.POST)):
+            sub_q_data['where'] += request.POST.keys()[ind].strip() + "=" 
+            sub_q_data['where'] += request.POST.values()[ind].strip()
+            if ind != len(request.POST) - 1: sub_q_data['where'] += ' AND '
+        # retrieve and run queries
+        conn_params['database'] = request.GET.get('database')
+        # assert False
+        q = sql.generate_query(query_type, conn_params['dialect'], sub_q_data)
+        r =  sql.full_query(conn_params, q[0])
+        # prepare html
+        html = ""
+        for ind in range(len(r['columns'])):
+            html += '<span class="column">' + str(r['columns'][ind]) + '</span>'
+            html += '<br /><p class="row-entry">' + str(r['rows'][0][ind]) + '</p>'
+        return html
+
     elif query_type in ['table_rpr', 'table_structure']:
         conn_params['database'] = request.GET.get('database')
         sub_q_data = {'database': request.GET.get('database'),}

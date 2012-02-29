@@ -142,9 +142,16 @@ table.sql thead th.table-th-sort {
 table.sql tbody td {
     border-bottom: 1px solid #DDDDDD;
     border-right: 1px solid #DDDDDD;
-    font-family: mono;
-    font-size: 11px;
     padding: 3px 3px 2px;
+	max-width: 300px;
+}
+table.sql tbody td * {
+	font-family: mono;
+	font-size: 11px;
+	padding: 0px;
+	margin: 0px;
+	overflow: hidden;
+	max-height: 16px;
 }
 table.sql tbody tr:first-child td, table.sql tbody tr:last-child td, table.sql {
     border-radius: 0 0 0 0;

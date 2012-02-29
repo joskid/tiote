@@ -54,7 +54,13 @@ WHERE schema_name NOT LIKE '%pg_toast%' AND schema_name NOT LIKE '%pg_temp%'"
 
 
 def generate_query(query_type, dialect='postgresql', query_data=None):
-    if dialect == 'postgresql': #postgresql-only statements
+
+    if query_type == 'get_row':
+        prfx = "{schema}.".format(**query_data) if dialect =='postgresql' else ""
+        q0 = "SELECT * FROM {0}{table} WHERE {where} LIMIT 1".format(prfx, **query_data)
+        return (q0,)
+
+    elif dialect == 'postgresql': #postgresql-only statements
         
         if query_type == 'create_user':
             # create role statement

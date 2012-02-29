@@ -70,9 +70,9 @@ def ajax(request):
         if q == 'sidebar':
             return utils.fns.generate_sidebar(request)
         elif request.GET.get('type') == 'representation':
-            return HttpResponse( utils.fns.rpr_query(request, q) )
+            return HttpResponse( utils.db.rpr_query(request, q) )
         elif request.GET.get('type') == 'full':
-            return HttpResponse( utils.fns.full_query(request, q) )
+            return HttpResponse( utils.db.full_query(request, q) )
         else:
             return utils.fns.http_500('feature not yet implemented!')
         

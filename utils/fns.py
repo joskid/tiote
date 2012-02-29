@@ -285,20 +285,20 @@ class HtmlTable():
             # go_link adds anchors in every row 
             # go_link_type determines the characteristics of the anchor: href || onclick
             if self.props.keys().count('go_link') > 0 and self.props['go_link'] == True:
-                if self.props['go_link_type'] == 'href':
-                    l_props.append(
-                        '<a href="{0}={1}" class="go_link icon-go">&nbsp;</a>'.format(
-                            self.props['go_link_dest'],row[0])
-                    )
-                elif self.props['go_link_type'] == 'onclick':
-                    l_props.append(
-                        '<a onclick="{0}()" class="go_link icon-go">&nbsp;</a>'.format(
-                            self.props['go_link_dest'])
-                    )
+                l_props.append(
+                    '<a href="{0}={1}" class="go_link icon-go">&nbsp;</a>'.format(
+                        self.props['go_link_dest'],row[0])
+                )
+            if self.props.keys().count('display_row') > 0 and self.props['display_row'] == True:
+                l_props.append(
+                    '<a class="go_link icon-go display_row pointer">&nbsp;</a>'
+                )
         tida = "<td class='controls'>{0}</td>".format("".join(l_props))
         row_list.append(tida)
-        for col in row:
-            row_list.append("<td>{0}</td>".format(col))
+        for column_data in row:
+            if len(str(column_data)) > 50: # value should be set in settings
+                column_data = str(column_data)[0:50] + '<span class="to-be-continued">...</span>'
+            row_list.append("<td><p>{0}</p></td>".format(str(column_data)))
         row_list.append("</tr>")
         self.tbody_chldrn.append(row_list)
     

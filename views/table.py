@@ -28,7 +28,7 @@ def browse(request):
     # assert False
     browse_table_html = utils.fns.HtmlTable(
         props={'count':tbl_data['count'], 'keys': tbl_data['keys']['rows'],
-            'with_checkboxes': True,
+            'with_checkboxes': True, 'display_row': True,
         }, 
         store = {'total_count':tbl_data['total_count'], 'offset': tbl_data['offset'],
             'limit': tbl_data['limit']
@@ -68,7 +68,8 @@ def structure(request):
         props = {'count': indexes_data['count'], 'with_checkboxes': True},
         **indexes_data
     ).to_element()
-    return HttpResponse(columns_table_html+indexes_table_html)
+    return HttpResponse("".join(['<h5 class="heading">Columns:</h5>',      
+        columns_table_html,'<h5 class="heading">Indexes:</h5>', indexes_table_html]))
 
 
 def route(request):

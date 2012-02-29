@@ -11,7 +11,7 @@ window.addEvent('domready', function() {
 	nav.addEvent('navigationChanged', function(navObject){
 		// do page initialization here
         var loginState = checkLoginState();
-		console.log('navigationChanged event fired');
+//		console.log('navigationChanged event fired');
 		if (loginState) {
 			if (Cookie.read('TT_NEXT')){
 				navObject = Cookie.read('TT_NEXT').parseQueryString(false, true);
@@ -45,7 +45,7 @@ function clearPage(clear_sidebar){
 
 // A single tiote page
 function Page(obj){
-	console.log('new Page() object created');
+//	console.log('new Page() object created');
 	this.options = new Hash();
 	this.updateOptions({'navObj': obj, 'hash': location.hash});
 	this.setTitle();
@@ -139,7 +139,6 @@ Page.prototype.generateTopMenu = function(data){
 }
 
 Page.prototype.generateSidebar = function(data) {
-	console.log('generateSidebar()!');
 	// xhr request for table list
     var x = new XHR({'query':'sidebar', 'type':'representation',
 		'section': this.options.navObj.section,
@@ -208,7 +207,7 @@ Page.prototype.generateView = function(data){
 					if ( data['view'] == 'users') {
 						self.userView();
 					} else {
-						self.completeForm();
+//						self.completeForm();
 					}
 				} else if (data['section'] == 'database'){
 				
@@ -265,30 +264,58 @@ Page.prototype.userView = function(){
 
 
 Page.prototype.completeTableView = function() {
-	console.log('completeTableView()!')
+	var self = this;
 	if ($$('table.sql') != null ) {
-		$$('table.sql').each(function(tbl, tbl_index){
+		$$('table.sql').each(function(tbl, tbl_in){
 			self.tbls.include(new HtmlTable($(tbl)));
-			make_checkable(self.tbls[tbl_index]);
+			make_checkable(self.tbls[tbl_in]);
 			// attach the variables passed down as javascript objects to the 
 			// table object
-			self.tbls[tbl_index]['vars'] = {}; // container
-			if ($(self.tbls[tbl_index]).get('data')) {
+			self.tbls[tbl_in]['vars'] = {}; // container
+			if ($(self.tbls[tbl_in]).get('data')) {
 				var data = {}
-				$(self.tbls[tbl_index]).get('data').split(';').each(function(d){
+				$(self.tbls[tbl_in]).get('data').split(';').each(function(d){
 					var ar = d.split(':');
 					data[ar[0]] = ar[1];
 				});
-				self.tbls[tbl_index]['vars']['data'] = data; // schema: [key: value]
+				self.tbls[tbl_in]['vars']['data'] = data; // schema: [key: value]
 			}
-			if ($(self.tbls[tbl_index]).get('keys')) {
-				var data = {}
-				$(self.tbls[tbl_index]).get('keys').split(';').each(function(d){
+			if ($(self.tbls[tbl_in]).get('keys')) {
+				var data = []; // data[[1,2,3],...] indexes 1: name of column,
+							   // 2 : index type
+						       // 3 : column position in tr
+				$(self.tbls[tbl_in]).get('keys').split(';').each(function(d){
 					var ar = d.split(':');
-					data[ar[0]] = ar[1];
+					if (ar[0] != "") data.include(ar);
 				});
-				self.tbls[tbl_index]['vars']['keys'] = data; // schema: [column: key_type]
+				// loop through the ths to see which corresponds to the keys
+				$(self.tbls[tbl_in]).getElements('th').each(function(th, th_in){
+					for (var i = 0; i < data.length; i++) {
+						if ($(th).get('text') == data[i][0] )
+							data[i].include(th_in);
+					}
+				});
+				
+				self.tbls[tbl_in]['vars']['keys'] = data; // schema: [column, key_type, column index]
 			}
+			
+			// make a.display_row(s) clickable
+			$(tbl).getElements('a.display_row').each(function(al, al_in){
+				if ($(tbl).get('keys' != null)) {	// functionality requires keys
+					al.addEvent('click', function(e) {	// attach click event
+						var where_stmt = generate_where(self.tbls[tbl_in], al_in);
+						// make xhr request
+						var x = new XHR(Object.merge({
+							'method': 'post', 'query': 'get_row','type':'representation',
+							'showLoader': false,
+							onSuccess : function(text, xml) {
+								showDialog("Entry", text);
+							}, data: where_stmt
+						}, page_hash())
+						).send();
+					});
+				}
+			});
 		});
 		
 	}
@@ -324,111 +351,6 @@ Page.prototype.completeTableOptions = function() {
 }
 
 
-Page.prototype.completeForm = function(){
-	console.log('completeForm()!');
-    var form_name = 'tt_form';
-	var form = $(form_name);
-	var undisplayed_result = $('undisplayed_result');
-	//validation
-	var form_validator = new Form.Validator.Inline(form, {
-        'evaluateFieldsOnBlur':false, 'evaluateFieldsOnChange': false}
-    );
-    // add new vaildation
-    form_validator.add('select_requires', {
-        errorMsg: function(el){
-//                var stmt = '';
-//                el.get('class').split(' ').each(function(item){
-//                    if (item.contains('select_requires:') && assets['stmt'] != item && stmt != '')
-//                        stmt = item;
-//                });
-//                updateAssets({'stmt':stmt})
-            var ar_t = assets['stmt'].split(':');
-			var msg = '';
-			ar_t[1].split('|').each(function(field){
-				msg += field.split('_')[0]
-				if ( field != ar_t[1].split('|').getLast() )
-					msg += ', '
-			});
-			msg +=  (ar_t[1].split('|').length > 1) ? ' fields' : ' field';
-            return 'This field requires '+msg;
-        },
-        test: function(el){
-            var stmt = '';
-            el.get('class').split(' ').each(function(item){
-                if (item.contains('select_requires:') && assets['stmt'] != item)
-                    stmt = item;
-            });
-            updateAssets({'stmt':stmt});
-            var ar_t = assets['stmt'].split(':');var ex_vals = ar_t[2].split('|');
-            if (ex_vals.contains(el.value)) {
-				var ret = 0;
-				ar_t[1].split('|').each(function(cond){
-					if ($('id_'+cond).value )
-						ret += 0
-					else
-						ret += 1
-				});
-				return ( ret == 0) ? true : false ;
-//                    if ($('id_'+ar_t[1]).value )
-//                        return true
-//                    else
-//                        return false
-            } else 
-                return true
-        }
-    });
-    
-//        form_validator.addEvent('onElementFail', function(field, validatorsFailed){
-//            if ($$('div.validation-advice'))
-//                $$('div.validation-advice').each(function(item){
-//                    item.addClass('alert-message warning')
-//                });
-//        });
-	var request_url = generate_ajax_url(true);
-    self = this;
-    var xx = new Form.Request(form,undisplayed_result,{
-		requestOptions:{
-			'spinnerTarget': form,
-			'header': {
-				'X-CSRFToken': Cookie.read('csrftoken')
-			},
-			'url': request_url,
-            onRequest: function(){
-//                    form_data = serializeForm(form_name);
-//                    updateAssets(form_data);
-            }, 
-            onSuccess: function(responseTree, responseElements, responseHTML, responseJavaScript){
-            	var result_holder = $('undisplayed_result');
-                $('msg-placeholder').getChildren().destroy();
-                if (Cookie.read('tt_formContainsErrors')){
-                    console.log('the submitted form contains errors!');
-                    $('msg-placeholder').adopt($(undisplayed_result).getChildren());
-                    Cookie.dispose('tt_formContainsErrors');
-                } else {
-                    var resp = JSON.decode( result_holder.childNodes[0].nodeValue)
-                    if (resp.status == 'failed') {
-                        showDialog('Error!', resp.msg, {'overlayClick':false});
-                    } else {
-                        // decide next course of action
-                        if (self.options.navObj['view'] == home && this.options.navObj['view'] == 'home')
-                            nav.set({'section':'database','view':'overview','database':form_data['name']});
-                        else
-                            reloadPage(); 
-                    }                        
-                }
-
-            },
-            onFailure: function(xhr){
-                showDialog('Error!',
-                    'An unexpected error was encountered. Please reload the page and try again',
-                    {'overlayClick':false}
-                );
-            }
-            
-		}
-	});
-}
-
 
 var XHR = new Class({
 
@@ -451,8 +373,13 @@ var XHR = new Class({
             if (options.type)
                 options.url += '&type=' + options.type;
         }
-		if (options.section)
+		// 
+		if (options.url.substr(-1) != "?") options.url += "&";
+		//
+		if (options.section) {
+			
 			options.url += 'section=' + options.section;
+		}
 		if (options.view)
 			options.url += '&view=' + options.view;
 		if (options.database)
