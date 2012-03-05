@@ -69,7 +69,7 @@ var SimpleModal = new Class({
         hideFooter:    false,
         btn_ok:        "OK", // Label
         btn_cancel:    "Cancel", // Label
-        template:"<div class=\"simple-modal-header\"> \
+        template:"<div class=\"simple-modal-header window-title\"> \
             <h1>{_TITLE_}</h1> \
           </div> \
           <div class=\"simple-modal-body\"> \

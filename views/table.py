@@ -33,7 +33,7 @@ def browse(request):
         store = {'total_count':tbl_data['total_count'], 'offset': tbl_data['offset'],
             'limit': tbl_data['limit']
         }, **tbl_data
-    ).to_element()
+    ).to_element().replace('\n', '<br />') # html doesn't display newlines(\n)
     table_options_html = utils.fns.table_options('data', pagination=True,
         with_keys=bool(tbl_data['keys']['rows']))
 

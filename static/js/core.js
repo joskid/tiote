@@ -140,7 +140,7 @@ Page.prototype.generateTopMenu = function(data){
 
 Page.prototype.generateSidebar = function(data) {
 	// xhr request for table list
-    var x = new XHR({'query':'sidebar', 'type':'representation',
+    var x = new XHR({'query':'sidebar', 'type':'repr',
 		'section': this.options.navObj.section,
         'schema': this.options.navObj.schema, 
         'database': this.options.navObj.database,
@@ -227,7 +227,7 @@ Page.prototype.userView = function(){
 	console.log('userView() called!');
 	// xhr request users table and load it
 	var h = getWindowHeight() * .45;
-	this.loadTable('user_rpr','representation',
+	this.loadTable('user_rpr','repr',
 		{'height': h, 'with_checkboxes':true},{});
 	window.addEvent('resize', function(){
 		h = getWindowHeight() * .45;
@@ -306,10 +306,13 @@ Page.prototype.completeTableView = function() {
 						var where_stmt = generate_where(self.tbls[tbl_in], al_in);
 						// make xhr request
 						var x = new XHR(Object.merge({
-							'method': 'post', 'query': 'get_row','type':'representation',
+							'method': 'post', 'query': 'get_row','type':'repr',
 							'showLoader': false,
 							onSuccess : function(text, xml) {
-								showDialog("Entry", text);
+								showDialog("Entry", text, {
+									offsetTop: null, width: 475, hideFooter: true,
+									overlayOpacity: .1, overlayClick: false
+								});
 							}, data: where_stmt
 						}, page_hash())
 						).send();

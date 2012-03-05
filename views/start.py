@@ -69,7 +69,7 @@ def ajax(request):
         q = request.GET.get('query')
         if q == 'sidebar':
             return utils.fns.generate_sidebar(request)
-        elif request.GET.get('type') == 'representation':
+        elif request.GET.get('type') == 'repr':
             return HttpResponse( utils.db.rpr_query(request, q) )
         elif request.GET.get('type') == 'full':
             return HttpResponse( utils.db.full_query(request, q) )

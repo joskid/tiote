@@ -220,15 +220,19 @@ var updateAssets = function(obj, bool){
 }
 
 function showDialog(title, msg, options){
-	var op = {
-		'offsetTop': 0.2 * screen.availHeight
-		}
+	var op = {'offsetTop': 0.2 * screen.availHeight};
 	if (options) op = Object.merge(op, options)
 	var SM = new SimpleModal(op);
 	SM.show({
 		'title': title, 
 		'contents': msg
-	})
+	});
+	// add a max-height for modals
+	// totally a hack
+	$$('.simple-modal .contents')[0].setStyle('max-height', .60 * screen.availHeight);
+	// center height of dialog
+	var topOffset = (screen.availHeight -  $$('.simple-modal')[0].getSize().x) / 2;
+	$$('.simple-modal')[0].setStyle('top', topOffset)
 }
 
 
@@ -343,7 +347,7 @@ function generate_where(tbl, row_in) {
 	var stmt = "", keys = tbl.vars.keys;
 	for (var i = 0; i < keys.length; i++) {
 		if (keys[i][0] == "") continue;
-		stmt += keys[i][0] + '=\'' + $(tbl).getElements('tr')[row_in].getElements('td')[keys[i][2]].get('text');
+		stmt += keys[i][0] + '=\'' + $(tbl).getElements('tbody tr')[row_in].getElements('td')[keys[i][2]].get('text');
 		stmt += (i != keys.length - 1) ? "\' & " : "\'"; // -1 becos the 
 	}
 	return stmt;

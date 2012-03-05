@@ -303,7 +303,7 @@ class HtmlTable():
         self.tbody_chldrn.append(row_list)
     
     def to_element(self):
-        el = "<table{0}{1}{2}><thead><tr>{3}</tr></thead><tbody>{4}</tbody></table>".format(
+        el = '<table{0}{1}{2}><thead class="window-title"><tr>{3}</tr></thead><tbody>{4}</tbody></table>'.format(
             ''.join(self.attribs_list), # {0}
             ' data="' + ''.join(self.store_list) +'"' if bool(self.store_list) else '', #{1}
             ' keys="' + ''.join(self.keys_list) + '"' if bool(self.keys_list) else '' , #{2}
