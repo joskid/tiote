@@ -65,8 +65,8 @@ def ajax(request):
             request.GET.get('commonQuery')) ) 
     
     # medium GET request queries
-    if request.GET.get('query'):
-        q = request.GET.get('query')
+    if request.GET.get('q'):
+        q = request.GET.get('q')
         if q == 'sidebar':
             return utils.fns.generate_sidebar(request)
         elif request.GET.get('type') == 'repr':

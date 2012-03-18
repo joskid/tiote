@@ -1,93 +1,3 @@
-/* Navigation.js Copyright (c) 2010 Jay Carlson */
-var Navigation = new Class({
-	Implements: [Options, Events],
-	options: {
-		interval: 200
-		
-	},
-	state: null,
-	oldLocation: "",
-	initialize: function(options) {
-		this.setOptions(options);
-		this.state = new Hash();
-		if("onhashchange" in window) {
-			window.onhashchange = this.agent.bind(this);
-			this.agent();
-		} else {
-			var navigationChangeTimer = setInterval(this.agent.bind(this), this.options.interval);
-		}
-	},
-	
-	agent: function() {
-		if(this.oldLocation.length < 1 || this.oldLocation != window.location.hash.substr(1, window.location.hash.length-1)) { //only update if the location changed
-			this.oldLocation = window.location.hash.substr(1, window.location.hash.length-1);
-			this.state.empty();
-			this.state.extend(this.oldLocation.parseQueryString(false, true));
-			this.fireEvent("navigationChanged", this.state);
-		}	
-	},
-	updateLocation: function() {
-		window.location.hash = this.state.toQueryString().cleanQueryString();	
-	},
-	set: function(key, value) {
-		if(typeOf(key) != "string" && value == null) {
-			this.state.extend(key);
-		} else {
-			this.state.set(key, value);
-		}
-		this.updateLocation();
-	},
-	unset: function(keys) {
-		if(typeOf(keys)=="string") {
-			this.state.erase(keys);
-		} else {
-			keys.each(function(item) {
-				this.state.erase(item);
-			}.bind(this));	
-		}
-		this.updateLocation();
-	},
-	clearAndSet: function(key, value) {
-		this.state.empty();
-		this.set(key, value);
-	}
-});
-
-
-function serializeForm(context){
-	var form_data = new Object();
-	// input[type=text]
-	$$('#' + context +' input[type=text]').each(function(item,key){
-		form_data[item.get('name')] = item.get('value');
-	});
-	// hidden input
-	$$('#'+context+' input[type=hidden]').each(function(item){
-		form_data[item.name] = item.value;
-	});
-	// input[type=password]
-	$$('#' + context +' input[type=password]').each(function(item, key){
-		form_data[item.get('name')] = item.get('value');
-	});
-	// input[type=radio]
-	$$('#' + context + ' input[type=radio]').each(function(item, key){
-		if (item.checked)
-			form_data[item.name] = item.value;
-	});
-	// input[type=checkbox]
-	$$('#' + context + ' input[type=checkbox]').each(function(item,key){
-		if ( ! form_data.has(item.name) ) 
-			form_data[item.name] = [];
-		if (item.checked) {
-			ar = form_data[item.name];
-			form_data[item.name][ar.length] = item.value;
-		}
-	});
-	// select
-	$$('#' + context + ' select').each(function(item,key){
-		form_data[item.name] = item.value;
-	})
-	return form_data;
-}
 
 function generate_ajax_url(withAjaxKey,extra_data) {
 	extra_data = extra_data || {};
@@ -160,7 +70,7 @@ function set_all_tr_state(context, state) {
 
 
 function runXHRJavascript(){
-	console.log('runXHRJavaxript() called!');
+//	console.log('runXHRJavaxript() called!');
 	var scripts = $ES("script", 'rightside');
 	for (var i=0; i<scripts.length; i++) {
 		// basic xss prevention
@@ -206,19 +116,6 @@ function reloadPage(){
 	nav.fireEvent('navigationChanged', context);
 }
 
-// hack: avoiding bind of a Request callback
-var updateAssets = function(obj, bool){
-	bool = false || Boolean(bool);
-	assets.extend(obj);
-	if (bool) {
-		assets['xhrCount'] += 1;
-		assets['xhrData_' + assets['xhrCount']] = assets['xhrData'];
-		assets['xhr_last'] = assets['xhrData_' + assets['xhrCount']];
-		assets.erase('xhrData')
-	}
-	
-}
-
 function showDialog(title, msg, options){
 	var op = {'offsetTop': 0.2 * screen.availHeight};
 	if (options) op = Object.merge(op, options)
@@ -236,14 +133,8 @@ function showDialog(title, msg, options){
 }
 
 
-function checkLoginState(){
-	return shortXHR({
-		'loginCheck': 'yeah'
-	})
-}
-
 // add a class of select to the current displayed menu
-function setTopMenuSelect(){
+function highlightActiveMenu(){
 	var aas = $$('.nav')[0].getElements('a');
 	aas.each(function(item){
 		if (location.href.contains(item.hash)){

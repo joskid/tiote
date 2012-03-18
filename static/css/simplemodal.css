@@ -58,7 +58,7 @@
     padding: 10px 5px 10px 10px;
 }
 .simple-modal .simple-modal-body div.contents {
-    overflow-y: scroll;
+    overflow-y: auto;
 }
 .simple-modal .simple-modal-body p {
     color: #606060;

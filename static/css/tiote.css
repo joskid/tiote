@@ -1,3 +1,6 @@
+/*
+	SIDEBAR
+*/
 #sidebar {
      background: none repeat scroll 0pt 0pt #EFEFEF;
      border-right: 1px solid #DDDDDD;
@@ -25,14 +28,16 @@ margin: 5px 0px 5px 0px;
     width: 180px;
 }
 #sidebar ul {
-     font-size: 12px;
+     font-size: 11px;
      list-style-type: none;
      margin: 0pt 0pt 0pt 10px;
 }
 
 #sidebar ul a { color: #777777; }
 #sidebar ul li.active { font-weight: bold;}
-
+/*
+	ICONS
+*/
 .icon-table {
     background: url("../img/table.png") no-repeat scroll 0 0 transparent;
 }
@@ -58,6 +63,9 @@ a:hover {
     color: #404040;
     text-decoration: none;
 }
+/*
+	PAGE UI
+*/
 #tt-page {
     margin-left: -10px;
     padding-right: 10px;

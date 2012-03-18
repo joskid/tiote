@@ -1,6 +1,4 @@
-var pg; var nav;
-var pageLoadSpinner;
-var assets = new Hash({'xhrCount': 0});
+var pg, nav, pageLoadSpinner; // global variables
 
 window.addEvent('domready', function() {
     // spinners 
@@ -8,9 +6,9 @@ window.addEvent('domready', function() {
     
 	nav = new Navigation();
     
-	nav.addEvent('navigationChanged', function(navObject){
+	nav.addEvent('navigationChanged', function(navObject, OldNavObject){
 		// do page initialization here
-        var loginState = checkLoginState();
+        var loginState = shortXHR({'loginCheck': 'yeah'});
 //		console.log('navigationChanged event fired');
 		if (loginState) {
 			if (Cookie.read('TT_NEXT')){
@@ -24,8 +22,8 @@ window.addEvent('domready', function() {
             // funny redirect
             location.href = location.protocol + '//'+ location.host + location.pathname + 'login/'
 		}
-		pg = new Page(navObject);
-		setTopMenuSelect();
+		pg = new Page(navObject, OldNavObject);
+		highlightActiveMenu();
 	});
     
 	if (! location.pathname.contains('login/') ) {
@@ -44,10 +42,9 @@ function clearPage(clear_sidebar){
 }
 
 // A single tiote page
-function Page(obj){
+function Page(obj, oldObj){
 //	console.log('new Page() object created');
-	this.options = new Hash();
-	this.updateOptions({'navObj': obj, 'hash': location.hash});
+	this.options = new Hash({navObj: obj, oldNavObj: oldObj});
 	this.setTitle();
 	this.generateTopMenu(obj);
 	this.tbls = [];
@@ -56,18 +53,7 @@ function Page(obj){
 	// unset all window resize events
 	window.removeEvents(['resize']);
 	clearPage();
-	this.generateView(obj);
-}
-
-	
-Page.prototype.startPageLoad =  function() {
-    console.log('startPageLoad()!')
-    pageLoadSpinner.show(true);
-}
-
-Page.prototype.endPageLoad =  function() {
-//        if (pageLoadSpinner.active)
-        pageLoadSpinner.hide();
+	this.generateView(obj, oldObj);
 }
 
 Page.prototype.setTitle = function(new_title){
@@ -138,60 +124,10 @@ Page.prototype.generateTopMenu = function(data){
 	$$('.topbar .container-fluid')[0].adopt(nava);
 }
 
-Page.prototype.generateSidebar = function(data) {
-	// xhr request for table list
-    var x = new XHR({'query':'sidebar', 'type':'repr',
-		'section': this.options.navObj.section,
-        'schema': this.options.navObj.schema, 
-        'database': this.options.navObj.database,
-        'table': this.options.navObj.table,
-        'offset': this.options.navObj.offset,
-        'method': 'get',
-        'onSuccess': function(text,xml){
-			// if there is already sidebar data clear it
-			if ($('sidebar').getChildren())
-				$('sidebar').getChildren().destroy();
-			$('sidebar').set('html', text);
-			window.addEvent('resize', function(){
-				$('sidebar').setStyle('height', getHeight() - 40);
-			});
-			$('sidebar').setStyle('height', getHeight() - 40);
-			// handle events
-			if ($('db_select')) {
-				$('db_select').addEvent('change', function(e){
-					if (e.target.value != page_hash()['database']) {
-						var context = {'section':'database','view':'overview',
-							'database': e.target.value
-						}
-						if (Object.keys(page_hash()).contains('schema'))
-							context['schema'] = 'public';
-						redirectPage(context);
-					}
-				});
-			}
-			if ($('schema_select')) {
-				$('schema_select').addEvent('change', function(e){
-					if (e.target.value != page_hash()['schema']) {
-						var context = {'section':'database','view':'overview',
-							'database': page_hash()['database'], 'schema': e.target.value
-						}
-						redirectPage(context);
-					}
-				});
-			}
-		}
-	}).send();
-	
-}
-
-
-Page.prototype.updateOptions = function(obj) {
-	this.options.extend(obj)
-}
-
-
-Page.prototype.generateView = function(data){
+Page.prototype.generateView = function(data, oldData){
+//	console.log(data), console.log(oldData);
     var self = this;
+	// decide if the there should be a request for sidebar
 	var x = new XHR(Object.merge({'method':'get',
         'onSuccess': function(text,xml){
             var viewData = {'text' : text,'xml' : xml};
@@ -200,21 +136,9 @@ Page.prototype.generateView = function(data){
                 nav.set({'section': 'home','view': 'home'});
             } else {
 				$('tt-content').set('html', viewData['text']);
-				self.completeTableView();
-				self.completeTableOptions();
-				if (data['section'] == 'home') {
-					// further individual page processing
-					if ( data['view'] == 'users') {
-						self.userView();
-					} else {
-//						self.completeForm();
-					}
-				} else if (data['section'] == 'database'){
-				
-				} else if (data['section'] == 'table'){
-				
-				}
-				self.generateSidebar();
+				self.jsifyTable();
+				self.addTableOpts();
+				self.generateSidebar(data, oldData);
 			}
             runXHRJavascript();
         }
@@ -223,47 +147,80 @@ Page.prototype.generateView = function(data){
 }
 
 
-Page.prototype.userView = function(){
-	console.log('userView() called!');
-	// xhr request users table and load it
-	var h = getWindowHeight() * .45;
-	this.loadTable('user_rpr','repr',
-		{'height': h, 'with_checkboxes':true},{});
-	window.addEvent('resize', function(){
-		h = getWindowHeight() * .45;
-		$(this.data_table).setStyle('height', 'auto');
-		$(this.data_table).setStyle('max-height', h);
-	});
-	this.loadTableOptions('user')
-	// hide some elmts
-	var sbls_1 = [];var sbls_2 = [];
-	var p1 = $$('.hide_1').getParent().getParent().getParent().getParent().getParent();
-	p1.each(function(item,key){
-		sbls_1.include(item.getSiblings()[0]);
-	});
-	var p2 = $$('.hide_2').getParent().getParent().getParent().getParent().getParent();
-	p2.each(function(item,key){
-		sbls_2.include(item.getSiblings()[0]);
-		sbls_2.include(item.getSiblings()[1]);
-	});
-	hideAll(sbls_1);hideAll(sbls_2);
-	$$('.addevnt').addEvent('change', function(e){
-		if (e.target.id == 'id_access_0') {
-			hideAll(sbls_1);
-		} else if( e.target.id == 'id_privileges_0') {
-			hideAll(sbls_2);
-		}else if (e.target.id == 'id_access_1') {
-			showAll(sbls_1);
-		} else if (e.target.id == 'id_privileges_1'){
-			showAll(sbls_2);
+Page.prototype.generateSidebar = function(data, oldData) {
+	// xhr request for table list
+	var clear_sidebar = true;
+	if (Cookie.read('TT_UPDATE_SIDEBAR')){
+		clear_sidebar = true;
+		Cookie.dispose('TT_UPDATE_SIDEBAR');
+	} else {
+		// other necessary conditions
+		if ($('sidebar') && $('sidebar').getChildren().length) {
+			if (oldData && 
+					(oldData['section'] == data['section'] 
+//						&& oldData['table'] == data['table']
+					))
+				clear_sidebar = false;
 		}
-	})
+	}
 	
-	this.completeForm();
+	if (clear_sidebar) {
+		var x = new XHR({'query':'sidebar', 'type':'repr',
+			'section': this.options.navObj.section,
+			'schema': this.options.navObj.schema, 
+			'database': this.options.navObj.database,
+			'table': this.options.navObj.table,
+			'offset': this.options.navObj.offset,
+			'method': 'get',
+			'onSuccess': function(text,xml){
+				// if there is already sidebar data clear it
+				if ($('sidebar').getChildren())
+					$('sidebar').getChildren().destroy();
+				$('sidebar').set('html', text);
+				window.addEvent('resize', function(){
+					$('sidebar').setStyle('height', getHeight() - 40);
+				});
+				$('sidebar').setStyle('height', getHeight() - 40);
+				// handle events
+				if ($('db_select')) {
+					$('db_select').addEvent('change', function(e){
+						if (e.target.value != page_hash()['database']) {
+							var context = {'section':'database','view':'overview',
+								'database': e.target.value
+							}
+							if (Object.keys(page_hash()).contains('schema'))
+								context['schema'] = 'public';
+							redirectPage(context);
+						}
+					});
+				}
+				if ($('schema_select')) {
+					$('schema_select').addEvent('change', function(e){
+						if (e.target.value != page_hash()['schema']) {
+							var context = {'section':'database','view':'overview',
+								'database': page_hash()['database'], 'schema': e.target.value
+							}
+							redirectPage(context);
+						}
+					});
+				}
+				// highlights the link corresponding to the current view in the sidebar
+				//  in cases where the sidebar wasn't refreshed
+				if ($('sidebar').getChildren('ul a')) {
+					$$('#sidebar ul a').each(function(lnk){
+						lnk.addEvent('click', function(e){
+							$$('#sidebar ul li').removeClass('active');
+							lnk.getParent().addClass('active');
+						});
+					});
+				}
+			}
+		}).send();
+	}
 }
 
 
-Page.prototype.completeTableView = function() {
+Page.prototype.jsifyTable = function() {
 	var self = this;
 	if ($$('table.sql') != null ) {
 		$$('table.sql').each(function(tbl, tbl_in){
@@ -325,7 +282,7 @@ Page.prototype.completeTableView = function() {
 }
 
 
-Page.prototype.completeTableOptions = function() {
+Page.prototype.addTableOpts = function() {
 	// .table-options processing : row selection
 	if ($$('.table-options') != null) {
 		$$('.table-options').each(function(tbl_opt, tbl_opt_index){
@@ -354,6 +311,50 @@ Page.prototype.completeTableOptions = function() {
 }
 
 
+Page.prototype.updateOptions = function(obj) {
+	this.options.extend(obj)
+}
+
+
+Page.prototype.userView = function(){
+	console.log('userView() called!');
+	// xhr request users table and load it
+	var h = getWindowHeight() * .45;
+	this.loadTable('user_rpr','repr',
+		{'height': h, 'with_checkboxes':true},{});
+	window.addEvent('resize', function(){
+		h = getWindowHeight() * .45;
+		$(this.data_table).setStyle('height', 'auto');
+		$(this.data_table).setStyle('max-height', h);
+	});
+	this.loadTableOptions('user')
+	// hide some elmts
+	var sbls_1 = [];var sbls_2 = [];
+	var p1 = $$('.hide_1').getParent().getParent().getParent().getParent().getParent();
+	p1.each(function(item,key){
+		sbls_1.include(item.getSiblings()[0]);
+	});
+	var p2 = $$('.hide_2').getParent().getParent().getParent().getParent().getParent();
+	p2.each(function(item,key){
+		sbls_2.include(item.getSiblings()[0]);
+		sbls_2.include(item.getSiblings()[1]);
+	});
+	hideAll(sbls_1);hideAll(sbls_2);
+	$$('.addevnt').addEvent('change', function(e){
+		if (e.target.id == 'id_access_0') {
+			hideAll(sbls_1);
+		} else if( e.target.id == 'id_privileges_0') {
+			hideAll(sbls_2);
+		}else if (e.target.id == 'id_access_1') {
+			showAll(sbls_1);
+		} else if (e.target.id == 'id_privileges_1'){
+			showAll(sbls_2);
+		}
+	})
+	
+	this.completeForm();
+}
+
 
 var XHR = new Class({
 
@@ -372,7 +373,7 @@ var XHR = new Class({
 		else if (options.commonQuery)
 			options.url += 'commonQuery=' + options.commonQuery;
         else if (options.query){
-            options.url += 'query=' + options.query;
+            options.url += 'q=' + options.query;
             if (options.type)
                 options.url += '&type=' + options.type;
         }
@@ -391,8 +392,6 @@ var XHR = new Class({
 			options.url += '&schema=' + options.schema
 		if (options.table)
 			options.url += '&table=' + options.table
-		if (options.table)
-			options.url += '&table=' + options.table;
 		if (options.offset)
 			options.url += '&offset=' + options.offset;
 		// append ajax validation key
@@ -433,8 +432,6 @@ var XHR = new Class({
 	
 	// redefined to avoid auto script execution
 	success: function(text, xml) {
-		assets.xhrCount += 1;
-		assets['xhrData_'+ assets.xhrCount] = {'text':text,'xml':xml};
 		this.onSuccess(text, xml);
 	}
 	
