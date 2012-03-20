@@ -103,11 +103,6 @@
     display: none;
 }
 
-.simple-modal p.data-entry {
-	font-family: mono;
-	font-size: 11px;
-}
-
 .simple-modal .column-entry{
 	font-weight: bold;
 }

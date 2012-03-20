@@ -108,6 +108,35 @@ div.table-options .paginatn a {
 div.table-options .paginatn a.cntrl {
     color: #0069D6;
 }
+
+div.data-entry code{
+	line-height: 18px;
+	background: none;
+}
+
+input[type="text"], textarea, select {
+    font-family: mono;
+    font-size: 12px;
+}
+
+h5.heading {
+    margin-bottom: 10px;
+    text-transform: uppercase;
+}
+
+.heading {
+    border-bottom: 1px solid #DDDDDD;
+    color: #888888;
+    padding-bottom: 0;
+}
+
+.go_link {
+	margin-left: 5px;
+}
+
+/*
+	JSIFIED TABLE
+*/
 table.sql {
     border: medium none;
     display: block;
@@ -139,8 +168,6 @@ table.sql thead th {
     cursor: pointer;
     font-size: 12px;
     font-weight: normal;
-    max-width: 300px;
-    min-width: 150px;
     padding: 2px;
 	text-align: center;
 }
@@ -157,14 +184,19 @@ table.sql tbody td {
     padding: 3px 3px 2px;
 	max-width: 300px;
 }
-table.sql tbody td * {
-	font-family: mono;
-	font-size: 11px;
-	padding: 0px;
-	margin: 0px;
+
+table.sql td div.data-entry {
+	max-height: 18px;
 	overflow: hidden;
-	max-height: 16px;
+	max-width: 300px;
+    min-width: 150px;
 }
+
+table.sql td.controls div.data-entry {
+	max-width: none;
+	min-width: 0;
+}
+
 table.sql tbody tr:first-child td, table.sql tbody tr:last-child td, table.sql {
     border-radius: 0 0 0 0;
 }
@@ -174,9 +206,7 @@ table.sql tbody td:first-child, table.sql thead th:first-child {
 table.sql th.controls {
     min-width: 20px;
 }
-table.sql a.go_link, table.sql input.checker {
-    max-width: 25px;
-    padding: 0px 0px 0px 5px;
+table.sql td.controls * {
 }
 table.sql td.controls:last-child {
 	padding-right: 5px;
@@ -184,19 +214,10 @@ table.sql td.controls:last-child {
 table.sql tr.table-tr-selected td {
     background: none repeat scroll 0 0 #EFEFEF;
 }
-input[type="text"], textarea, select {
-    font-family: mono;
-    font-size: 12px;
-}
-h5.heading {
-    margin-bottom: 10px;
-    text-transform: uppercase;
-}
-.heading {
-    border-bottom: 1px solid #DDDDDD;
-    color: #888888;
-    padding-bottom: 0;
-}
+
+/*
+	FORMS
+*/
 .actions {
     padding: 10px 20px 10px 41%;
 }

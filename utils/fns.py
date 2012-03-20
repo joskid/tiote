@@ -193,7 +193,7 @@ def generate_sidebar(request):
             # append schema selection with default to public
             schema_list = db.common_query(request, 'schema_list')
             schema_selection_form = select_input(schema_list,desc={'id':'schema_select'},initial=d['schema'])
-            s += "<h6 class='icon-schemas'>schema</h6>" + schema_selection_form
+            s += '<h6 class="icon-schemas">schema</h6>' + schema_selection_form
         
         # table selection ul
         table_list = db.rpr_query(request, 'existing_tables')
@@ -202,13 +202,13 @@ def generate_sidebar(request):
         for tbl_row in table_list:
             # decide selected table
             li_pfx = " class='active'" if request.GET.get('table') == tbl_row[0] else ''
-            a = "<a class='icon-table' href='#section=table&view=browse&database={0}{1}&table={2}'>{2}</a>".format(
+            a = '<a class="icon-table" href="#section=table&view=browse&database={0}{1}&table={2}">{2}</a>'.format(
                     d['database'], pg_sfx, tbl_row[0]
                 )
             sfx_list.append("<li{0}>{1}</li>".format(li_pfx, a))
             
         sfx = "<ul>{0}</ul>".format( ''.join(sfx_list) )
-        ret_string += "<h6 class='icon-databases'>databases</h6>"+ db_selection_form + s + sfx
+        ret_string += '<h6 class="icon-databases">databases</h6>'+ db_selection_form + s + sfx
 
     else: # home section
         li_list = []
@@ -285,20 +285,25 @@ class HtmlTable():
             # go_link adds anchors in every row 
             # go_link_type determines the characteristics of the anchor: href || onclick
             if self.props.keys().count('go_link') > 0 and self.props['go_link'] == True:
-                l_props.append(
-                    '<a href="{0}={1}" class="go_link icon-go">&nbsp;</a>'.format(
-                        self.props['go_link_dest'],row[0])
+                l_props.append( 
+                    '<a href="{0}={1}" class="go_link">{2}</a>'.format(
+                        self.props['go_link_dest'],row[0],
+                        '<img src="{{STATIC_URL}}/img/goto.png" />'
+                    )
                 )
             if self.props.keys().count('display_row') > 0 and self.props['display_row'] == True:
                 l_props.append(
-                    '<a class="go_link icon-go display_row pointer">&nbsp;</a>'
+                    '<a class="go_link display_row pointer"><img src="{{STATIC_URL}}/img/goto.png" /></a>'
                 )
-        tida = "<td class='controls'>{0}</td>".format("".join(l_props))
+        tida = '<td class="controls"{1}><div class="data-entry">{0}</div></td>'.format(
+            "".join(l_props),
+            ' style="min-width:' + str(len(l_props) * 18) + 'px"' if len(l_props) else '25px"'
+            )
         row_list.append(tida)
         for column_data in row:
-            if len(str(column_data)) > 50: # value should be set in settings
-                column_data = str(column_data)[0:50] + '<span class="to-be-continued">...</span>'
-            row_list.append("<td><p>{0}</p></td>".format(str(column_data)))
+            if len(str(column_data)) > 40: # value should be set in settings
+                column_data = str(column_data)[0:40] + '<span class="to-be-continued">...</span>'
+            row_list.append('<td><div class="data-entry"><code>{0}</code></div></td>'.format(str(column_data)))
         row_list.append("</tr>")
         self.tbody_chldrn.append(row_list)
     
@@ -315,5 +320,5 @@ class HtmlTable():
     def __str__(self):
         return self.to_element()
     
-# avoid cyclic imports
+# cyclic import
 import db

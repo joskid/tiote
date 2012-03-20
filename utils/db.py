@@ -62,7 +62,7 @@ def rpr_query(request, query_type, query_data=None):
         html = ""
         for ind in range(len(r['columns'])):
             html += '<span class="column-entry">' + str(r['columns'][ind]) + '</span>'
-            html += '<br /><p class="data-entry">' + str(r['rows'][0][ind]) + '</p>'
+            html += '<br /><div class="data-entry"><code>' + str(r['rows'][0][ind]) + '</code></div>'
         # replace all newlines with <br /> because html doesn't render newlines (\n) directly
         html = html.replace('\n', '<br />')
         return html

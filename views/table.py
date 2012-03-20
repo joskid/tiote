@@ -37,7 +37,7 @@ def browse(request):
     table_options_html = utils.fns.table_options('data', pagination=True,
         with_keys=bool(tbl_data['keys']['rows']))
 
-    return HttpResponse(table_options_html + browse_table_html)
+    return table_options_html + browse_table_html
 
 
 def structure(request):
@@ -68,14 +68,17 @@ def structure(request):
         props = {'count': indexes_data['count'], 'with_checkboxes': True},
         **indexes_data
     ).to_element()
-    return HttpResponse("".join(['<h5 class="heading">Columns:</h5>',      
-        columns_table_html,'<h5 class="heading">Indexes:</h5>', indexes_table_html]))
+    return "".join(['<h5 class="heading">Columns:</h5>',      
+        columns_table_html,'<h5 class="heading">Indexes:</h5>', indexes_table_html])
 
 
 def route(request):
     if request.GET.get('view') == 'browse':
-        return browse(request)
+        t = browse(request)
     elif request.GET.get('view') == 'structure':
-        return structure(request)
+        t = structure(request)
     else:
         return utils.fns.http_500('malformed URL')
+    # add request context to the response
+    context = RequestContext(request, [utils.fns.site_proc])
+    return HttpResponse(Template(t).render(context))

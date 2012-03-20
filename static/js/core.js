@@ -64,7 +64,8 @@ Page.prototype.setTitle = function(new_title){
 		Object.each(r, function(item, key){
 			if (key == 'view' && r[key] == r['section']) {
 			} else {
-				if (key == 'view' || key =='section') { /* skip */ } 
+				if (key == 'view' || key =='section') { /* skip */ }
+				else if (key == 'schema'&& !Object.keys(r).contains(key)) {/* skip */}
 				else {title += ' / ' + item;}
 			}
 		});
@@ -380,10 +381,8 @@ var XHR = new Class({
 		// 
 		if (options.url.substr(-1) != "?") options.url += "&";
 		//
-		if (options.section) {
-			
+		if (options.section)
 			options.url += 'section=' + options.section;
-		}
 		if (options.view)
 			options.url += '&view=' + options.view;
 		if (options.database)

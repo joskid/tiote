@@ -39,7 +39,7 @@ def overview(request):
         }, **tbl_data
         ).to_element()
     table_options_html = utils.fns.table_options('data')
-    return HttpResponse(table_options_html + tables_html)
+    return table_options_html + tables_html
     
 
 def query(request):
@@ -55,12 +55,14 @@ def export(request):
 
 def route(request):
     if request.GET['view'] == 'overview':
-        return overview(request)
+        t = overview(request)
     elif request.GET['view'] == 'query':
-        return query(request)
+        t = query(request)
     elif request.GET['view'] == 'import':
-        return import_(request)
+        t = import_(request)
     elif request.GET['view'] == 'export':
-        return export(request)
-    
+        t = export(request)
+    # add request context to the response
+    context = RequestContext(request, [utils.fns.site_proc])
+    return HttpResponse(Template(t).render(context))
 
