@@ -234,8 +234,9 @@ function page_hash(){
 
 // get's a where statement for the selected table
 function generate_where(tbl, row_in) {
+	var stmt = "";
 	if (!tbl.vars.keys) return stmt;		// the table must have keys stored
-	var stmt = "", keys = tbl.vars.keys;
+	var keys = tbl.vars.keys;
 	for (var i = 0; i < keys.length; i++) {
 		if (keys[i][0] == "") continue;
 		stmt += keys[i][0] + '=\'' + $(tbl).getElements('tbody tr')[row_in].getElements('td')[keys[i][2]].get('text');

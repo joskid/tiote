@@ -36,7 +36,6 @@ def browse(request):
     ).to_element().replace('\n', '<br />') # html doesn't display newlines(\n)
     table_options_html = utils.fns.table_options('data', pagination=True,
         with_keys=bool(tbl_data['keys']['rows']))
-
     return table_options_html + browse_table_html
 
 

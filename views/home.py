@@ -1,5 +1,4 @@
 import json
-from lxml import etree
 
 from django.http import HttpResponse, Http404
 from django.template import loader, RequestContext, Template

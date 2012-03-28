@@ -18,7 +18,10 @@ def check_login(request):
 def set_ajax_key(request):
     if not request.session.get('ajaxKey', False):
         sessid = hashlib.md5( str(random.random()) ).hexdigest()
-        d = request.META['PWD']
+        try: # some environments eg. GAE doesn't have this
+            d = request.META['PWD']
+        except KeyError:
+            d = ""
         request.session['ajaxKey'] = hashlib.md5(sessid + d).hexdigest()[0:10]
         
 def validateAjaxRequest(request):
@@ -243,9 +246,11 @@ class HtmlTable():
             self.keys_list = self._build_keys_list(self.props['keys'])
         # build <thead><tr> children
         if columns is not None:
-            hd_list = ["<th class='controls'></th>"]
+            hd_list = ["<td class='controls'><div></div></td>"]
             for head in columns:
-                hd_list.append('<th>'+head+'</th>')
+                hd_list.append('<td><div>'+head+'</div></td>')
+            # empty td 
+            hd_list.append('<td class="last-td"></td>')
             self.thead_chldrn = hd_list
         # build <tbody> children
         if rows is not None:
@@ -273,6 +278,9 @@ class HtmlTable():
             for tup in keys:
                 _l.append("{0}:{1};".format(tup[0], tup[len(tup) - 1]) )
         return _l
+
+    def has_body(self):
+        return len(self.tbody_chldrn) > 0
 
     def push(self, row, props=None):
         count = len(self.tbody_chldrn)
@@ -304,18 +312,33 @@ class HtmlTable():
             if len(str(column_data)) > 40: # value should be set in settings
                 column_data = str(column_data)[0:40] + '<span class="to-be-continued">...</span>'
             row_list.append('<td><div class="data-entry"><code>{0}</code></div></td>'.format(str(column_data)))
+        # empty td
+        row_list.append('<td class="last-td"></td>')
         row_list.append("</tr>")
         self.tbody_chldrn.append(row_list)
     
     def to_element(self):
-        el = '<table{0}{1}{2}><thead class="window-title"><tr>{3}</tr></thead><tbody>{4}</tbody></table>'.format(
+        thead = '<div class="tbl-header"><table><tbody><tr>{0}</tr></tbody></table></div>'.format(
+            ''.join(self.thead_chldrn)
+        )
+
+        tbody = '<div class="tbl-body"><table{0}{1}{2}><tbody>{3}</tbody></table></div>'.format(
             ''.join(self.attribs_list), # {0}
             ' data="' + ''.join(self.store_list) +'"' if bool(self.store_list) else '', #{1}
             ' keys="' + ''.join(self.keys_list) + '"' if bool(self.keys_list) else '' , #{2}
-            ''.join(self.thead_chldrn),  #{3}
-            ''.join([ ''.join(row) for row in self.tbody_chldrn]) #{4}
+            ''.join([ ''.join(row) for row in self.tbody_chldrn])
         )
-        return el
+
+        # el = '<table{0}{1}{2}><thead class="window-title"><tr>{3}</tr></thead><tbody>{4}</tbody></table>'.format(
+        #     ''.join(self.attribs_list), # {0}
+        #     ' data="' + ''.join(self.store_list) +'"' if bool(self.store_list) else '', #{1}
+        #     ' keys="' + ''.join(self.keys_list) + '"' if bool(self.keys_list) else '' , #{2}
+        #     ''.join(self.thead_chldrn),  #{3}
+        #     ''.join([ ''.join(row) for row in self.tbody_chldrn]) #{4}
+        # )
+        
+        # thead = ''
+        return '<div class="jsifyTable">' + thead + tbody + '</div>'
 
     def __str__(self):
         return self.to_element()

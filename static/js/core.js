@@ -137,7 +137,9 @@ Page.prototype.generateView = function(data, oldData){
                 nav.set({'section': 'home','view': 'home'});
             } else {
 				$('tt-content').set('html', viewData['text']);
-				self.jsifyTable();
+				if (data['section']=='table' && data['view'] =='browse') {
+					self.jsifyTable(true);
+				} else { self.jsifyTable(false);}
 				self.addTableOpts();
 				self.generateSidebar(data, oldData);
 			}
@@ -159,9 +161,17 @@ Page.prototype.generateSidebar = function(data, oldData) {
 		if ($('sidebar') && $('sidebar').getChildren().length) {
 			if (oldData && 
 					(oldData['section'] == data['section'] 
-//						&& oldData['table'] == data['table']
-					))
-				clear_sidebar = false;
+						&& oldData['table'] == data['table']
+						&& oldData['database'] == data['database']
+					)) {
+						if (Object.keys(oldData).contains('schema') 
+							&& Object.keys(data).contains('schema')) { // pg dialect
+							if (oldData['schema'] == data['schema'])
+								clear_sidebar = false;
+						} else {										// mysql dialect
+							clear_sidebar = false;
+						}
+					}
 		}
 	}
 	
@@ -179,9 +189,9 @@ Page.prototype.generateSidebar = function(data, oldData) {
 					$('sidebar').getChildren().destroy();
 				$('sidebar').set('html', text);
 				window.addEvent('resize', function(){
-					$('sidebar').setStyle('height', getHeight() - 40);
+					$('sidebar').setStyle('height', getHeight() - 50);
 				});
-				$('sidebar').setStyle('height', getHeight() - 40);
+				window.fireEvent('resize');
 				// handle events
 				if ($('db_select')) {
 					$('db_select').addEvent('change', function(e){
@@ -221,8 +231,62 @@ Page.prototype.generateSidebar = function(data, oldData) {
 }
 
 
-Page.prototype.jsifyTable = function() {
+Page.prototype.jsifyTable = function(syncHeightWithWindow) {
 	var self = this;
+	// display
+	if ($$('.jsifyTable').length) {
+		$$('.jsifyTable').each(function(cont, cont_in) {
+//			console.log('cont #' + cont_in);
+			// auto update height
+			syncHeightWithWindow = syncHeightWithWindow || false;
+			if (syncHeightWithWindow) {
+				window.addEvent('resize', function() {
+					if (cont.getElement('.tbl-body table') != null &&
+						cont.getElement('.tbl-body table').getScrollSize().y > (getHeight() - 100)) {
+						cont.getElement('.tbl-body table').setStyle('height', (getHeight() - 100));
+					}
+				});
+				window.fireEvent('resize');
+			}
+			if (cont.getElements('.tbl-body table tr').length) {
+				// same size body and header
+				var tds = cont.getElements('.tbl-body table tr')[0].getElements('td');
+				var ths = cont.getElements('.tbl-header table tr')[0].getElements('td');
+	
+				for (var i = 0; i < ths.length - 1; ++i) {
+					var width;
+					if (ths[i].getDimensions().x > tds[i].getDimensions().x) {
+						width = ths[i].getDimensions().x + 10;
+						tds[i].setStyles({'min-width':width, 'width': width});
+						width = tds[i].getDimensions().x - 1; // -1 for border
+						ths[i].setStyles({'min-width': width, 'width': width});
+					} else {
+						width = tds[i].getDimensions().x - 1; // -1 for border
+						ths[i].setStyles({'min-width': width, 'width': width });
+					}
+				}
+				tds = null, ths = null;
+			}
+
+			if (cont.getElement('.tbl-body table') != undefined
+				&& cont.getElement('.tbl-header table') != undefined) {
+				// variables needed
+				var tblhead_tbl = cont.getElement('.tbl-header table');
+				var tblbody_tbl = cont.getElement('.tbl-body table');
+				// sync scrolling 
+				tblbody_tbl.addEvent('scroll', function(e){
+					var scrl = tblbody_tbl.getScroll();
+					cont.getElement('.tbl-header table').scrollTo(scrl.x, scrl.y);
+				});
+				// add the width of scrollbar to min-width property of ".tbl-header td.last-td"
+				var w = tblbody_tbl.getScrollSize().x - tblhead_tbl.getScrollSize().x;
+				w = w + 25 + 7;
+				tblhead_tbl.getElement('td.last-td').setStyle('min-width', w);
+				
+			}
+		});
+	}
+	// behaviour
 	if ($$('table.sql') != null ) {
 		$$('table.sql').each(function(tbl, tbl_in){
 			self.tbls.include(new HtmlTable($(tbl)));
@@ -246,8 +310,8 @@ Page.prototype.jsifyTable = function() {
 					var ar = d.split(':');
 					if (ar[0] != "") data.include(ar);
 				});
-				// loop through the ths to see which corresponds to the keys
-				$(self.tbls[tbl_in]).getElements('th').each(function(th, th_in){
+				// loop through the tds int .tbl-header to see which corresponds to the keys
+				$$('.tbl-header table')[tbl_in].getElements('td').each(function(th, th_in){
 					for (var i = 0; i < data.length; i++) {
 						if ($(th).get('text') == data[i][0] )
 							data[i].include(th_in);
@@ -257,7 +321,7 @@ Page.prototype.jsifyTable = function() {
 				self.tbls[tbl_in]['vars']['keys'] = data; // schema: [column, key_type, column index]
 			}
 			
-			// make a.display_row(s) clickable
+			// handle a.display_row(s) click events
 			$(tbl).getElements('a.display_row').each(function(al, al_in){
 				if ($(tbl).get('keys' != null)) {	// functionality requires keys
 					al.addEvent('click', function(e) {	// attach click event

@@ -3,7 +3,7 @@ from django.forms.formsets import formset_factory
 from django.core import validators
 from django.utils.datastructures import SortedDict
 
-from tiote import functions
+from tiote import utils
 
 mysql_types = ['varchar', 'char', 'text', 'tinytext', 'mediumtext', 'longtext', 'tinyint',
     'smallint', 'mediumint', 'int', 'bigint', 'real', 'double', 'float', 'decimal', 'numeric',
@@ -46,7 +46,7 @@ class mysqlDbForm(forms.Form):
         f = SortedDict()
         f['name'] = forms.CharField(widget=forms.TextInput(attrs={'class':'required'}))
         f['charset'] = forms.ChoiceField(
-            choices = functions.make_choices(charsets),
+            choices = utils.fns.make_choices(charsets),
             initial = 'latin1'
         )
         self.base_fields = f
@@ -60,14 +60,14 @@ class pgsqlDbForm(forms.BaseForm):
         
         f['name'] = forms.CharField(widget=forms.TextInput(attrs={'class':'required'}))
         f['encoding'] = forms.ChoiceField(
-            choices = functions.make_choices(pgsql_encoding),
+            choices = utils.fns.make_choices(pgsql_encoding),
             initial = 'UTF8',
             )
         f['template'] = forms.ChoiceField(
-            choices = functions.make_choices(templates),
+            choices = utils.fns.make_choices(templates),
             required = False,
         )
-        f['owner'] = forms.ChoiceField( choices = functions.make_choices(users) ,
+        f['owner'] = forms.ChoiceField( choices = utils.fns.make_choices(users) ,
             required = False, )
         
         self.base_fields = f
@@ -99,7 +99,7 @@ class mysqlUserForm(forms.BaseForm):
         f['select_databases'] = forms.MultipleChoiceField(
             required = False,
             widget = forms.CheckboxSelectMultiple(attrs={'class':'retouch'}),
-            choices = functions.make_choices(dbs, True),
+            choices = utils.fns.make_choices(dbs, True),
         )
         f['privileges'] = forms.ChoiceField(
             choices = (('all', 'All Privileges'),('select','Selected Privedges'),),
@@ -109,11 +109,11 @@ class mysqlUserForm(forms.BaseForm):
         f['user_privileges'] = forms.MultipleChoiceField(
             required = False,
             widget = forms.CheckboxSelectMultiple(attrs={'class':'privileges'}),
-            choices = functions.make_choices(user_privilege_choices, True),
+            choices = utils.fns.make_choices(user_privilege_choices, True),
         )
         f['administrator_privileges'] = forms.MultipleChoiceField(
             required = False,
-            choices = functions.make_choices(admin_privilege_choices, True) ,
+            choices = utils.fns.make_choices(admin_privilege_choices, True) ,
             widget = forms.CheckboxSelectMultiple(attrs={'class':'privileges'}),
         )
         f['options'] = forms.MultipleChoiceField(
@@ -151,11 +151,11 @@ class pgsqlUserForm(forms.BaseForm):
 #            required = False)
         f['role_privileges'] = forms.MultipleChoiceField(
             required = False, widget = forms.CheckboxSelectMultiple,
-            choices = functions.make_choices(pgsql_privileges_choices, True) 
+            choices = utils.fns.make_choices(pgsql_privileges_choices, True) 
         )
         if groups:
             f['group_membership'] = forms.MultipleChoiceField(
-                choices = functions.make_choices(groups, True), required = False,
+                choices = utils.fns.make_choices(groups, True), required = False,
                 widget = forms.CheckboxSelectMultiple,)
         
         self.base_fields = f
@@ -173,11 +173,11 @@ class pgsqlTableForm(forms.BaseForm):
         if edit is False:
             f['name'] = forms.CharField(widget=forms.TextInput(attrs={'class':'required'}))
             f['of_type'] = forms.ChoiceField(
-                choices = functions.make_choices(existing_tables),
+                choices = utils.fns.make_choices(existing_tables),
                 required = False, widget = wdg
                 )
             f['inherit'] = forms.ChoiceField(
-                choices = functions.make_choices(existing_tables),
+                choices = utils.fns.make_choices(existing_tables),
                 required = False, widget = wdg
                 )
         # variable number of columns
@@ -188,7 +188,7 @@ class pgsqlTableForm(forms.BaseForm):
                 label = 'name')
             f['type_'+fi] = forms.ChoiceField(
                 label = 'type',
-                choices = functions.make_choices(pgsql_types),
+                choices = utils.fns.make_choices(pgsql_types),
                 widget = forms.Select(attrs={'class':'required'}),
                 )
             f['length_'+fi] = forms.IntegerField(
@@ -198,12 +198,12 @@ class pgsqlTableForm(forms.BaseForm):
                 required = False,
                 widget = forms.Select(attrs={'class':'even needs:foreign-fields:foreign'
                         +' select_requires:references_'+fi+'|column_'+fi+':foreign'}),
-                choices = functions.make_choices(pgsql_key_choices),
+                choices = utils.fns.make_choices(pgsql_key_choices),
                 label = 'key',
             )
             f['references_'+fi] = forms.ChoiceField(
                 required= False, label = 'references',
-                choices = functions.make_choices(existing_tables),
+                choices = utils.fns.make_choices(existing_tables),
                 widget = forms.Select()
                 )
             f['column_'+fi] = forms.ChoiceField(
@@ -211,11 +211,11 @@ class pgsqlTableForm(forms.BaseForm):
                 )
             f['on_update_'+fi] = forms.ChoiceField(
                 required= False, label = 'on update',
-                choices = functions.make_choices(foreign_key_action_choices, True)
+                choices = utils.fns.make_choices(foreign_key_action_choices, True)
             )
             f['on_delete_'+fi] = forms.ChoiceField(
                 required = False, label = 'on delete',
-                choices = functions.make_choices(foreign_key_action_choices, True)
+                choices = utils.fns.make_choices(foreign_key_action_choices, True)
             )
             f['default_'+fi] = forms.CharField(
                 required = False,
@@ -225,11 +225,11 @@ class pgsqlTableForm(forms.BaseForm):
             f['other_'+fi] = forms.MultipleChoiceField(
                 label = 'other', required = False,
                 widget = forms.CheckboxSelectMultiple(),
-                choices = functions.make_choices(['not null'], True))
+                choices = utils.fns.make_choices(['not null'], True))
         if column_form:
             f['insert_position'] = forms.ChoiceField(
-                choices = functions.make_choices(['at the end of the table', 'at the beginning'], True)
-                    + functions.make_choices(existing_columns,False,'--------','after'),
+                choices = utils.fns.make_choices(['at the end of the table', 'at the beginning'], True)
+                    + utils.fns.make_choices(existing_columns,False,'--------','after'),
                 label = 'insert this column',
                 initial = 'at the end of the table',
                 widget = forms.Select(attrs={'class':'required'}),
@@ -252,12 +252,12 @@ class mysqlTableForm(forms.BaseForm):
         if edit is False:
             f['name'] = forms.CharField(widget=forms.TextInput(attrs={'class':'required'}))
             f['charset'] = forms.ChoiceField(
-                choices = functions.make_choices(charsets),
+                choices = utils.fns.make_choices(charsets),
                 initial='latin1'
             )
             f['engine'] = forms.ChoiceField(
                 required = False, 
-                choices = functions.make_choices( engine_list ),
+                choices = utils.fns.make_choices( engine_list ),
                 initial = default_engine
             )
         # variable amount of column_count
@@ -268,7 +268,7 @@ class mysqlTableForm(forms.BaseForm):
                 widget=forms.TextInput(attrs={'class':'required'}),
                 label = 'name')
             f['type'+sfx] = forms.ChoiceField(
-                choices = functions.make_choices(mysql_types),
+                choices = utils.fns.make_choices(mysql_types),
                 widget = forms.Select(attrs={'class':'required needs:values:set|enum select_requires:values'
                     +sfx+':set|enum select_requires:size'+sfx+':varchar'}),
                 initial = 'varchar',
@@ -284,7 +284,7 @@ class mysqlTableForm(forms.BaseForm):
             f['key'+sfx] = forms.ChoiceField(
                 required = False,
                 widget = forms.Select(attrs={'class':'even'}),
-                choices = functions.make_choices(mysql_key_choices),
+                choices = utils.fns.make_choices(mysql_key_choices),
                 label = 'key',
             )
             f['default'+sfx] = forms.CharField(
@@ -293,21 +293,21 @@ class mysqlTableForm(forms.BaseForm):
                 widget=forms.TextInput
             )
             f['charset'+sfx] = forms.ChoiceField(
-                choices = functions.make_choices(charsets), 
+                choices = utils.fns.make_choices(charsets), 
                 initial='latin1',
                 label = 'charset',
                 widget=forms.Select(attrs={'class':'required'})
             )
             f['other'+sfx] = forms.MultipleChoiceField(
-                choices = functions.make_choices(mysql_other_choices, True),
+                choices = utils.fns.make_choices(mysql_other_choices, True),
                 widget = forms.CheckboxSelectMultiple(attrs={'class':'occupy'}),
                 required = False,
                 label = 'other',
             )
         if column_form:
             f['insert_position'] = forms.ChoiceField(
-                choices = functions.make_choices(['at the end of the table', 'at the beginning'], True)
-                    + functions.make_choices(existing_columns,False,'--------','after'),
+                choices = utils.fns.make_choices(['at the end of the table', 'at the beginning'], True)
+                    + utils.fns.make_choices(existing_columns,False,'--------','after'),
                 label = 'insert this column',
                 initial = 'at the end of the table',
                 widget = forms.Select(attrs={'class':'required'}),

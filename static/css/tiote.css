@@ -147,21 +147,7 @@ table.sql * {
     border-radius: 0 0 0 0;
 }
 
-.window-title {
-	background-color: #F5F5F5;
-    background-image: -moz-linear-gradient(center top , #FFFFFF, #F5F5F5);
-	background-image: -khtml-gradient(linear, left top, left bottom, from(#ffffff), to(#f5f5f5));
-	background-image: -moz-linear-gradient(top, #ffffff, #f5f5f5);
-	background-image: -ms-linear-gradient(top, #ffffff, #f5f5f5);
-	background-image: -webkit-gradient(linear, left top, left bottom, color-stop(0%, #ffffff), color-stop(100%, #f5f5f5));
-	background-image: -webkit-linear-gradient(top, #ffffff, #f5f5f5);
-	background-image: -o-linear-gradient(top, #ffffff, #f5f5f5);
-	background-image: linear-gradient(top, #ffffff, #f5f5f5);
-	filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#ffffff', endColorstr='#f5f5f5', GradientType=0);
-    background-repeat: repeat-x;
-}
-
-table.sql thead th {
+.tbl-header table tbody td {
     border-bottom: 1px solid #DDDDDD;
     border-right: 1px solid #DDDDDD;
     border-top: 1px solid #DDDDDD;
@@ -178,11 +164,10 @@ table.sql thead div span {
 table.sql thead th.table-th-sort {
     font-weight: bold;
 }
-table.sql tbody td {
+table.sql tbody td, .tbl-body tbody td {
     border-bottom: 1px solid #DDDDDD;
     border-right: 1px solid #DDDDDD;
     padding: 3px 3px 2px;
-	max-width: 300px;
 }
 
 table.sql td div.data-entry {
@@ -200,10 +185,10 @@ table.sql td.controls div.data-entry {
 table.sql tbody tr:first-child td, table.sql tbody tr:last-child td, table.sql {
     border-radius: 0 0 0 0;
 }
-table.sql tbody td:first-child, table.sql thead th:first-child {
+table.sql tbody td:first-child, .tbl-header table td:first-child {
     border-left: 1px solid #DDDDDD;
 }
-table.sql th.controls {
+table.sql td.controls {
     min-width: 20px;
 }
 table.sql td.controls * {
@@ -215,6 +200,27 @@ table.sql tr.table-tr-selected td {
     background: none repeat scroll 0 0 #EFEFEF;
 }
 
+.jsifyTable .tbl-header * {
+	margin: 0;
+	padding: 0;
+}
+
+.jsifyTable {
+	margin-right: -10px;
+}
+.jsifyTable .tbl-header table {
+	overflow: hidden;
+	display: block;
+}
+.jsifyTable .tbl-header td {
+	overflow: hidden;
+}
+td.last-td {
+	width: 100%;
+	min-width: 0px;
+	padding: 0px;
+	margin: 0px;
+}
 /*
 	FORMS
 */

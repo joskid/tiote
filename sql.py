@@ -259,8 +259,8 @@ WHERE table_catalog='{database}' AND table_schema='{schema}' AND table_name='{ta
                 queries.append("DELETE FROM {database}.{table}".format(**query_data) + " WHERE "+where+" LIMIT 1" )
             return queries
                 
-        elif query_type == 'indexes':
-            return ("SHOW indexes FROM `{database}`.`{table}`".format(**query_data), )
+        # elif query_type == 'indexes':
+        #     return ("SHOW indexes FROM `{database}`.`{table}`".format(**query_data), )
                 
         elif query_type == 'table_rpr':
             q = "SELECT TABLE_NAME, TABLE_ROWS, TABLE_TYPE, ENGINE FROM \
@@ -278,7 +278,8 @@ WHERE table_catalog='{database}' AND table_schema='{schema}' AND table_name='{ta
         elif query_type == 'indexes':
             q0 = "SELECT DISTINCT kcu.column_name, kcu.constraint_name, tc.constraint_type \
 from information_schema.key_column_usage as kcu, information_schema.table_constraints as tc WHERE \
-kcu.constraint_name = tc.constraint_name AND kcu.table_schema='{database}' AND tc.table_schema='{database}'".format(**query_data)
+kcu.constraint_name = tc.constraint_name AND kcu.table_schema='{database}' AND tc.table_schema='{database}' \
+AND kcu.table_name='{table}'".format(**query_data)
             return (q0, )
         
         elif query_type == 'primary_keys':
@@ -313,7 +314,9 @@ def full_query(conn_params, query):
         for row in query_result:
             row = list(row)
             for i in range(len(row)):
-                if type( row[i] ) == datetime.datetime:
+                if row[i] == None:
+                    row[i] = ""
+                elif type( row[i] ) == datetime.datetime:
                     row[i] = row[i].__str__()
             l.append( tuple(row) )
         d =  {'columns': query_result.keys(),'count': query_result.rowcount, 
