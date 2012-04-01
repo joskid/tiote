@@ -23,23 +23,6 @@ def index(request):
     context.update(c)
     return HttpResponse(template.render(context))
         
-
-def login(request):
-    errors = []
-    redi = request.META['PATH_INFO']
-    redi = redi.replace('login/', '');
-    if request.method == 'POST':
-        form = forms.LoginForm(request.POST)
-        if form.is_valid():
-            dict_cd = utils.db.do_login(request, form.cleaned_data)
-            if dict_cd['login'] == True:
-                return HttpResponseRedirect(redi)
-            else:
-                errors = [ dict_cd['msg'] ] 
-    
-    return begin(request, 'login', errors=errors)
-        
-        
 def ajax(request):
     #check XmlHttpRequest
     if not request.is_ajax():
@@ -93,6 +76,51 @@ def ajax(request):
     else:
         return utils.fns.http_500('request corresponses to no function!')
    
+def login(request):
+    c = {}
+    errors = []
+    redi = request.META['PATH_INFO']
+    redi = redi.replace('login/', '');
+
+    # dialects' info
+    c['dialects'] = [
+        {'dialect': 'PostgreSQL', 'dialect_package':'python-psycopg2'},
+        {'dialect': 'MySQL', 'dialect_package':'python-mysqldb'}, 
+    ]
+    # determine enabled and disabled features
+    choices = ""
+    try:
+        import psycopg2
+        choices = "p"
+    except ImportError:
+        c['dialects'][0]['disabled'] = True
+    try:
+        import MySQLdb
+        choices = "a" if choices == "p" else "m" # last driver
+    except ImportError:
+        c['dialects'][1]['disabled'] = True
+
+    if request.method == 'POST':
+        form = forms.LoginForm(choices=choices, data=request.POST)
+        c['form'] = form
+        if form.is_valid():
+            dict_cd = utils.db.do_login(request, form.cleaned_data)
+            if dict_cd['login'] == True:
+                return HttpResponseRedirect(redi)
+            else:
+                c['errors'] = [ dict_cd['msg'] ] 
+
+    if request.method == 'GET':
+        form = forms.LoginForm(choices=choices)
+        c['form'] = form
+    
+    t = loader.get_template('tt_login.html')
+    context = RequestContext(request, {
+        }, [utils.fns.site_proc]
+    )
+    context.update(c)
+    h = HttpResponse(t.render(context))
+    return h
 
 
 def begin(request, page, **kwargs):
@@ -100,11 +128,6 @@ def begin(request, page, **kwargs):
     if kwargs:
         if kwargs.has_key('errors'):
             c.update({'errors': kwargs['errors']})
-    if page == 'login':
-        if request.method == 'POST':
-            c.update({'form': forms.LoginForm(request.POST)})
-        else:
-            c.update({'form': forms.LoginForm()})
     t = utils.fns.skeleton(page)
     context = RequestContext(request, {
         }, [utils.fns.site_proc]
@@ -112,4 +135,3 @@ def begin(request, page, **kwargs):
     context.update(c)
     h =  HttpResponse(t.render(context))
     return h
-

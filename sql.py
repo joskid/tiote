@@ -1,6 +1,6 @@
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine.url import URL
-from sqlalchemy.exceptions import OperationalError, ProgrammingError, \
+from sqlalchemy.exc import OperationalError, ProgrammingError, \
     DatabaseError
 import datetime
 # sqlaclehemy modules
@@ -258,9 +258,6 @@ WHERE table_catalog='{database}' AND table_schema='{schema}' AND table_name='{ta
             for where in query_data['conditions']:
                 queries.append("DELETE FROM {database}.{table}".format(**query_data) + " WHERE "+where+" LIMIT 1" )
             return queries
-                
-        # elif query_type == 'indexes':
-        #     return ("SHOW indexes FROM `{database}`.`{table}`".format(**query_data), )
                 
         elif query_type == 'table_rpr':
             q = "SELECT TABLE_NAME, TABLE_ROWS, TABLE_TYPE, ENGINE FROM \

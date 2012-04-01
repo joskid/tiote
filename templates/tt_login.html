@@ -1,55 +1,107 @@
-{% extends 'tt_start.html' %}
-
-{% block content %}
-<div class='span12'>
-<h3>Welcome to Tiote</h3>
-<p>To begin using this application you need to input the user and password to
-	the database backend you intend on using. Then afterward select the kind of
-	database backend. Submit and begin using tiote!
-</p>
-
-{% if errors %}
-<div class='alert-message error'>
-	{% for err in errors %}
-	<p>{{ err }}</p>
-	{% endfor %}
-</div>
-</div>
-{% endif %}
-{% if form.errors %}
-<div class='alert-message warning'>
-{{ form.errors }}
-</div>
-{% endif %}
-<div class='span8'>
-	<form action="" id='tt_form' method="post" accept-charset="utf-8">
-		{% csrf_token %}
-		<fieldset>
-		{% for field in form %}
-			<div class="clearfix">
-				{{ field.label_tag}}
-				<div class='input'>
-					{{ field }}
-				</div>
-				<!-- {% if field.help_text %}<div class='alert-message warning'>{{field.help_text}}</span>{% endif %} -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="description" content="django database administrator">
+	<meta name="author" content="Bankole Ojo">
+	<link href="{{STATIC_URL}}/css/bootstrap.min.css" rel="stylesheet" />
+	<link href="{{STATIC_URL}}/css/tiote.css" rel="stylesheet" />
+	{% block mooscripts %}
+	<script src="{{STATIC_URL}}/js/mootools-1.3.min.js" type="text/javascript" charset="utf-8"></script>
+	<script src="{{STATIC_URL}}/js/mootools-more-1.3.min.js" type='text/javascript' charset='utf-8'></script>
+	{% endblock %}
+	<title>tiote / login</title>
+</head>
+<body>
+	<div class="container">
+	<div class='row'>
+		<div id="banner" class='span 12'><h1>Project Tiote</h1></div>
+	</div>	
+	<div class='row'>
+		<div id='info' class='span6'>
+			{% if errors %}
+			<div class='alert-message block-message error'>
+				{% for err in errors %}
+				<p>{{ err }}</p>
+				{% endfor %}
 			</div>
+			{% endif %}
+			{% if form.errors %}
+			<div class='alert-message block-message warning'>{{ form.errors }}</div>
+			{% endif %}
+		{% for d in dialects %}
+			{% if d.disabled %}
+			<div class="alert-message block-message warning">
+				<p>
+					<strong>{{d.dialect}} support has been disabled</strong><br />
+					To enable support for {{d.dialect}} database engine, install python package for {{d.dialect}} database: 
+					<code>{{d.dialect_package}}</code>
+				</p>
+			</div>
+			{% else %}
+			<div class="alert-message block-message info">
+				<p>
+					<strong>{{d.dialect}} support is enabled</strong><br />
+					To begin use select the appropriate driver in the database driver dropdown
+				</p>
+			</div>
+			{% endif %}
 		{% endfor %}
-		</fieldset>
-	  <div class='actions'><input type="submit" id="submit-btn" class='btn primary submit-button' value="login &rarr;"/></div>
-	</form>
-</div>
-<div id="undisplayed_result" style="display:none"></div>
-<script type="text/javascript" ajaxKey='{{ajaxKey}}' charset="utf-8">
-	// give focus to username field
-	window.addEvent('domready', function(){
-		$('id_username').focus();
-	});
-	// form validation
-	var form_validator = new Form.Validator.Inline($('tt_form'), {
-		'evaluateFieldsOnBlur':false, 'evaluateFieldsOnChange': false}
-		);
-</script>
-{% endblock %}
+		</div>
+		<div class="span2">&nbsp;</div>
+		<div id='login-form' class='span7'>
+			<form action="" id='tt_form' method="post" accept-charset="utf-8">
+				{% csrf_token %}
+				<fieldset>
+					<legend style="margin-bottom:15px;">Login Form</legend>
+				{% for field in form %}
+					<div class="clearfix">
+						{{ field.label_tag}}
+						<div class='input'>{{ field }}</div>
+						<!-- {% if field.help_text %}<div class='alert-message warning'>{{field.help_text}}</span>{% endif %} -->
+					</div>
+				{% endfor %}
+				</fieldset>
+				<hr />
+			  <div><input type="submit" id="submit-btn" class='btn primary submit-button pull-right' value="login &rarr;"/></div>
+			</form>
+		</div>
+	</div></div>
+</body>
 
-{% block scripts %}{% endblock %}
-{% block styles %}{% endblock %}
+<style type="text/css">
+body {
+ background-color: #fafafa;
+}
+.container {
+	margin-bottom: 5%;
+}
+#banner h1 {
+    background-color: #000000;
+    color: #FFFFFF;
+    font-family: monospace;
+    padding: 10px 20px 30px;
+}
+#login-form {
+	border: 1px solid #ddd;
+	padding: 14px;
+	border-radius: 6px;
+	background-color: #fff;
+}
+.error-holder {
+    width: 340px;
+    padding-right: 10px;
+  }
+</style>
+<script type="text/javascript" ajaxKey='{{ajaxKey}}' charset="utf-8">
+	 // give focus to username field
+	 window.addEvent('domready', function(){
+	 	$('id_username').focus();
+	 	// form validation
+		 var form_validator = new Form.Validator.Inline($('tt_form'), 
+		 	{'evaluateFieldsOnBlur':false, 'evaluateFieldsOnChange': false}
+		 ); 
+	 });
+	 
+</script>
+</html>

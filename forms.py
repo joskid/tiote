@@ -317,31 +317,43 @@ class mysqlTableForm(forms.BaseForm):
         forms.BaseForm.__init__(self, **kwargs)
 
 
-class LoginForm(forms.Form):
+class LoginForm(forms.BaseForm):
     
-    database_choices = ( ('', 'select database driver'),('postgresql', 'PostgreSQL'), ('mysql', 'MySQL'))
-    host = forms.CharField(
-        initial = 'localhost', widget=forms.TextInput(attrs=({'class':'required'}))
-    )
-    username = forms.CharField(
-        widget=forms.TextInput(attrs=({'class':'required'}))
-    )
-    password = forms.CharField(
-        widget = forms.PasswordInput,
-        required = False,
-    )
-    database_driver = forms.ChoiceField(
-        choices = database_choices,
-        widget = forms.Select(attrs={
-#            'class':'select_requires:connection_database:postgresql'
-            'class':'required'
-                }
-        ),
-    )
-    connection_database = forms.CharField(
-        required=False, 
-        help_text='Optional but needed if the PostgreSQL installation does not include the default `postgres` database'
-    )
+    def __init__(self, templates=None, choices="a", charsets=None, **kwargs):
+        f = SortedDict()
+        # choices = "a" || all choices
+        # choices = "m" || mysql dialect
+        # , 
+        # choices = "p" || postgresql dialect
+        database_choices = [ ('', 'select database driver'),]
+        if choices == "p" or choices == "a":
+            database_choices.append(('postgresql', 'PostgreSQL'))
+        if choices == "m" or choices == "a":
+            database_choices.append(('mysql', 'MySQL'))
+        f['host'] = forms.CharField(
+            initial = 'localhost', widget=forms.TextInput(attrs=({'class':'required'}))
+        )
+        f['username'] = forms.CharField(
+            widget=forms.TextInput(attrs=({'class':'required'}))
+        )
+        f['password'] = forms.CharField(
+            widget = forms.PasswordInput,
+            required = False,
+        )
+        f['database_driver'] = forms.ChoiceField(
+            choices = database_choices,
+            widget = forms.Select(attrs={
+    #            'class':'select_requires:connection_database:postgresql'
+                'class':'required'
+                    }
+            ),
+        )
+        f['connection_database'] = forms.CharField(
+            required=False, 
+            help_text='Optional but needed if the PostgreSQL installation does not include the default `postgres` database'
+        )
+        self.base_fields = f
+        forms.BaseForm.__init__(self, **kwargs)
     
     
 class ExportForm(forms.Form):
