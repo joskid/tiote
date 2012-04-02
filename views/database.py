@@ -31,7 +31,8 @@ def overview(request):
     props_keys = [('table_name', 'key')]
     if utils.fns.get_conn_params(request)['dialect'] == 'postgresql':
         props_keys.append(('table_schema', 'key'))
-    tables_html = utils.fns.HtmlTable(
+    static_addr = utils.fns.render_template(request, '{{STATIC_URL}}')
+    tables_html = utils.fns.HtmlTable(static_addr=static_addr,
         props={'count':tbl_data['count'],'with_checkboxes': True,
             'go_link': True, 'go_link_type': 'href', 
             'go_link_dest': '#'+urlencode(dest_url)+'&table',
@@ -39,30 +40,9 @@ def overview(request):
         }, **tbl_data
         ).to_element()
     table_options_html = utils.fns.table_options('data')
-    return table_options_html + tables_html
+    return HttpResponse(table_options_html + tables_html)
     
-
-def query(request):
-    pass
-
-
-def import_(request):
-    pass
-
-
-def export(request):
-    pass
 
 def route(request):
     if request.GET['view'] == 'overview':
-        t = overview(request)
-    elif request.GET['view'] == 'query':
-        t = query(request)
-    elif request.GET['view'] == 'import':
-        t = import_(request)
-    elif request.GET['view'] == 'export':
-        t = export(request)
-    # add request context to the response
-    context = RequestContext(request, [utils.fns.site_proc])
-    return HttpResponse(Template(t).render(context))
-
+        return overview(request)

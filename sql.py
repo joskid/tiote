@@ -139,7 +139,7 @@ AND kcu.table_schema='{schema}' AND kcu.table_catalog='{database}'".format(**que
 FROM information_schema.key_column_usage AS kcu LEFT OUTER JOIN information_schema.table_constraints \
 AS tc on (kcu.constraint_name = tc.constraint_name) WHERE kcu.table_name='{table}' \
 AND kcu.table_schema='{schema}' AND kcu.table_catalog='{database}' AND \
-(tc.constraint_type='PRIMARY KEY' OR tc.constraint_type='UNIQUE')".format(**query_data)
+(tc.constraint_type='PRIMARY KEY')".format(**query_data)
             return (q0, )
         
         elif query_type == 'drop_table':
@@ -284,7 +284,7 @@ AND kcu.table_name='{table}'".format(**query_data)
 from information_schema.key_column_usage as kcu, information_schema.table_constraints as tc WHERE \
 kcu.constraint_name = tc.constraint_name AND kcu.table_schema='{database}' AND tc.table_schema='{database}' \
 AND kcu.table_name='{table}' AND tc.table_name='{table}' \
-AND (tc.constraint_type='PRIMARY KEY' OR tc.constraint_type='UNIQUE')".format(**query_data)
+AND (tc.constraint_type='PRIMARY KEY')".format(**query_data)
             return (q0, )
         
         elif query_type == 'table_structure':

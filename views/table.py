@@ -23,10 +23,10 @@ def browse(request):
     # row(s) edit/updating request handling
     elif request.method == 'POST' and request.GET.get('update') == 'edit':
         return utils.fns.http_500('feature not yet implemented!')
-    
     tbl_data = utils.db.rpr_query(request, 'browse_table')
-    # assert False
+    static_addr = utils.fns.render_template(request, '{{STATIC_URL}}')
     browse_table_html = utils.fns.HtmlTable(
+        static_addr = static_addr,
         props={'count':tbl_data['count'], 'keys': tbl_data['keys']['rows'],
             'with_checkboxes': True, 'display_row': True,
         }, 
@@ -36,7 +36,7 @@ def browse(request):
     ).to_element().replace('\n', '<br />') # html doesn't display newlines(\n)
     table_options_html = utils.fns.table_options('data', pagination=True,
         with_keys=bool(tbl_data['keys']['rows']))
-    return table_options_html + browse_table_html
+    return HttpResponse(table_options_html + browse_table_html)
 
 
 def structure(request):
@@ -57,27 +57,25 @@ def structure(request):
             return utils.db.rpr_query(request, q, query_data)
         
     # view data
+    static_addr = utils.fns.render_template(request, '{{STATIC_URL}}')
     tbl_struct_data = utils.db.rpr_query(request, 'table_structure')
     columns_table_html = utils.fns.HtmlTable(attribs = {'id': 'tbl_columns'},
         props = {'count': tbl_struct_data['count'], 'with_checkboxes': True,},
-        **tbl_struct_data
+        static_addr = static_addr, **tbl_struct_data
     ).to_element()
     indexes_data = utils.db.rpr_query(request, 'indexes')
-    indexes_table_html = utils.fns.HtmlTable(
+    indexes_table_html = utils.fns.HtmlTable(static_addr = static_addr,
         props = {'count': indexes_data['count'], 'with_checkboxes': True},
         **indexes_data
     ).to_element()
-    return "".join(['<h5 class="heading">Columns:</h5>',      
+    return HttpResponse("".join(['<h5 class="heading">Columns:</h5>',      
         columns_table_html,'<h5 class="heading">Indexes:</h5>', indexes_table_html])
-
+    )
 
 def route(request):
     if request.GET.get('view') == 'browse':
-        t = browse(request)
+        return browse(request)
     elif request.GET.get('view') == 'structure':
-        t = structure(request)
+        return structure(request)
     else:
         return utils.fns.http_500('malformed URL')
-    # add request context to the response
-    context = RequestContext(request, [utils.fns.site_proc])
-    return HttpResponse(Template(t).render(context))

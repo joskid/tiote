@@ -151,6 +151,12 @@ Page.prototype.generateView = function(data, oldData){
 
 
 Page.prototype.generateSidebar = function(data, oldData) {
+	var resize_sidebar = function() {
+		if ($('sidebar').getScrollSize().y > (getHeight() - 50) || 
+		$('sidebar').getSize().y < (getHeight() - 50)) {
+			$('sidebar').setStyle('height', getHeight() - 50);
+		}
+	};
 	// xhr request for table list
 	var clear_sidebar = true;
 	if (Cookie.read('TT_UPDATE_SIDEBAR')){
@@ -188,9 +194,7 @@ Page.prototype.generateSidebar = function(data, oldData) {
 				if ($('sidebar').getChildren())
 					$('sidebar').getChildren().destroy();
 				$('sidebar').set('html', text);
-				window.addEvent('resize', function(){
-					$('sidebar').setStyle('height', getHeight() - 50);
-				});
+				window.addEvent('resize', resize_sidebar);
 				window.fireEvent('resize');
 				// handle events
 				if ($('db_select')) {
@@ -228,6 +232,8 @@ Page.prototype.generateSidebar = function(data, oldData) {
 			}
 		}).send();
 	}
+	window.addEvent('resize', resize_sidebar);
+	window.fireEvent('resize');
 }
 
 

@@ -232,7 +232,8 @@ class HtmlTable():
         - columns - an iterable containing the table heads
         - rows - and iterable containing some iterables
     '''
-    def __init__(self, columns=None, rows=None, attribs={}, props=None, store={}, **kwargs):
+    def __init__(self, columns=None, rows=None, attribs={}, props=None, store={}, 
+        static_addr = "", **kwargs):
         self.props = props
         self.tbody_chldrn = []
         # build attributes
@@ -244,8 +245,10 @@ class HtmlTable():
         self.keys_list = []
         if self.props.keys().count('keys') > 0:
             self.keys_list = self._build_keys_list(self.props['keys'])
+            self.keys_column = [x[0] for x in self.props['keys']]
         # build <thead><tr> children
         if columns is not None:
+            self.columns = columns
             hd_list = ["<td class='controls'><div></div></td>"]
             for head in columns:
                 hd_list.append('<td><div>'+head+'</div></td>')
@@ -254,7 +257,7 @@ class HtmlTable():
             self.thead_chldrn = hd_list
         # build <tbody> children
         if rows is not None:
-            [self.push(row) for row in rows]       
+            [self.push(row, static_addr=static_addr) for row in rows]       
 
     def _build_attribs_list(self, attribs=None):
         attribs_list = []
@@ -282,7 +285,7 @@ class HtmlTable():
     def has_body(self):
         return len(self.tbody_chldrn) > 0
 
-    def push(self, row, props=None):
+    def push(self, row, static_addr="", props=None):
         count = len(self.tbody_chldrn)
         row_list = ["<tr id='row_{0}'>".format(str(count))]
         l_props = []
@@ -296,22 +299,26 @@ class HtmlTable():
                 l_props.append( 
                     '<a href="{0}={1}" class="go_link">{2}</a>'.format(
                         self.props['go_link_dest'],row[0],
-                        '<img src="{{STATIC_URL}}/img/goto.png" />'
+                        '<img src="{0}/img/goto.png" />'.format(static_addr)
                     )
                 )
             if self.props.keys().count('display_row') > 0 and self.props['display_row'] == True:
                 l_props.append(
-                    '<a class="go_link display_row pointer"><img src="{{STATIC_URL}}/img/goto.png" /></a>'
+                    '<a class="go_link display_row pointer"><img src="{0}/img/goto.png" /></a>'.format(static_addr)
                 )
         tida = '<td class="controls"{1}><div class="data-entry">{0}</div></td>'.format(
             "".join(l_props),
             ' style="min-width:' + str(len(l_props) * 18) + 'px"' if len(l_props) else '25px"'
             )
         row_list.append(tida)
-        for column_data in row:
-            if len(str(column_data)) > 40: # value should be set in settings
-                column_data = str(column_data)[0:40] + '<span class="to-be-continued">...</span>'
+
+        for i in range(len(row)):
+            if len(str(row[i])) > 40 and hasattr(self, 'keys_column') and not self.keys_column.count(self.columns[i]):
+                column_data = str(row[i])[0:40] + '<span class="to-be-continued">...</span>'
+            else:
+                column_data = row[i]
             row_list.append('<td><div class="data-entry"><code>{0}</code></div></td>'.format(str(column_data)))
+
         # empty td
         row_list.append('<td class="last-td"></td>')
         row_list.append("</tr>")
@@ -342,6 +349,11 @@ class HtmlTable():
 
     def __str__(self):
         return self.to_element()
-    
+
+def render_template(request, template, context= {}):
+    _context = RequestContext(request, [site_proc])
+    if len(context) > 0: context.update(context)
+    return Template(template).render(_context)
+
 # cyclic import
 import db

@@ -2,11 +2,12 @@
 from django.http import HttpResponse, Http404, HttpResponseRedirect
 from django.template import loader, RequestContext, Template
 from django.views.decorators.http import require_http_methods
+from django.views.decorators.gzip import gzip_page
 from django.core import serializers
 
 from tiote import forms, utils, views
 
-
+@gzip_page
 def index(request):
     utils.fns.set_ajax_key(request)
     request.session.set_expiry(1800)
@@ -23,6 +24,7 @@ def index(request):
     context.update(c)
     return HttpResponse(template.render(context))
         
+@gzip_page
 def ajax(request):
     #check XmlHttpRequest
     if not request.is_ajax():
@@ -76,6 +78,7 @@ def ajax(request):
     else:
         return utils.fns.http_500('request corresponses to no function!')
    
+@gzip_page
 def login(request):
     c = {}
     errors = []
