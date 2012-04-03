@@ -316,7 +316,8 @@ class HtmlTable():
             if len(str(row[i])) > 40 and hasattr(self, 'keys_column') and not self.keys_column.count(self.columns[i]):
                 column_data = str(row[i])[0:40] + '<span class="to-be-continued">...</span>'
             else:
-                column_data = row[i]
+                column_data = str(row[i])
+            column_data = column_data.replace(' ', '&nbsp;') # tds with spaces in them have its width set to its min-width
             row_list.append('<td><div class="data-entry"><code>{0}</code></div></td>'.format(str(column_data)))
 
         # empty td

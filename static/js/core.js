@@ -61,14 +61,10 @@ Page.prototype.setTitle = function(new_title){
 	if (! new_title) {
 		var title = 'tiote';
 		var r = location.hash.replace('#','').parseQueryString();
-		Object.each(r, function(item, key){
-			if (key == 'view' && r[key] == r['section']) {
-			} else {
-				if (key == 'view' || key =='section') { /* skip */ }
-				else if (key == 'schema'&& !Object.keys(r).contains(key)) {/* skip */}
-				else {title += ' / ' + item;}
-			}
+		['database','schema','table'].each(function(or_item){
+			if (Object.keys(r).contains(or_item)) title += ' / ' + r[or_item];
 		});
+		if (Object.keys(r).contains('offset')) title += ' / page ' + (r['offset'] / 100);
 		title += ' / ' + r['view'];
 	} else {
 		title = new_title;
@@ -139,7 +135,8 @@ Page.prototype.generateView = function(data, oldData){
 				$('tt-content').set('html', viewData['text']);
 				if (data['section']=='table' && data['view'] =='browse') {
 					self.jsifyTable(true);
-				} else { self.jsifyTable(false);}
+					self.browseView();
+				} else {self.jsifyTable(false);}
 				self.addTableOpts();
 				self.generateSidebar(data, oldData);
 			}
@@ -268,7 +265,7 @@ Page.prototype.jsifyTable = function(syncHeightWithWindow) {
 						ths[i].setStyles({'min-width': width, 'width': width});
 					} else {
 						width = tds[i].getDimensions().x - 1; // -1 for border
-						ths[i].setStyles({'min-width': width, 'width': width });
+						ths[i].setStyles({'min-width': width, 'width': width});
 					}
 				}
 				tds = null, ths = null;
@@ -287,8 +284,7 @@ Page.prototype.jsifyTable = function(syncHeightWithWindow) {
 				// add the width of scrollbar to min-width property of ".tbl-header td.last-td"
 				var w = tblbody_tbl.getScrollSize().x - tblhead_tbl.getScrollSize().x;
 				w = w + 25 + 7;
-				tblhead_tbl.getElement('td.last-td').setStyle('min-width', w);
-				
+				tblhead_tbl.getElement('td.last-td').setStyle('min-width', w);	
 			}
 		});
 	}
@@ -381,6 +377,32 @@ Page.prototype.addTableOpts = function() {
 	
 }
 
+function sort_dir() {
+	if (page_hash()['sort_dir'] == undefined) return "asc"
+	else if (!['asc','desc'].contains(page_hash()['sort_dir']) ) return "asc";
+	else if (page_hash()['sort_dir']=='desc') return "asc";
+	else return "desc"
+}
+	
+	
+Page.prototype.browseView = function() {	
+	var theads = document.getElement('.tbl-header table tr').getElements('td[class!=controls]');
+	theads.setStyle('cursor', 'pointer');
+	theads.each(function(thead, thead_in){
+		// add click event
+		thead.addEvent('click', function(e){
+			var o = Object.merge(page_hash(), {'sort_key': thead.get('text'),
+				'method': 'get', 'sort_dir': sort_dir()
+				});
+			redirectPage(o);
+		});
+		// mark as sort key
+		if (thead.get('text') == page_hash()['sort_key']) {
+			thead.setStyle('font-weight', 'bold');
+			thead.addClass(page_hash()['sort_dir'] == 'asc'? 'sort-asc': 'sort-desc');
+		} 
+	});
+}
 
 Page.prototype.updateOptions = function(obj) {
 	this.options.extend(obj)
@@ -451,18 +473,15 @@ var XHR = new Class({
 		// 
 		if (options.url.substr(-1) != "?") options.url += "&";
 		//
-		if (options.section)
-			options.url += 'section=' + options.section;
-		if (options.view)
-			options.url += '&view=' + options.view;
-		if (options.database)
-			options.url += '&database=' + options.database
-		if (options.schema)
-			options.url += '&schema=' + options.schema
-		if (options.table)
-			options.url += '&table=' + options.table
-		if (options.offset)
-			options.url += '&offset=' + options.offset;
+		if (options.section) options.url += 'section=' + options.section;
+		if (options.view) options.url += '&view=' + options.view;
+		if (options.database) options.url += '&database=' + options.database
+		if (options.schema) options.url += '&schema=' + options.schema
+		if (options.table) options.url += '&table=' + options.table
+		if (options.offset)	options.url += '&offset=' + options.offset;
+		if (options.sort_key) options.url += '&sort_key=' + options.sort_key;
+		if (options.sort_dir) options.url += "&sort_dir=" + options.sort_dir;
+		
 		// append ajax validation key
 		options.url += '&ajaxKey=' + ajaxKey;
 		this.parent(options);
@@ -473,10 +492,7 @@ var XHR = new Class({
 			show('header-load');
             ajaxSpinner.show(true);
 			
-			this.addEvent("onSuccess", function() {
-//				hide('header-load');
-//				ajaxSpinner.hide();
-			});
+			this.addEvent("onSuccess", function() {});
 			
 			this.addEvent('onComplete', function(xhr){
 				hide('header-load');

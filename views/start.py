@@ -82,8 +82,7 @@ def ajax(request):
 def login(request):
     c = {}
     errors = []
-    redi = request.META['PATH_INFO']
-    redi = redi.replace('login/', '');
+    redi = request.META['PATH_INFO'].replace('login/', '')
 
     # dialects' info
     c['dialects'] = [

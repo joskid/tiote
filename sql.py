@@ -55,10 +55,17 @@ WHERE schema_name NOT LIKE '%pg_toast%' AND schema_name NOT LIKE '%pg_temp%'"
 
 def generate_query(query_type, dialect='postgresql', query_data=None):
 
+    prfx = "{schema}.".format(**query_data) if dialect =='postgresql' else ""
     if query_type == 'get_row':
-        prfx = "{schema}.".format(**query_data) if dialect =='postgresql' else ""
         q0 = "SELECT * FROM {0}{table} WHERE {where} LIMIT 1".format(prfx, **query_data)
         return (q0,)
+
+    elif query_type == 'browse_table':
+        q0 = "SELECT * FROM {0}{table}"
+        if query_data.has_key('sort_key') and query_data.has_key('sort_dir'):
+            q0 += " ORDER BY {sort_key} {sort_dir}"
+        q0 += " LIMIT {limit} OFFSET {offset}"
+        return (q0.format(prfx, **query_data),)
 
     elif dialect == 'postgresql': #postgresql-only statements
         
@@ -107,16 +114,17 @@ def generate_query(query_type, dialect='postgresql', query_data=None):
             return (q, )
         
         elif query_type == 'table_rpr':
-            q = "SELECT table_name, table_type, table_schema FROM \
-information_schema.tables WHERE table_schema='{schema}' ORDER BY table_name ASC".format(**query_data)
+            # q = "SELECT table_name, table_type, table_schema FROM \
+# information_schema.tables WHERE table_schema='{schema}' ORDER BY table_name ASC".format(**query_data)
+            
+            q = "SELECT t2.tablename, t2.tableowner, t2.tablespace, t1.reltuples::integer AS estimated_row_count \
+FROM ( pg_catalog.pg_class as t1 INNER JOIN pg_catalog.pg_tables AS t2  ON t1.relname = t2.tablename) \
+WHERE t2.schemaname='{schema}'ORDER BY t2.tablename ASC ".format(**query_data)
+
             return (q, )
         
         elif query_type == 'count_rows':
             q0 = "SELECT count(*) FROM {schema}.{table}".format(**query_data)
-            return (q0,)
-        
-        elif query_type == 'browse_table':
-            q0 = "SELECT * FROM {schema}.{table} LIMIT {limit} OFFSET {offset}".format(**query_data)
             return (q0,)
         
         elif query_type == 'delete_row':
@@ -267,10 +275,6 @@ WHERE table_catalog='{database}' AND table_schema='{schema}' AND table_name='{ta
         elif query_type == 'count_rows':
             q0 = "SELECT count(*) FROM `{database}`.`{table}`".format(**query_data)
             return (q0, )
-        
-        elif query_type == 'browse_table':
-            q0 = "SELECT * FROM `{database}`.`{table}` LIMIT {limit} OFFSET {offset}".format(**query_data)
-            return (q0,)
         
         elif query_type == 'indexes':
             q0 = "SELECT DISTINCT kcu.column_name, kcu.constraint_name, tc.constraint_type \

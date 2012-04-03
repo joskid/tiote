@@ -24,7 +24,7 @@ def rpr_query(request, query_type, query_data=None):
         if type(r) == dict:
             return jsonize_result(r)
         else:
-            return http_500(r)
+            return fns.http_500(r)
         
         
     elif query_type in ['indexes', 'primary_keys']:
@@ -101,8 +101,8 @@ def rpr_query(request, query_type, query_data=None):
         sub_q_data = {'table': request.GET.get('table'),'database':request.GET.get('database')}
         sub_q_data['offset'] = request.GET.get('offset') if request.GET.get('offset') else 0
         sub_q_data['limit'] = request.GET.get('limit') if request.GET.get('limit') else 100
-        if request.GET.get('schema'):
-            sub_q_data['schema'] = request.GET.get('schema')
+        for item in ['schema', 'sort_key', 'sort_dir']:
+            if request.GET.get(item): sub_q_data[item] = request.GET.get(item)
         # retrieve and run queries
         conn_params['database'] = request.GET.get('database')
         keys = rpr_query(request, 'primary_keys', sub_q_data)
@@ -118,7 +118,7 @@ def rpr_query(request, query_type, query_data=None):
                       'limit':sub_q_data['limit'], 'keys': keys})
             return r
         else:
-            return http_500(r)
+            return fns.http_500(r)
         
     # queries that just asks formats and return result
     elif query_type in ['existing_tables',]:
@@ -144,7 +144,7 @@ def rpr_query(request, query_type, query_data=None):
                 sql.stored_query(query_type, conn_params['dialect']))
         
         else:
-            return http_500('query not implemented!')
+            return fns.http_500('query not implemented!')
             
             
     elif conn_params['dialect'] == 'mysql':
@@ -155,9 +155,9 @@ def rpr_query(request, query_type, query_data=None):
             return sql.full_query(conn_params, query)
         
         else:
-            return http_500('query not yet implemented!')
+            return fns.http_500('query not yet implemented!')
     else:
-        return http_500('dialect not supported!')
+        return fns.http_500('dialect not supported!')
 
 
 def common_query(request, query_name):
@@ -235,6 +235,6 @@ def get_home_variables(request):
             variables.update(d)
             return variables
         else:
-            return http_500(result)
+            return fns.http_500(result)
 
 

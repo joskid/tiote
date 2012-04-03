@@ -151,7 +151,6 @@ table.sql * {
     border-bottom: 1px solid #DDDDDD;
     border-right: 1px solid #DDDDDD;
     border-top: 1px solid #DDDDDD;
-    cursor: pointer;
     font-size: 12px;
     font-weight: normal;
     padding: 2px;
@@ -220,6 +219,16 @@ td.last-td {
 	min-width: 0px;
 	padding: 0px;
 	margin: 0px;
+}
+
+td.sort-asc{
+    background: url("../img/sortasc.gif") no-repeat scroll right 6px transparent;
+    margin-right: 1px;
+}
+
+td.sort-desc{
+    background: url("../img/sortdesc.gif") no-repeat scroll right 5px transparent;
+    margin-right: 1px;
 }
 /*
 	FORMS
