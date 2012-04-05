@@ -17,17 +17,17 @@ def overview(request):
             q = 'drop_table'
         elif request.GET.get('update') == 'empty':
             q = 'empty_table'
-        query_data = {'database':request.GET['database'],'conditions':utils.fns.get_conditions(l)}
-        if request.GET.get('schema'):
-            query_data['schema'] = request.GET.get('schema')
+        query_data = {'db':request.GET['db'],'conditions':utils.fns.get_conditions(l)}
+        if request.GET.get('schm'):
+            query_data['schm'] = request.GET.get('schm')
         return utils.db.rpr_query(request, q , query_data)
 
     tbl_data = utils.db.rpr_query(request, 'table_rpr')
     from urllib import urlencode
     from django.utils.datastructures import SortedDict
-    dest_url = SortedDict({'section':'table','view':'browse'})
-    dest_url['database'] = request.GET.get('database')
-    dest_url['schema'] = request.GET.get('schema')
+    dest_url = SortedDict({'sctn':'tbl','v':'browse'})
+    dest_url['db'] = request.GET.get('db')
+    dest_url['schm'] = request.GET.get('schm')
     props_keys = [('table_name', 'key')]
     if utils.fns.get_conn_params(request)['dialect'] == 'postgresql':
         props_keys.append(('table_schema', 'key'))
@@ -35,7 +35,7 @@ def overview(request):
     tables_html = utils.fns.HtmlTable(static_addr=static_addr,
         props={'count':tbl_data['count'],'with_checkboxes': True,
             'go_link': True, 'go_link_type': 'href', 
-            'go_link_dest': '#'+urlencode(dest_url)+'&table',
+            'go_link_dest': '#'+urlencode(dest_url)+'&tbl',
             'keys': props_keys
         }, **tbl_data
         ).to_element()
@@ -44,5 +44,5 @@ def overview(request):
     
 
 def route(request):
-    if request.GET['view'] == 'overview':
+    if request.GET['v'] == 'overview':
         return overview(request)

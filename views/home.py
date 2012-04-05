@@ -72,7 +72,7 @@ def users(request):
             h.set_cookie('tt_formContainsErrors','true')
             return h
             
-    elif request.method == 'POST' and request.GET.get('view'):
+    elif request.method == 'POST' and request.GET.get('v'):
         return HttpResponse('edit not yet implemented')
     else:
         form = UserForm(dbs=db_list, groups=group_list)
@@ -116,14 +116,14 @@ def export(request):
 
 
 def route(request):
-    if request.GET['view'] == 'users':
+    if request.GET['v'] == 'users':
         return users(request)
-    elif request.GET['view'] == 'query':
+    elif request.GET['v'] == 'query':
         return query(request)
-    elif request.GET['view'] == 'export':
+    elif request.GET['v'] == 'export':
         return export(request)
-    elif request.GET['view'] == 'import':
+    elif request.GET['v'] == 'import':
         return import_(request)
-    elif request.GET['view'] == 'home':
+    elif request.GET['v'] == 'home':
         return home(request)
     

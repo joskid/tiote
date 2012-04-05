@@ -115,7 +115,7 @@ def construct_cond(k, v):
 
 def response_shortcut(request, template = False, extra_vars=False ):
     # extra_vars are more context variables
-    template = skeleton(template) if template else skeleton(request.GET['view'], request.GET['section'])
+    template = skeleton(template) if template else skeleton(request.GET['v'], request.GET['sctn'])
     context = RequestContext(request, {
         }, [site_proc]
     )
@@ -134,9 +134,9 @@ def get_conn_params(request):
     data['password'] = request.session.get('TT_PASSWORD')
     data['dialect'] = request.session.get('TT_DIALECT')
     if request.session.get('TT_DATABASE'):
-        data['database'] = request.session.get('TT_DATABASE')
+        data['db'] = request.session.get('TT_DATABASE')
     else:
-        data['database'] = '' if data['dialect'] =='mysql' else 'postgres'
+        data['db'] = '' if data['dialect'] =='mysql' else 'postgres'
     return data    
 
 
@@ -167,9 +167,10 @@ def generate_sidebar(request):
 
     def select_input(rows, desc=None, initial=None):
         # build select's El attributes
-        attrib_str = ''
+        _l_attrib_str = []
         for k in desc.keys():
-            attrib_str += " " + k +"='" + desc[k] +"'"
+            _l_attrib_str.extend([" ", k, "='", desc[k], "'"])
+        attrib_str = "".join(_l_attrib_str)
         # build select's options
         options_str = ''
         for row in rows:
@@ -187,26 +188,26 @@ def generate_sidebar(request):
     conn_params = get_conn_params(request)
     db_list = db.common_query(request, 'db_list')
     
-    if request.GET.get('database') or request.GET.get('table'):
-        d = {'database': request.GET.get('database')}
-        db_selection_form = select_input(db_list, desc={'id':'db_select'}, initial=d['database'])
+    if request.GET.get('db') or request.GET.get('tbl'):
+        d = {'db': request.GET.get('db')}
+        db_selection_form = select_input(db_list, desc={'id':'db_select'}, initial=d['db'])
         s = ''
         if conn_params['dialect'] == 'postgresql':
-            d['schema'] = request.GET.get('schema')
+            d['schm'] = request.GET.get('schm')
             # append schema selection with default to public
             schema_list = db.common_query(request, 'schema_list')
-            schema_selection_form = select_input(schema_list,desc={'id':'schema_select'},initial=d['schema'])
+            schema_selection_form = select_input(schema_list,desc={'id':'schema_select'},initial=d['schm'])
             s += '<h6 class="icon-schemas">schema</h6>' + schema_selection_form
         
         # table selection ul
         table_list = db.rpr_query(request, 'existing_tables')
         sfx_list = []
-        pg_sfx = '&schema=' + d['schema'] if conn_params['dialect']=='postgresql' else ''
+        pg_sfx = '&schm=' + d['schm'] if conn_params['dialect']=='postgresql' else ''
         for tbl_row in table_list:
             # decide selected table
-            li_pfx = " class='active'" if request.GET.get('table') == tbl_row[0] else ''
-            a = '<a class="icon-table" href="#section=table&view=browse&database={0}{1}&table={2}">{2}</a>'.format(
-                    d['database'], pg_sfx, tbl_row[0]
+            li_pfx = " class='active'" if request.GET.get('tbl') == tbl_row[0] else ''
+            a = '<a class="icon-table" href="#sctn=tbl&v=browse&db={0}{1}&tbl={2}">{2}</a>'.format(
+                    d['db'], pg_sfx, tbl_row[0]
                 )
             sfx_list.append("<li{0}>{1}</li>".format(li_pfx, a))
             
@@ -216,8 +217,8 @@ def generate_sidebar(request):
     else: # home section
         li_list = []
         for db_row in db_list:
-            sufx = "&schema=public" if conn_params['dialect'] == 'postgresql' else ''
-            a = "<a class='icon-database' href='#section=database&view=overview&database={0}{1}'>{0}</a>".format(db_row[0],sufx)
+            sufx = "&schm=public" if conn_params['dialect'] == 'postgresql' else ''
+            a = "<a class='icon-database' href='#sctn=db&v=overview&db={0}{1}'>{0}</a>".format(db_row[0],sufx)
             li_list.append('<li>{0}</li>'.format(a))
         ret_string += '<h6>Databases</h6><ul>' + ''.join(li_list) + '</ul>'
 #    return ret_string
@@ -336,16 +337,7 @@ class HtmlTable():
             ' keys="' + ''.join(self.keys_list) + '"' if bool(self.keys_list) else '' , #{2}
             ''.join([ ''.join(row) for row in self.tbody_chldrn])
         )
-
-        # el = '<table{0}{1}{2}><thead class="window-title"><tr>{3}</tr></thead><tbody>{4}</tbody></table>'.format(
-        #     ''.join(self.attribs_list), # {0}
-        #     ' data="' + ''.join(self.store_list) +'"' if bool(self.store_list) else '', #{1}
-        #     ' keys="' + ''.join(self.keys_list) + '"' if bool(self.keys_list) else '' , #{2}
-        #     ''.join(self.thead_chldrn),  #{3}
-        #     ''.join([ ''.join(row) for row in self.tbody_chldrn]) #{4}
-        # )
         
-        # thead = ''
         return '<div class="jsifyTable">' + thead + tbody + '</div>'
 
     def __str__(self):

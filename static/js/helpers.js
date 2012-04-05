@@ -6,7 +6,7 @@ function generate_ajax_url(withAjaxKey,extra_data) {
 	n.extend(extra_data);
 	var request_url = 'ajax/?';
 	n.each(function(item,key){
-		if (key == 'section') {
+		if (key == 'sctn') {
 			request_url += key + '=' + item;
 		}
 		else {
@@ -211,10 +211,10 @@ function tbl_pagination(total_count, limit, offset) {
 function disable_unimplemented_links(){
 	var implemented = {
 		'home': ['home'],
-		'database': ['overview'],
-		'table': ['browse', 'structure']
+		'db': ['overview'],
+		'tbl': ['browse', 'structure']
 	}
-	var section = page_hash()['section']
+	var section = page_hash()['sctn']
 	$$('.nav a').each(function(nav_link){
 		if ( ! implemented[section].contains( nav_link.get('html').toLowerCase() ) ){
 			new Element('span', {

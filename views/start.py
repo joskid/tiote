@@ -62,19 +62,19 @@ def ajax(request):
             return utils.fns.http_500('feature not yet implemented!')
         
         
-    if not request.GET.get('view', False) and not request.GET.get('section', False):
+    if not request.GET.get('v', False) and not request.GET.get('sctn', False):
         return utils.fns.http_500('not a complete ajax request!')
     
     # call corresponding function as request.GET.get('view', False)
     
-    if request.GET.get('section', False) == 'begin':
-        return begin(request, request.GET.get('view', False))
-    if request.GET.get('section', False) == 'home':
+    if request.GET.get('sctn', False) == 'begin':
+        return begin(request, request.GET.get('v', False))
+    if request.GET.get('sctn', False) == 'home':
         return views.home.route(request)
-    elif request.GET.get('section', False) == 'database':
-        return views.database.route(request)
-    elif request.GET.get('section', False) == 'table':
-        return views.table.route(request)
+    elif request.GET.get('sctn', False) == 'db':
+        return views.db.route(request)
+    elif request.GET.get('sctn', False) == 'tbl':
+        return views.tbl.route(request)
     else:
         return utils.fns.http_500('request corresponses to no function!')
    

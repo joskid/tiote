@@ -18,7 +18,7 @@ window.addEvent('domready', function() {
 			}
 		} else {
 			Cookie.write('TT_NEXT', new Hash(navObject).toQueryString());
-			navObject = new Hash({'section': 'begin', 'view': 'login'});
+			navObject = new Hash({'sctn': 'begin', 'v': 'login'});
             // funny redirect
             location.href = location.protocol + '//'+ location.host + location.pathname + 'login/'
 		}
@@ -28,7 +28,7 @@ window.addEvent('domready', function() {
     
 	if (! location.pathname.contains('login/') ) {
         if (location.hash) {reloadPage();} 
-        else {nav.set({'section': 'home', 'view': 'home'});}
+        else {nav.set({'sctn': 'home', 'v': 'home'});}
     }
 	
 });
@@ -61,11 +61,11 @@ Page.prototype.setTitle = function(new_title){
 	if (! new_title) {
 		var title = 'tiote';
 		var r = location.hash.replace('#','').parseQueryString();
-		['database','schema','table'].each(function(or_item){
+		['db','schm','tbl'].each(function(or_item){
 			if (Object.keys(r).contains(or_item)) title += ' / ' + r[or_item];
 		});
-		if (Object.keys(r).contains('offset')) title += ' / page ' + (r['offset'] / 100);
-		title += ' / ' + r['view'];
+		if (Object.keys(r).contains('offset')) title += ' / page ' + (r['offset'] / 100 + 1);
+		title += ' / ' + r['v'];
 	} else {
 		title = new_title;
 	}
@@ -82,34 +82,34 @@ Page.prototype.generateTopMenu = function(data){
 	});
 	
 	var order = [];var prefix_str;var suffix;
-	if (data['section'] == 'begin') {
+	if (data['sctn'] == 'begin') {
 		order = ['login', 'help', 'faq'];
-		prefix_str = '#section=begin';
-	}else if (data['section'] == 'home') {
+		prefix_str = '#sctn=begin';
+	}else if (data['sctn'] == 'home') {
 		order = ['home', ,'users','query', 'import', 'export'];
-		prefix_str = '#section=home';
-	}else if (data['section'] == 'database') {
+		prefix_str = '#sctn=home';
+	}else if (data['sctn'] == 'db') {
 		order = ['overview', 'query','import','export'];
-		prefix_str = '#section=database';
-		suffix = ['&database=']
-	}else if (data['section'] == 'table') {
+		prefix_str = '#sctn=db';
+		suffix = ['&db=']
+	}else if (data['sctn'] == 'tbl') {
 		order = ['browse', 'structure', 'insert', 'search', 'query', 'import', 'export'];
-		prefix_str = '#section=table';
-		suffix = ['&database=','&table='];
+		prefix_str = '#sctn=tbl';
+		suffix = ['&db=','&tbl='];
 	}
 	
 	var aggregate_links = new Elements();
 	order.each(function(item, key){
 		var elmt = links[item];
-		elmt.href = prefix_str + '&view=' + elmt.text;
-        if (data['section'] == 'database' || data['section'] == 'table'){
-            elmt.href += suffix[0] + data['database'];
-            if (data['schema'])
-                elmt.href += '&schema=' + data['schema'];
+		elmt.href = prefix_str + '&v=' + elmt.text;
+        if (data['sctn'] == 'db' || data['sctn'] == 'tbl'){
+            elmt.href += suffix[0] + data['db'];
+            if (data['schm'])
+                elmt.href += '&schm=' + data['schm'];
         }
-        if (data['section'] == 'table')
-            elmt.href += suffix[1] + data['table'];
-		// todo: add suffix_str eg &table=weed
+        if (data['sctn'] == 'tbl')
+            elmt.href += suffix[1] + data['tbl'];
+		// todo: add suffix_str eg &tbl=weed
 		elmt.text = elmt.text.capitalize();
 		var ela = new Element('li',{});
 		ela.adopt(elmt);
@@ -128,12 +128,12 @@ Page.prototype.generateView = function(data, oldData){
 	var x = new XHR(Object.merge({'method':'get',
         'onSuccess': function(text,xml){
             var viewData = {'text' : text,'xml' : xml};
-            if (!data['section']) {
+            if (!data['sctn']) {
                 nav.state.empty()
-                nav.set({'section': 'home','view': 'home'});
+                nav.set({'sctn': 'home','v': 'home'});
             } else {
 				$('tt-content').set('html', viewData['text']);
-				if (data['section']=='table' && data['view'] =='browse') {
+				if (data['sctn']=='tbl' && data['v'] =='browse') {
 					self.jsifyTable(true);
 					self.browseView();
 				} else {self.jsifyTable(false);}
@@ -163,13 +163,13 @@ Page.prototype.generateSidebar = function(data, oldData) {
 		// other necessary conditions
 		if ($('sidebar') && $('sidebar').getChildren().length) {
 			if (oldData && 
-					(oldData['section'] == data['section'] 
-						&& oldData['table'] == data['table']
-						&& oldData['database'] == data['database']
+					(oldData['sctn'] == data['sctn'] 
+						&& oldData['tbl'] == data['tbl']
+						&& oldData['db'] == data['db']
 					)) {
-						if (Object.keys(oldData).contains('schema') 
-							&& Object.keys(data).contains('schema')) { // pg dialect
-							if (oldData['schema'] == data['schema'])
+						if (Object.keys(oldData).contains('schm') 
+							&& Object.keys(data).contains('schm')) { // pg dialect
+							if (oldData['schm'] == data['schm'])
 								clear_sidebar = false;
 						} else {										// mysql dialect
 							clear_sidebar = false;
@@ -179,14 +179,8 @@ Page.prototype.generateSidebar = function(data, oldData) {
 	}
 	
 	if (clear_sidebar) {
-		var x = new XHR({'query':'sidebar', 'type':'repr',
-			'section': this.options.navObj.section,
-			'schema': this.options.navObj.schema, 
-			'database': this.options.navObj.database,
-			'table': this.options.navObj.table,
-			'offset': this.options.navObj.offset,
-			'method': 'get',
-			'onSuccess': function(text,xml){
+		var x = new XHR(Object.merge({'query':'sidebar', 'type':'repr', 'method': 'get',
+			onSuccess: function(text,xml){
 				// if there is already sidebar data clear it
 				if ($('sidebar').getChildren())
 					$('sidebar').getChildren().destroy();
@@ -196,21 +190,21 @@ Page.prototype.generateSidebar = function(data, oldData) {
 				// handle events
 				if ($('db_select')) {
 					$('db_select').addEvent('change', function(e){
-						if (e.target.value != page_hash()['database']) {
-							var context = {'section':'database','view':'overview',
-								'database': e.target.value
+						if (e.target.value != page_hash()['db']) {
+							var context = {'sctn':'db','v':'overview',
+								'db': e.target.value
 							}
-							if (Object.keys(page_hash()).contains('schema'))
-								context['schema'] = 'public';
+							if (Object.keys(page_hash()).contains('schm'))
+								context['schm'] = 'public';
 							redirectPage(context);
 						}
 					});
 				}
 				if ($('schema_select')) {
 					$('schema_select').addEvent('change', function(e){
-						if (e.target.value != page_hash()['schema']) {
-							var context = {'section':'database','view':'overview',
-								'database': page_hash()['database'], 'schema': e.target.value
+						if (e.target.value != page_hash()['schm']) {
+							var context = {'sctn':'db','v':'overview',
+								'db': page_hash()['db'], 'schm': e.target.value
 							}
 							redirectPage(context);
 						}
@@ -227,7 +221,7 @@ Page.prototype.generateSidebar = function(data, oldData) {
 					});
 				}
 			}
-		}).send();
+		}, page_hash())).send();
 	}
 	window.addEvent('resize', resize_sidebar);
 	window.fireEvent('resize');
@@ -245,7 +239,8 @@ Page.prototype.jsifyTable = function(syncHeightWithWindow) {
 			if (syncHeightWithWindow) {
 				window.addEvent('resize', function() {
 					if (cont.getElement('.tbl-body table') != null &&
-						cont.getElement('.tbl-body table').getScrollSize().y > (getHeight() - 100)) {
+						(cont.getElement('.tbl-body table').getScrollSize().y > (getHeight() - 100)) ||
+						cont.getElement('.tbl-body table').getSize().y < (getHeight() - 100) ) {
 						cont.getElement('.tbl-body table').setStyle('height', (getHeight() - 100));
 					}
 				});
@@ -473,11 +468,11 @@ var XHR = new Class({
 		// 
 		if (options.url.substr(-1) != "?") options.url += "&";
 		//
-		if (options.section) options.url += 'section=' + options.section;
-		if (options.view) options.url += '&view=' + options.view;
-		if (options.database) options.url += '&database=' + options.database
-		if (options.schema) options.url += '&schema=' + options.schema
-		if (options.table) options.url += '&table=' + options.table
+		if (options.sctn) options.url += 'sctn=' + options.sctn; 
+		if (options.v) options.url += '&v=' + options.v;
+		if (options.db) options.url += '&db=' + options.db;
+		if (options.schm) options.url += '&schm=' + options.schm;
+		if (options.tbl) options.url += '&tbl=' + options.tbl;
 		if (options.offset)	options.url += '&offset=' + options.offset;
 		if (options.sort_key) options.url += '&sort_key=' + options.sort_key;
 		if (options.sort_dir) options.url += "&sort_dir=" + options.sort_dir;

@@ -15,10 +15,10 @@ def browse(request):
 #        conditions = utils.fns.get_conditions(l)
         conditions = [utils.fns.construct_cond(item[0], item[1]) 
             for item in utils.fns.dict_conds(request.POST.get('whereToEdit')) ]
-        query_data = {'database': request.GET.get('database'),'table': request.GET.get('table'),
+        query_data = {'db': request.GET.get('db'),'table': request.GET.get('table'),
              'conditions': conditions}
-        if request.GET.get('schema'):
-            query_data['schema'] = request.GET.get('schema')
+        if request.GET.get('schm'):
+            query_data['schm'] = request.GET.get('schm')
         return utils.db.rpr_query(request, 'delete_row', query_data)
     # row(s) edit/updating request handling
     elif request.method == 'POST' and request.GET.get('update') == 'edit':
@@ -51,7 +51,7 @@ def structure(request):
             return HttpResponse('update not yet implemented!')
         elif request.GET.get('update') == 'delete':
             q = 'delete_column'
-            query_data = {'database': request.GET.get('database'), 'table': request.GET.get('table'),
+            query_data = {'db': request.GET.get('db'), 'table': request.GET.get('table'),
                           'conditions': conditions}
             
             return utils.db.rpr_query(request, q, query_data)
@@ -73,9 +73,9 @@ def structure(request):
     )
 
 def route(request):
-    if request.GET.get('view') == 'browse':
+    if request.GET.get('v') == 'browse':
         return browse(request)
-    elif request.GET.get('view') == 'structure':
+    elif request.GET.get('v') == 'structure':
         return structure(request)
     else:
         return utils.fns.http_500('malformed URL')

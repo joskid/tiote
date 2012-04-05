@@ -1,1 +1,1 @@
-import home, database, table
+import home, db, tbl

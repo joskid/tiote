@@ -54,18 +54,47 @@ WHERE schema_name NOT LIKE '%pg_toast%' AND schema_name NOT LIKE '%pg_temp%'"
 
 
 def generate_query(query_type, dialect='postgresql', query_data=None):
+    # init
+    if query_data.has_key('schm'):
+        prfx = "{schm}.".format(**query_data) if dialect =='postgresql' else ""
+    else: prfx = ""
 
-    prfx = "{schema}.".format(**query_data) if dialect =='postgresql' else ""
+    #queries
     if query_type == 'get_row':
-        q0 = "SELECT * FROM {0}{table} WHERE {where} LIMIT 1".format(prfx, **query_data)
+        q0 = "SELECT * FROM {0}{tbl} WHERE {where} LIMIT 1".format(prfx, **query_data)
         return (q0,)
 
     elif query_type == 'browse_table':
-        q0 = "SELECT * FROM {0}{table}"
+        q0 = "SELECT * FROM {0}{tbl}"
         if query_data.has_key('sort_key') and query_data.has_key('sort_dir'):
             q0 += " ORDER BY {sort_key} {sort_dir}"
         q0 += " LIMIT {limit} OFFSET {offset}"
         return (q0.format(prfx, **query_data),)
+
+
+    elif query_type == 'count_rows':
+        q0 = "SELECT count(*) FROM {0}{tbl}".format(prfx, **query_data)
+        return (q0,)
+
+
+    elif query_type == 'drop_table':
+        queries = []
+        for where in query_data['conditions']:
+            queries.append( "DROP TABLE {0}{table_name}".format(prfx, **where))
+        return tuple(queries)
+    
+    elif query_type == 'empty_table':
+        queries = []
+        for where in query_data['conditions']:
+            queries.append( "TRUNCATE {0}{table_name}".format(prfx, **where) )
+        return queries
+
+    elif query_type == 'delete_row':
+        queries = []
+        for whereCond in query_data['conditions']:
+            q0 = "DELETE FROM {0}{tbl}".format(prfx, **query_data) + " WHERE "+whereCond
+            queries.append(q0)
+        return tuple(queries)
 
     elif dialect == 'postgresql': #postgresql-only statements
         
@@ -114,66 +143,36 @@ def generate_query(query_type, dialect='postgresql', query_data=None):
             return (q, )
         
         elif query_type == 'table_rpr':
-            # q = "SELECT table_name, table_type, table_schema FROM \
-# information_schema.tables WHERE table_schema='{schema}' ORDER BY table_name ASC".format(**query_data)
-            
             q = "SELECT t2.tablename, t2.tableowner, t2.tablespace, t1.reltuples::integer AS estimated_row_count \
 FROM ( pg_catalog.pg_class as t1 INNER JOIN pg_catalog.pg_tables AS t2  ON t1.relname = t2.tablename) \
-WHERE t2.schemaname='{schema}'ORDER BY t2.tablename ASC ".format(**query_data)
-
+WHERE t2.schemaname='{schm}' ORDER BY t2.tablename ASC".format(**query_data)
             return (q, )
-        
-        elif query_type == 'count_rows':
-            q0 = "SELECT count(*) FROM {schema}.{table}".format(**query_data)
-            return (q0,)
-        
-        elif query_type == 'delete_row':
-            queries = []
-            sch = query_data.pop('schema')
-            for whereCond in query_data['conditions']:
-                q0 = "DELETE FROM "+sch+".{table}".format(**query_data) + " WHERE "+whereCond
-                queries.append(q0)
-            return tuple(queries)
         
         elif query_type == 'indexes':
             q0 = "SELECT kcu.column_name, kcu.constraint_name, tc.constraint_type \
 FROM information_schema.key_column_usage AS kcu LEFT OUTER JOIN information_schema.table_constraints \
-AS tc on (kcu.constraint_name = tc.constraint_name) WHERE kcu.table_name='{table}' \
-AND kcu.table_schema='{schema}' AND kcu.table_catalog='{database}'".format(**query_data)
+AS tc on (kcu.constraint_name = tc.constraint_name) WHERE kcu.table_name='{tbl}' \
+AND kcu.table_schema='{schm}' AND kcu.table_catalog='{db}'".format(**query_data)
             return (q0,)
         
         elif query_type == 'primary_keys':
             q0 = "SELECT kcu.column_name, kcu.constraint_name, tc.constraint_type \
 FROM information_schema.key_column_usage AS kcu LEFT OUTER JOIN information_schema.table_constraints \
-AS tc on (kcu.constraint_name = tc.constraint_name) WHERE kcu.table_name='{table}' \
-AND kcu.table_schema='{schema}' AND kcu.table_catalog='{database}' AND \
+AS tc on (kcu.constraint_name = tc.constraint_name) WHERE kcu.table_name='{tbl}' \
+AND kcu.table_schema='{schm}' AND kcu.table_catalog='{db}' AND \
 (tc.constraint_type='PRIMARY KEY')".format(**query_data)
             return (q0, )
-        
-        elif query_type == 'drop_table':
-            queries = []
-            sch = query_data.pop('schema')
-            for where in query_data['conditions']:
-                queries.append( "DROP TABLE "+sch+".{table_name}".format(**where))
-            return tuple(queries)
-        
-        elif query_type == 'empty_table':
-            queries = []
-            sch = query_data.pop('schema')
-            for where in query_data['conditions']:
-                queries.append( "TRUNCATE "+sch+".{table_name}".format(**where) )
-            return queries
         
         elif query_type == 'table_structure':
             q0 = "SELECT column_name as column, data_type as type, is_nullable as null, \
 column_default as default, character_maximum_length, numeric_precision, numeric_scale, \
 datetime_precision, interval_type, interval_precision FROM information_schema.columns \
-WHERE table_catalog='{database}' AND table_schema='{schema}' AND table_name='{table}' ".format(**query_data)
+WHERE table_catalog='{db}' AND table_schema='{schm}' AND table_name='{tbl}' ".format(**query_data)
             return (q0, )
         
         
         elif query_type == 'existing_tables':
-            q0 = "SELECT table_name FROM information_schema.tables WHERE table_schema='{schema}' ORDER BY table_name ASC".format(**query_data)
+            q0 = "SELECT table_name FROM information_schema.tables WHERE table_schema='{schm}' ORDER BY table_name ASC".format(**query_data)
             return (q0, )
         
         
@@ -202,7 +201,7 @@ WHERE table_catalog='{database}' AND table_schema='{schema}' AND table_name='{ta
                             
             if query_data['select_databases'] and len(query_data['select_databases']) > 1:
                 for db in query_data['select_databases']: #mutliple grant objects
-                    q3 = q2 + ' ON {database}.*'.format(database = db)
+                    q3 = q2 + ' ON {db}.*'.format(database = db)
                     # user specification
                     q3 += " TO '{username}'@'{host}'".format(**query_data)
                     # grant option
@@ -231,28 +230,8 @@ WHERE table_catalog='{database}' AND table_schema='{schema}' AND table_name='{ta
                 q += " CHARACTER SET {charset}".format(**query_data)
             return (q, )
         
-        elif query_type == 'delete_column':
-            queries = []
-            q_sfx = "ALTER TABLE {database}.{table} DROP ".format(**query_data)
-            for cond in query_data['conditions']:
-                queries.append(q_sfx + cond['field'])
-            return queries
-        
-        elif query_type == 'drop_table':
-            queries = []
-            db = query_data.pop('database')
-            for where in query_data['conditions']:
-                queries.append( "DROP TABLE "+db+".{table_name}".format(**where))
-            return tuple(queries)
-        
-        elif query_type == 'empty_table':
-            queries = []
-            for where in query_data['conditions']:
-                queries.append( "TRUNCATE "+query_data['database']+".{table_name}".format(**where) )
-            return queries
-        
         elif query_type == 'column_list':
-            return ("SELECT column_name FROM information_schema.columns WHERE table_schema='{database}' AND table_name='{table}'")
+            return ("SELECT column_name FROM information_schema.columns WHERE table_schema='{db}' AND table_name='{tbl}'")
         
         elif query_type == 'drop_user':
             queries = []
@@ -261,42 +240,32 @@ WHERE table_catalog='{database}' AND table_schema='{schema}' AND table_name='{ta
                 queries.append(q)
             return tuple(queries)
         
-        elif query_type == 'delete_row':
-            queries = []
-            for where in query_data['conditions']:
-                queries.append("DELETE FROM {database}.{table}".format(**query_data) + " WHERE "+where+" LIMIT 1" )
-            return queries
-                
         elif query_type == 'table_rpr':
             q = "SELECT TABLE_NAME, TABLE_ROWS, TABLE_TYPE, ENGINE FROM \
-            `INFORMATION_SCHEMA`.`TABLES` WHERE TABLE_SCHEMA = '{database}'".format(**query_data)
+            `INFORMATION_SCHEMA`.`TABLES` WHERE TABLE_SCHEMA = '{db}'".format(**query_data)
             return (q,)
-
-        elif query_type == 'count_rows':
-            q0 = "SELECT count(*) FROM `{database}`.`{table}`".format(**query_data)
-            return (q0, )
         
         elif query_type == 'indexes':
             q0 = "SELECT DISTINCT kcu.column_name, kcu.constraint_name, tc.constraint_type \
 from information_schema.key_column_usage as kcu, information_schema.table_constraints as tc WHERE \
-kcu.constraint_name = tc.constraint_name AND kcu.table_schema='{database}' AND tc.table_schema='{database}' \
-AND kcu.table_name='{table}'".format(**query_data)
+kcu.constraint_name = tc.constraint_name AND kcu.table_schema='{db}' AND tc.table_schema='{db}' \
+AND kcu.table_name='{tbl}'".format(**query_data)
             return (q0, )
         
         elif query_type == 'primary_keys':
             q0 = "SELECT DISTINCT kcu.column_name, kcu.constraint_name, tc.constraint_type \
 from information_schema.key_column_usage as kcu, information_schema.table_constraints as tc WHERE \
-kcu.constraint_name = tc.constraint_name AND kcu.table_schema='{database}' AND tc.table_schema='{database}' \
-AND kcu.table_name='{table}' AND tc.table_name='{table}' \
+kcu.constraint_name = tc.constraint_name AND kcu.table_schema='{db}' AND tc.table_schema='{db}' \
+AND kcu.table_name='{tbl}' AND tc.table_name='{tbl}' \
 AND (tc.constraint_type='PRIMARY KEY')".format(**query_data)
             return (q0, )
         
         elif query_type == 'table_structure':
-            q0 = "DESCRIBE {database}.{table}".format(**query_data)
+            q0 = "DESCRIBE {db}.{tbl}".format(**query_data)
             return (q0, )
         
         elif query_type == 'existing_tables':
-            q0 = "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='{database}'".format(**query_data)
+            q0 = "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='{db}'".format(**query_data)
             return (q0, )
         
 
@@ -368,6 +337,6 @@ def model_login(conn_params):
 
 
 def get_conn_link(conn_params):
-    return '{dialect}://{username}:{password}@{host}/{database}'.format(**conn_params)
+    return '{dialect}://{username}:{password}@{host}/{db}'.format(**conn_params)
 
 
