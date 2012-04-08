@@ -172,7 +172,9 @@ WHERE table_catalog='{db}' AND table_schema='{schm}' AND table_name='{tbl}' ".fo
         
         
         elif query_type == 'existing_tables':
-            q0 = "SELECT table_name FROM information_schema.tables WHERE table_schema='{schm}' ORDER BY table_name ASC".format(**query_data)
+            # selects both tables and views
+            # q0 = "SELECT table_name FROM information_schema.tables WHERE table_schema='{schm}' ORDER BY table_name ASC".format(**query_data)
+            q0 = "SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname='{schm}' ORDER BY tablename ASC".format(**query_data)
             return (q0, )
         
         

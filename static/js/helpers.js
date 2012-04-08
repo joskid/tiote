@@ -201,8 +201,11 @@ function tbl_pagination(total_count, limit, offset) {
 	
 	return new Element('p', {'class':'paginatn pull-right'}).adopt(ancs,
 		// span to display no of pages created
-		new Element('span',{'style':'color:#888;padding-left:20px;',
-			'text': (pag_max > 0) ? '[ '+(pag_max+1)+' pages ]' : '[ 1 page ]' 
+		new Element('span',{'style':'color:#888;padding-left:20px;', 
+			'text': '[ {0} {1} | {2} {3} ]'.substitute( [ 
+					total_count, ((total_count > 1) ? 'entries' : 'entry'),
+					(pag_max+1), (pag_max > 0) ? 'pages' : 'page' ]
+				)
 		})
 	);
 }

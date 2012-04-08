@@ -238,10 +238,13 @@ Page.prototype.jsifyTable = function(syncHeightWithWindow) {
 			syncHeightWithWindow = syncHeightWithWindow || false;
 			if (syncHeightWithWindow) {
 				window.addEvent('resize', function() {
-					if (cont.getElement('.tbl-body table') != null &&
-						(cont.getElement('.tbl-body table').getScrollSize().y > (getHeight() - 100)) ||
-						cont.getElement('.tbl-body table').getSize().y < (getHeight() - 100) ) {
-						cont.getElement('.tbl-body table').setStyle('height', (getHeight() - 100));
+					if ($E('.tbl-body table', cont) != null) {
+						var t = $E('.tbl-body table', cont);
+						if (t.getScrollSize().y > (getHeight() - 110)) {
+							t.setStyle('height', (getHeight() - 110));
+						} else {
+							t.setStyle('height', null);
+						}
 					}
 				});
 				window.fireEvent('resize');
