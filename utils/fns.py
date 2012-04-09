@@ -91,28 +91,6 @@ def get_conditions(l):
         conditions.append(d)
     return conditions
 
-def dict_conds(st):
-    '''returns a list of list containing the cond name and cond value'''
-    l = [s.strip() for s in st.split(';')]
-    l_d = []
-    for ii in range(len(l)):
-        ll = l[ii].split('=')
-        l_d.append([ll[0],ll[1]])
-    return l_d
-
-
-def construct_cond(k, v):
-    ''' fix cases where SQL WHERE expects quotes for strings and no quotes for ints and floats'''
-    st = k+'='
-    try:
-        st += int(v)
-    except Exception:
-        try:
-            st += float(v)
-        except Exception:
-            st += '\''+v+'\''
-    return st
-
 def response_shortcut(request, template = False, extra_vars=False ):
     # extra_vars are more context variables
     template = skeleton(template) if template else skeleton(request.GET['v'], request.GET['sctn'])
@@ -140,7 +118,7 @@ def get_conn_params(request):
     return data    
 
 
-def table_options(opt_type, pagination=False, with_keys=True):
+def table_options(opt_type, with_keys=True, select_actions=False):
     # opt_type = "users || tbls || data
     l = ['<div class="table-options">'] # unclosed tag
     ctrls = ['all', 'none']
@@ -152,14 +130,15 @@ def table_options(opt_type, pagination=False, with_keys=True):
         l.append('<span>{0}</span>'.format("Columns:" if opt_type=='tbls' else "Select: "))
         for ctrl in ctrls:
             l.append('<a class="selecters select_{0}">select {0}</a>'.format(ctrl))
-        l.append("<span>With Selected: </span>")
-        # action(ctrls) html
-        if opt_type == 'users' or opt_type == 'data': 
-            ctrls = ['edit', 'delete']
-        elif opt_type == 'tbls':
-            ctrls = ['empty', 'drop']
-        for ctrl in ctrls:
-            l.append('<a class="doers action_{0}">{0}</a>'.format(ctrl))
+        if select_actions == True:
+            l.append("<span>With Selected: </span>")
+            # action(ctrls) html
+            if opt_type == 'user' or opt_type == 'data': 
+                ctrls = ['edit', 'delete']
+            elif opt_type == 'tbl':
+                ctrls = ['empty', 'drop']
+            for ctrl in ctrls:
+                l.append('<a class="doers action_{0}">{0}</a>'.format(ctrl))
     l.append("</p></div>") # closing unopen tags
     return "".join(l)
 

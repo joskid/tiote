@@ -9,19 +9,14 @@ from tiote import forms, utils
 
 def browse(request):
     # row(s) deletion request handling
-    if request.method == 'POST' and request.GET.get('update') == 'delete':
-        # might be needed for future corrections
-#        l = request.POST.get('whereToEdit').strip().split(';');
-#        conditions = utils.fns.get_conditions(l)
-        conditions = [utils.fns.construct_cond(item[0], item[1]) 
-            for item in utils.fns.dict_conds(request.POST.get('whereToEdit')) ]
-        query_data = {'db': request.GET.get('db'),'table': request.GET.get('table'),
-             'conditions': conditions}
+    if request.method == 'POST' and request.GET.get('upd8') == 'delete':
+        query_data = {'db': request.GET.get('db'),'tbl': request.GET.get('tbl'),
+             'where_stmt': request.POST.get('where_stmt').strip()}
         if request.GET.get('schm'):
             query_data['schm'] = request.GET.get('schm')
         return utils.db.rpr_query(request, 'delete_row', query_data)
     # row(s) edit/updating request handling
-    elif request.method == 'POST' and request.GET.get('update') == 'edit':
+    elif request.method == 'POST' and request.GET.get('upd8') == 'edit':
         return utils.fns.http_500('feature not yet implemented!')
     tbl_data = utils.db.rpr_query(request, 'browse_table')
     static_addr = utils.fns.render_template(request, '{{STATIC_URL}}')
@@ -34,22 +29,22 @@ def browse(request):
             'limit': tbl_data['limit']
         }, **tbl_data
     ).to_element().replace('\n', '<br />') # html doesn't display newlines(\n)
-    table_options_html = utils.fns.table_options('data', pagination=True,
-        with_keys=bool(tbl_data['keys']['rows']))
+    table_options_html = utils.fns.table_options('data', 
+        with_keys=bool(tbl_data['keys']['rows']), select_actions=True)
     return HttpResponse(table_options_html + browse_table_html)
 
 
 def structure(request):
 
     # column deletion
-    if request.method == 'POST' and request.GET.get('update'):
+    if request.method == 'POST' and request.GET.get('upd8'):
         l = request.POST.get('whereToEdit').strip().split(';');
         conditions = utils.fns.get_conditions(l)
         q = ''
-        if request.GET.get('update') == 'edit':
+        if request.GET.get('upd8') == 'edit':
             q = 'drop_table'
             return HttpResponse('update not yet implemented!')
-        elif request.GET.get('update') == 'delete':
+        elif request.GET.get('upd8') == 'delete':
             q = 'delete_column'
             query_data = {'db': request.GET.get('db'), 'table': request.GET.get('table'),
                           'conditions': conditions}

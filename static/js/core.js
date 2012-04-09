@@ -289,24 +289,24 @@ Page.prototype.jsifyTable = function(syncHeightWithWindow) {
 	// behaviour
 	if ($$('table.sql') != null ) {
 		$$('table.sql').each(function(tbl, tbl_in){
-			self.tbls.include(new HtmlTable($(tbl)));
-			make_checkable(self.tbls[tbl_in]);
+			pg.tbls.include(new HtmlTable($(tbl)));
+			make_checkable(pg.tbls[tbl_in]);
 			// attach the variables passed down as javascript objects to the 
 			// table object
-			self.tbls[tbl_in]['vars'] = {}; // container
-			if ($(self.tbls[tbl_in]).get('data')) {
+			pg.tbls[tbl_in]['vars'] = {}; // container
+			if ($(pg.tbls[tbl_in]).get('data')) {
 				var data = {}
-				$(self.tbls[tbl_in]).get('data').split(';').each(function(d){
+				$(pg.tbls[tbl_in]).get('data').split(';').each(function(d){
 					var ar = d.split(':');
 					data[ar[0]] = ar[1];
 				});
-				self.tbls[tbl_in]['vars']['data'] = data; // schema: [key: value]
+				pg.tbls[tbl_in]['vars']['data'] = data; // schema: [key: value]
 			}
-			if ($(self.tbls[tbl_in]).get('keys')) {
+			if ($(pg.tbls[tbl_in]).get('keys')) {
 				var data = []; // data[[1,2,3],...] indexes 1: name of column,
 							   // 2 : index type
 						       // 3 : column position in tr
-				$(self.tbls[tbl_in]).get('keys').split(';').each(function(d){
+				$(pg.tbls[tbl_in]).get('keys').split(';').each(function(d){
 					var ar = d.split(':');
 					if (ar[0] != "") data.include(ar);
 				});
@@ -318,14 +318,14 @@ Page.prototype.jsifyTable = function(syncHeightWithWindow) {
 					}
 				});
 				
-				self.tbls[tbl_in]['vars']['keys'] = data; // schema: [column, key_type, column index]
+				pg.tbls[tbl_in]['vars']['keys'] = data; // schema: [column, key_type, column index]
 			}
 			
 			// handle a.display_row(s) click events
 			$(tbl).getElements('a.display_row').each(function(al, al_in){
 				if ($(tbl).get('keys' != null)) {	// functionality requires keys
 					al.addEvent('click', function(e) {	// attach click event
-						var where_stmt = generate_where(self.tbls[tbl_in], al_in);
+						var where_stmt = generate_where(pg.tbls[tbl_in], al_in);
 						// make xhr request
 						var x = new XHR(Object.merge({
 							'method': 'post', 'query': 'get_row','type':'repr',
@@ -357,22 +357,72 @@ Page.prototype.addTableOpts = function() {
 					a_sel.get('class').split(' ').each(function(cl){
 						if (cl.contains('select_')) {
 							var option = cl.replace('select_', '');
-							set_all_tr_state(self.tbls[tbl_opt_index], (option == 'all') ? true : false);
+							set_all_tr_state(pg.tbls[tbl_opt_index], (option == 'all') ? true : false);
 						}
 					});
 				});
 			});
 			
 			// table's needing pagination
-			if (Object.keys(self.tbls[tbl_opt_index]['vars']).contains('data')) {
+			if (Object.keys(pg.tbls[tbl_opt_index]['vars']).contains('data')) {
 				$(tbl_opt).adopt(tbl_pagination(
-					self.tbls[tbl_opt_index]['vars']['data']['total_count'],
-					self.tbls[tbl_opt_index]['vars']['data']['limit'], 
-					self.tbls[tbl_opt_index]['vars']['data']['offset']));
+					pg.tbls[tbl_opt_index]['vars']['data']['total_count'],
+					pg.tbls[tbl_opt_index]['vars']['data']['limit'], 
+					pg.tbls[tbl_opt_index]['vars']['data']['offset']));
 			}
+			
+			$ES('a.doers', tbl_opt).each(function(doer, doer_in){
+				doer.addEvent('click', function(e) {
+					do_action(pg.tbls[tbl_opt_index], e);
+				});
+
+			});
 		});
 	}
 	
+}
+
+function do_action(tbl, e) {
+//	console.log('do_action()!');
+	if (!tbl.getSelected()) return; // necessary condition to begin
+	var where_stmt = where_from_selected(tbl);
+	if (!where_stmt) return; // empty where stmt
+	var msg = "Are you sure you want to ";
+	// describe the action to be performed
+	var action;
+	if (e.target.hasClass("action_edit")) action = 'edit';
+	else if (e.target.hasClass("action_delete")) action = 'delete';
+	else if (e.target.hasClass("action_drop")) action = "drop";
+	else if (e.target.hasClass("action_empty")) action = "empty";
+	
+	msg += action + " the selected ";
+	var navObject = page_hash();
+	if (navObject['sctn'] == "db" && navObject['v'] == 'overview')
+		msg += where_stmt.contains(';') ? "tables" : "table";
+	else if (navObject['v'] == "tbl" && navObject['v'] == 'browse')
+		msg += where_stmt.contains(';') ? "rows" : "row";
+	// confirm if intention is to be carried out
+	var confirmDiag = new SimpleModal({'btn_ok': 'Yes', overlayClick: false,
+		draggable: True, offsetTop: 0.2 * screen.availHeight
+	});
+	confirmDiag.show({
+		model: 'confirm', 
+		callback: function() {
+			var x = new XHR({
+				url: generate_ajax_url(false, {}) + '&upd8=' + action,
+				spinnerTarget: $(tbl), 
+				onSuccess: function(text, xml) {
+					var resp = JSON.decode(text);
+					if (resp['status'] == "fail") {
+						showDialog("Action not successful", resp['msg']);
+					} else if (resp['status'] == 'success')
+						reloadPage();
+				}
+			}).post({'where_stmt': where_stmt});
+		}, 
+		title: 'Confirm intent',
+		contents: msg
+	});
 }
 
 function sort_dir() {

@@ -71,27 +71,27 @@ def generate_query(query_type, dialect='postgresql', query_data=None):
         q0 += " LIMIT {limit} OFFSET {offset}"
         return (q0.format(prfx, **query_data),)
 
-
     elif query_type == 'count_rows':
         q0 = "SELECT count(*) FROM {0}{tbl}".format(prfx, **query_data)
         return (q0,)
 
-
     elif query_type == 'drop_table':
         queries = []
         for where in query_data['conditions']:
-            queries.append( "DROP TABLE {0}{table_name}".format(prfx, **where))
+            where['table'] = where['table'].replace("'", "")
+            queries.append( "DROP TABLE {0}{table}".format(prfx, **where))
         return tuple(queries)
     
     elif query_type == 'empty_table':
         queries = []
         for where in query_data['conditions']:
-            queries.append( "TRUNCATE {0}{table_name}".format(prfx, **where) )
-        return queries
+            where['table'] = where['table'].replace("'", "")
+            queries.append( "TRUNCATE {0}{table}".format(prfx, **where) )
+        return tuple(queries)
 
     elif query_type == 'delete_row':
         queries = []
-        for whereCond in query_data['conditions']:
+        for whereCond in query_data['where_stmt'].split(';'):
             q0 = "DELETE FROM {0}{tbl}".format(prfx, **query_data) + " WHERE "+whereCond
             queries.append(q0)
         return tuple(queries)
@@ -143,7 +143,7 @@ def generate_query(query_type, dialect='postgresql', query_data=None):
             return (q, )
         
         elif query_type == 'table_rpr':
-            q = "SELECT t2.tablename, t2.tableowner, t2.tablespace, t1.reltuples::integer AS estimated_row_count \
+            q = "SELECT t2.tablename AS table, t2.tableowner AS owner, t2.tablespace, t1.reltuples::integer AS \"estimated row count\" \
 FROM ( pg_catalog.pg_class as t1 INNER JOIN pg_catalog.pg_tables AS t2  ON t1.relname = t2.tablename) \
 WHERE t2.schemaname='{schm}' ORDER BY t2.tablename ASC".format(**query_data)
             return (q, )
@@ -243,7 +243,7 @@ WHERE table_catalog='{db}' AND table_schema='{schm}' AND table_name='{tbl}' ".fo
             return tuple(queries)
         
         elif query_type == 'table_rpr':
-            q = "SELECT TABLE_NAME, TABLE_ROWS, TABLE_TYPE, ENGINE FROM \
+            q = "SELECT TABLE_NAME AS 'table', TABLE_ROWS AS 'rows', TABLE_TYPE AS 'type', ENGINE FROM \
             `INFORMATION_SCHEMA`.`TABLES` WHERE TABLE_SCHEMA = '{db}'".format(**query_data)
             return (q,)
         
@@ -310,10 +310,10 @@ def short_query(conn_params, queries):
         conn = eng.connect()
         for query in queries:
             query_result = conn.execute(text(query))
-        return {'status':'successfull', }
+        return {'status':'success', }
     except Exception as e:
         conn.close()
-        return {'status':'failed', 'msg': str(e) }
+        return {'status':'fail', 'msg': str(e) }
     
     
 def model_login(conn_params):
