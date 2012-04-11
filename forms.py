@@ -2,24 +2,29 @@ from django import forms
 from django.forms.formsets import formset_factory
 from django.core import validators
 from django.utils.datastructures import SortedDict
+from itertools import chain
+from django.utils.encoding import StrAndUnicode, force_unicode
+from django.utils.html import escape, conditional_escape
+from django.utils.safestring import mark_safe
 
 from tiote import utils
 
-mysql_types = ['varchar', 'char', 'text', 'tinytext', 'mediumtext', 'longtext', 'tinyint',
+mysql_types = ('varchar', 'char', 'text', 'tinytext', 'mediumtext', 'longtext', 'tinyint',
     'smallint', 'mediumint', 'int', 'bigint', 'real', 'double', 'float', 'decimal', 'numeric',
     'date', 'time', 'datetime', 'timestamp', 'tinyblob', 'blob', 'mediumblob', 'longblob', 'binary',
-    'varbinary', 'bit', 'enum', 'set']
+    'varbinary', 'bit', 'enum', 'set')
 
-pgsql_types = ['bigint', 'bigserial', 'bit', 'bit varying', 'boolean', 'bytea', 
+pgsql_types = ('bigint', 'bigserial', 'bit', 'bit varying', 'boolean', 'bytea', 
     'character varying', 'character', 'cidr', 'date', 'double precision', 'inet', 'integer', 
     'lseg', 'macaddr', 'money', 'real', 'smallint', 'serial', 'text', 'time', 
-    'time with time zone', 'timestamp', 'timestamp with time zone', 'uuid', 'xml']
+    'time with time zone', 'timestamp', 'timestamp with time zone', 'uuid', 'xml')
 
-pgsql_encoding = ['UTF8', 'SQL_ASCII', 'BIG5', 'EUC_CN', 'EUC_JP', 'EUC_KR', 'EUC_TW',
+# ('real', 'double', 'float', 'decimal', 'numeric', 'double precision')
+pgsql_encoding = ('UTF8', 'SQL_ASCII', 'BIG5', 'EUC_CN', 'EUC_JP', 'EUC_KR', 'EUC_TW',
     'GB18030', 'GBK', 'ISO_8859_5', 'ISO_8859_6', 'ISO_8859_7', 'ISO_8859_8', 'JOHAB',
     'KOI8R', 'KOI8U', 'LATIN1', 'LATIN2', 'LATIN3', 'LATIN4', 'LATIN5', 'LATIN6', 'LATIN7',
     'LATIN8', 'LATIN9', 'LATIN10', 'MULE_INTERNAL', 'WIN866', 'WIN874', 'WIN1250', 'WIN1251',
-    'WIN1252', 'WIN1253', 'WIN1254', 'WIN1255', 'WIN1256', 'WIN1257', 'WIN1258']
+    'WIN1252', 'WIN1253', 'WIN1254', 'WIN1255', 'WIN1256', 'WIN1257', 'WIN1258')
 
 mysql_key_choices = ('primary','unique','index')
 
@@ -39,7 +44,125 @@ export_choices = ( ('structure', 'structure'),('data', 'data') )
 
 foreign_key_action_choices = ['no action', 'restrict', 'cascade', 'set null', 'set default']
 
+def b(cond):
+    if cond == 'NO' or cond == False or cond == 'no': return "NOT NULL"
+    else: return ""
 
+class wCheckboxSelectMultiple(forms.SelectMultiple):
+    def render(self, name, value, attrs=None, choices=()):
+        if value is None: value = []
+        has_id = attrs and 'id' in attrs
+        final_attrs = self.build_attrs(attrs, name=name)
+        output = [u'<ul class="inputs-list">']
+        # Normalize to strings
+        str_values = set([force_unicode(v) for v in value])
+        for i, (option_value, option_label) in enumerate(chain(self.choices, choices)):
+            # If an ID attribute was given, add a numeric index as a suffix,
+            # so that the checkboxes don't all have the same ID attribute.
+            if has_id:
+                final_attrs = dict(final_attrs, id='%s_%s' % (attrs['id'], i))
+                label_for = u' for="%s"' % final_attrs['id']
+            else:
+                label_for = ''
+
+            cb = forms.CheckboxInput(final_attrs, check_test=lambda value: value in str_values)
+            option_value = force_unicode(option_value)
+            rendered_cb = cb.render(name, option_value)
+            option_label = conditional_escape(force_unicode(option_label))
+            output.append(u'<li><label%s>%s <span>%s</span></label></li>' % (label_for, rendered_cb, option_label))
+        output.append(u'</ul>')
+        return mark_safe(u'\n'.join(output))
+
+class InsertForm(forms.BaseForm):
+    def __init__(self, tbl_struct, tbl_indexes=(), **kwargs):
+# keys = ['column','type','null','default','character_maximum_length','numeric_precision', 'column_type']
+        f = SortedDict()
+        # dict to increase performance
+        _l = {}
+        for i in range(len(tbl_indexes)):
+            if _l.has_key(tbl_indexes[i][0]): _l[ tbl_indexes[i][0] ].append(i)
+            else: _l[ tbl_indexes[i][0] ] = [i]
+        # determing type of form fields for each column
+        for row in tbl_struct['rows']:
+            # if _l.has_key( row[0] ):
+            #     can_continue = True
+            #     for i in _l[row[0]]:
+            #         if tbl_indexes[i][2] == "FOREIGN KEY": can_continue = False
+            #     if not can_continue: continue; # next loop
+
+            if row[1] in ('character varying', 'varchar','character', 'char'):
+                f[row[0]] = forms.CharField()
+                if row[4]: f[row[0]].max_length = row[4] #max_length
+
+            elif row[1] in ('varbinary', 'bit', 'bit varying',):
+                f[row[0]] = forms.CharField()
+                if row[4]: f[row[0]].max_length = row[4] #max_length
+
+            elif row[1] in ('text', 'tinytext', 'mediumtext', 'longtext', ):
+                f[row[0]] = forms.CharField(widget=forms.Textarea(attrs={'cols':'', 'rows':''}))
+                if row[4]: f[row[0]].max_length = row[4] #max_length
+
+            elif row[1] in ('boolean', ): f[row[0]] = forms.BooleanField()
+
+            elif row[1] in ('tinyint', 'smallint', 'mediumint', 'int', 'bigint','integer',):
+                f[row[0]] = forms.IntegerField()
+                if row[5]: f[row[0]].validators.append(validators.MaxLengthValidator(row[5]))
+
+            elif row[1] in ('real', 'double', 'float', 'decimal', 'numeric', 'double precision'):
+                f[row[0]] = forms.FloatField()
+                if row[5]: f[row[0]].validators.append(validators.MaxLengthValidator(row[5]))
+
+            elif row[1] in ('decimal', 'numeric', 'money',):
+                f[row[0]] = forms.DecimalField()
+                if row[5]: f[row[0]].validators.append(validators.MaxLengthValidator(row[5]))
+
+            elif row[1] in ('date',):
+                f[row[0]] = forms.DateField()
+
+            elif row[1] in ('time','time with time zone',):
+                f[row[0]] = forms.TimeField()
+
+            elif row[1] in ('datetime', 'timestamp', 'timestamp with time zone',):
+                f[row[0]] = forms.DateTimeField()
+
+            elif row[1] == 'set':
+                f[row[0]] = forms.ChoiceField(widget=wCheckboxSelectMultiple())
+                f[row[0]].choices = utils.fns.make_choices(
+                    row[len(row)-1].replace("set(", "").replace(")","").split(","), True) 
+
+            elif row[1] == 'enum':
+                f[row[0]] = forms.ChoiceField()
+                f[row[0]].choices = utils.fns.make_choices(
+                    row[len(row)-1].replace("enum(", "").replace("\"","").replace(")","").split(","), False) 
+            # any field not currently understood
+            else: f[row[0]] = forms.CharField(widget=forms.Textarea(attrs={'cols':'', 'rows':''}))
+
+            # options common to all fields
+            # help_text
+            _il = [ row[len(row) - 1], ]
+            f[row[0]].help_text =  " ".join(_il)
+            if row[3]: f[row[0]].default = row[3] #default
+            #required fields
+            _c = []
+            if b(row[2]): _c.append("required")
+            # work with indexes
+            if _l.has_key( row[0] ):
+                for i in _l[row[0]]:
+                    if tbl_indexes[i][2] == "PRIMARY KEY": _c.pop(0) # make it not required
+
+            # width of the fields
+            if type(f[row[0]].widget) not in (forms.CheckboxSelectMultiple, wCheckboxSelectMultiple,):
+                _c.append("span6")
+            # add the attribute classes                
+            if f[row[0]].widget.attrs.has_key('class'):
+                f[row[0]].widget.attrs['class'] += " ".join(_c)
+            else:
+                f[row[0]].widget.attrs.update({'class':" ".join(_c)})
+
+
+        self.base_fields = f
+        forms.BaseForm.__init__(self, **kwargs)
+    
 # New Database Form
 class mysqlDbForm(forms.Form):
     def __init__(self, templates=None, users=None, charsets=None, **kwargs):
@@ -356,46 +479,6 @@ class LoginForm(forms.BaseForm):
         forms.BaseForm.__init__(self, **kwargs)
     
     
-class ExportForm(forms.Form):
-    output_choices = ( ('browser', 'browser'), ('file', 'text file'))
-    format = forms.ChoiceField(
-        choices = format_choices,
-        help_text = 'Select the output format you want',
-        widget = forms.RadioSelect,
-    )
-    export = forms.ChoiceField(
-        choices = export_choices,
-        help_text = '',
-        widget = forms.CheckboxSelectMultiple
-    )
-    output = forms.ChoiceField(
-        choices = output_choices,
-        help_text = 'if the number of rows expected is quite large. It is recommended you export to file',
-        widget = forms.RadioSelect,
-    )
-    
-
-class QueryForm(forms.Form):
-    query = forms.CharField(
-        help_text = 'Enter valid sql query and click query to execute',
-        widget = forms.Textarea(attrs={'cols':'', 'rows':''}),
-        label = '',
-    )
-    
-    
-class ImportForm(forms.BaseForm):
-    def __init__(self, include_csv = False, **kwargs):
-        f = SortedDict()
-        f['file'] = forms.FileField(
-            help_text = 'Upload a sql file',
-        )
-        if include_csv:
-            f['format'] = forms.ChoiceField(
-                choices = output_choices,
-                widget = forms.RadioSelect,
-            )
-        self.base_fields = f
-        forms.BaseForm.__init__(self, **kwargs)
     
     
 class pgsqlSequenceForm(forms.Form):

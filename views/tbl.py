@@ -35,7 +35,6 @@ def browse(request):
 
 
 def structure(request):
-
     # column deletion
     if request.method == 'POST' and request.GET.get('upd8'):
         l = request.POST.get('whereToEdit').strip().split(';');
@@ -67,10 +66,21 @@ def structure(request):
         columns_table_html,'<h5 class="heading">Indexes:</h5>', indexes_table_html])
     )
 
+def insert(request):
+    conn_params = utils.fns.get_conn_params
+    tbl_struct_data = utils.db.rpr_query(request, 'raw_table_structure')
+    tbl_indexes_data = utils.db.rpr_query(request, 'indexes')
+    # keys = ['column','type','null','default','character_maximum_length','numeric_precision','numeric_scale']
+    form = forms.InsertForm(tbl_struct=tbl_struct_data, tbl_indexes=tbl_indexes_data['rows'])
+
+    return utils.fns.response_shortcut(request, extra_vars={'form':form,})
+    
 def route(request):
     if request.GET.get('v') == 'browse':
         return browse(request)
     elif request.GET.get('v') == 'structure':
         return structure(request)
+    elif request.GET.get('v') == 'insert':
+        return insert(request)
     else:
         return utils.fns.http_500('malformed URL')

@@ -114,10 +114,6 @@ div.data-entry code{
 	background: none;
 }
 
-input[type="text"], textarea, select {
-    font-family: mono;
-    font-size: 12px;
-}
 
 h5.heading {
     margin-bottom: 10px;
@@ -233,21 +229,38 @@ td.sort-desc{
 /*
 	FORMS
 */
+
+input[type="text"], textarea, select {
+    font-family: mono;
+    font-size: 12px;
+	box-shadow: none;
+}
+
+input:focus, textarea:focus {
+	box-shadow: none;
+}
+
 .actions {
     padding: 10px 20px 10px 41%;
+	background-color: #fff;
 }
+
 table.compact-form td, table.compact-form, table.compact-form th {
     border: medium none;
 }
+
 table.compact-form td label {
     width: auto;
 }
+
 table.compact-form td.occupy label {
     padding-right: 20px;
 }
+
 .form-controls a {
     cursor: pointer;
 }
+
 div.validation-advice {
     background-color: #FFFFCC;
     border: 1px solid yellow;
@@ -256,13 +269,27 @@ div.validation-advice {
     padding: 1px;
     width: 216px;
 }
+
 .pointer {
     cursor: pointer;
 }
+
 .hidden {
     display: none;
 }
+
 fieldset {
 	margin-bottom: 0px;
 	padding-top: 0px;
+}
+
+form.form-stacked label {
+    font-weight: normal;
+    text-transform: lowercase;
+}
+form.form-stacked label span.help_text {
+    color: #AAAAAA;
+	font-size: 12px;
+	margin-left: 15px;
+	vertical-align: middle;
 }

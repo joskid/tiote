@@ -294,7 +294,10 @@ class HtmlTable():
 
         for i in range(len(row)):
             if len(str(row[i])) > 40 and hasattr(self, 'keys_column') and not self.keys_column.count(self.columns[i]):
-                column_data = str(row[i])[0:40] + '<span class="to-be-continued">...</span>'
+                if str(row[i]).count('\n') and str(row[i]).find('\n') < 40:
+                    column_data = str(row[i])[0:str(row[i]).find('\n')]
+                else: column_data = str(row[i])[0:40]
+                column_data += '<span class="to-be-continued">...</span>'
             else:
                 column_data = str(row[i])
             column_data = column_data.replace(' ', '&nbsp;') # tds with spaces in them have its width set to its min-width

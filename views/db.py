@@ -25,9 +25,8 @@ def overview(request):
     tbl_data = utils.db.rpr_query(request, 'table_rpr')
     from urllib import urlencode
     from django.utils.datastructures import SortedDict
-    dest_url = SortedDict({'sctn':'tbl','v':'browse'})
-    dest_url['db'] = request.GET.get('db')
-    dest_url['schm'] = request.GET.get('schm')
+    dest_url = SortedDict({'sctn':'tbl','v':'browse', 
+        'db': request.GET.get('db'), 'schm': request.GET.get('schm')})
     conn_params = utils.fns.get_conn_params(request)
     props_keys = (('table', 'key'),)
     static_addr = utils.fns.render_template(request, '{{STATIC_URL}}')

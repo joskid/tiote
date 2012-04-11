@@ -61,6 +61,7 @@ def rpr_query(request, query_type, query_data=None):
         r =  sql.full_query(conn_params, q[0])
         # prepare html
         html = ""
+        if type(r) == str: return r
         for ind in range(len(r['columns'])):
             html += '<span class="column-entry">' + str(r['columns'][ind]) + '</span>'
             html += '<br /><div class="data-entry"><code>' + str(r['rows'][0][ind]) + '</code></div>'
@@ -68,7 +69,7 @@ def rpr_query(request, query_type, query_data=None):
         html = html.replace('\n', '<br />')
         return html
 
-    elif query_type in ('table_rpr', 'table_structure',):
+    elif query_type in ('table_rpr', 'table_structure', 'raw_table_structure'):
         conn_params['db'] = request.GET.get('db')
         sub_q_data = {'db': request.GET.get('db'),}
         if request.GET.get('tbl'):
@@ -76,25 +77,37 @@ def rpr_query(request, query_type, query_data=None):
         if request.GET.get('schm'):
             sub_q_data['schm'] = request.GET.get('schm')
         # make query
+        if conn_params['dialect'] == 'postgresql' and query_type == 'raw_table_structure':
+            q = 'table_structure'
+        else: q = query_type
+
         r = sql.full_query(conn_params,
-            sql.generate_query(query_type, conn_params['dialect'], sub_q_data)[0] )
+            sql.generate_query(q, conn_params['dialect'], sub_q_data)[0] )
         # further needed processing
-        if conn_params['dialect'] == 'postgresql' and query_type =='table_structure':
+        if conn_params['dialect'] == 'postgresql' and query_type.count('table_structure'):
             rwz = []
             for tuple_row in r['rows']:
                 row = list(tuple_row)
+                _l = [ row[1] ]
                 if row[1] in ('bit', 'bit varying', 'character varying', 'character') and type(row[4]) is int:
-                    row[1] += '({0})'.format(row[4])
+                    _l.append( '({0})'.format(row[4]) )
                 elif row[1] in ('numeric', 'decimal') and type(row[5]) is int or type(row[6]) is int:
-                    row[1] += '({0},{1})'.format(row[5], row[6])
+                    _l.append( '({0},{1})'.format(row[5], row[6]) )
                 elif row[1] in ('interval', 'time with time zone', 'time without time zone',
                     'timestamp with time zone', 'timestamp without time zone') and type(row[7]) is int:
-                    row[1] += '({0})'.format(row[7])
+                    _l.append( '({0})'.format(row[7]) )
                 # append the current row to rwz
-                rwz.append([row[0], row[1], row[2], row[3] ])
+                if query_type == 'table_structure': rwz.append([row[0], "".join(_l), row[2], row[3] ])
+                elif query_type == 'raw_table_structure': 
+                    row.append("".join(_l))
+                    rwz.append(row)
             # change r['rows']
             r['rows'] = rwz
-            r['columns'] = [ r['columns'][0], r['columns'][1], r['columns'][2], r['columns'][3] ]
+            # change r['columns']
+            if query_type == 'table_structure':
+                r['columns'] = [ r['columns'][0], r['columns'][1], r['columns'][2], r['columns'][3] ]
+            elif query_type == 'raw_table_structure': r['columns'].append('column_type')
+
         return r
         
     elif query_type == 'browse_table':

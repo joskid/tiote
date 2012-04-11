@@ -215,7 +215,7 @@ function disable_unimplemented_links(){
 	var implemented = {
 		'home': ['home'],
 		'db': ['overview'],
-		'tbl': ['browse', 'structure']
+		'tbl': ['browse', 'structure', 'insert']
 	}
 	var section = page_hash()['sctn']
 	$$('.nav a').each(function(nav_link){
@@ -236,14 +236,17 @@ function page_hash(){
 }
 
 // generate a where stmt for a selected row with index row_in in table tbl
-function generate_where(tbl, row_in) {
-	var stmt = "";
+function generate_where(tbl, row_in, for_post) {
+	var stmt = "", delimitr = "";
+	for_post = for_post || false;
+	if (for_post) delimitr = "&"
+	else delimitr = "AND";
 	if (!tbl.vars.keys) return stmt;		// the table must have keys stored
 	var keys = tbl.vars.keys;
 	for (var i = 0; i < keys.length; i++) {
 		if (keys[i][0] == "") continue;
-		stmt += keys[i][0] + '=\'' + $(tbl).getElements('tbody tr')[row_in].getElements('td')[keys[i][2]].get('text');
-		stmt += (i != keys.length - 1) ? "\' AND " : "\'"; // -1 becos the 
+		stmt += keys[i][0] + '=\'' + $ES('tbody tr', tbl)[row_in].getElements('td')[keys[i][2]].get('text');
+		stmt += (i != keys.length - 1) ? "\' {0} ".substitute([delimitr]) : "\'"; 
 	}
 	return stmt;
 }

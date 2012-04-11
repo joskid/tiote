@@ -133,14 +133,12 @@ def generate_query(query_type, dialect='postgresql', query_data=None):
             return tuple(queries)
         
         elif query_type == 'create_db':
-            q = "CREATE DATABASE {name}".format(**query_data)
-            if query_data['encoding']:
-                q += " WITH ENCODING='{encoding}'".format(**query_data)
-            if query_data['owner']:
-                q += " OWNER={owner}".format(**query_data)
-            if query_data['template']:
-                q += " TEMPLATE={template}".format(**query_data)
-            return (q, )
+            _l = []
+            _l.append("CREATE DATABASE {name}")
+            if query_data['encoding']: _l.append(" WITH ENCODING='{encoding}'")
+            if query_data['owner']: _l.append(" OWNER={owner}")
+            if query_data['template']: _l.append(" TEMPLATE={template}")
+            return ("".join(_l).format(**query_data), )
         
         elif query_type == 'table_rpr':
             q = "SELECT t2.tablename AS table, t2.tableowner AS owner, t2.tablespace, t1.reltuples::integer AS \"estimated row count\" \
@@ -167,14 +165,20 @@ AND kcu.table_schema='{schm}' AND kcu.table_catalog='{db}' AND \
             q0 = "SELECT column_name as column, data_type as type, is_nullable as null, \
 column_default as default, character_maximum_length, numeric_precision, numeric_scale, \
 datetime_precision, interval_type, interval_precision FROM information_schema.columns \
-WHERE table_catalog='{db}' AND table_schema='{schm}' AND table_name='{tbl}' ".format(**query_data)
+WHERE table_catalog='{db}' AND table_schema='{schm}' AND table_name='{tbl}' \
+ORDER BY ordinal_position ASC".format(**query_data)
             return (q0, )
         
+        elif query_type == 'table_sequences':
+            q0 = 'SELECT sequence_name, nextval(sequence_name::regclass), \
+setval(sequence_name::regclass, lastval() - 1, true) FROM information_schema.sequences'
+            return (q0, )
         
         elif query_type == 'existing_tables':
             # selects both tables and views
-            # q0 = "SELECT table_name FROM information_schema.tables WHERE table_schema='{schm}' ORDER BY table_name ASC".format(**query_data)
-            q0 = "SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname='{schm}' ORDER BY tablename ASC".format(**query_data)
+            q0 = "SELECT table_name FROM information_schema.tables WHERE table_schema='{schm}' \
+ORDER BY table_name ASC".format(**query_data)
+            # q0 = "SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname='{schm}' ORDER BY tablename ASC".format(**query_data)
             return (q0, )
         
         
@@ -264,6 +268,13 @@ AND (tc.constraint_type='PRIMARY KEY')".format(**query_data)
         
         elif query_type == 'table_structure':
             q0 = "DESCRIBE {db}.{tbl}".format(**query_data)
+            return (q0, )
+
+        elif query_type == 'raw_table_structure':
+            q0 = 'SELECT column_name AS "column", data_type AS "type", is_nullable AS "null", \
+column_default AS "default", character_maximum_length, numeric_precision, numeric_scale, column_type \
+FROM information_schema.columns WHERE table_schema="{db}" AND table_name="{tbl}" \
+ORDER BY ordinal_position ASC'.format(**query_data)
             return (q0, )
         
         elif query_type == 'existing_tables':

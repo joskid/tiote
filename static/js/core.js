@@ -85,15 +85,15 @@ Page.prototype.generateTopMenu = function(data){
 	if (data['sctn'] == 'begin') {
 		order = ['login', 'help', 'faq'];
 		prefix_str = '#sctn=begin';
-	}else if (data['sctn'] == 'home') {
+	} else if (data['sctn'] == 'home') {
 		order = ['home', ,'users','query', 'import', 'export'];
 		prefix_str = '#sctn=home';
-	}else if (data['sctn'] == 'db') {
+	} else if (data['sctn'] == 'db') {
 		order = ['overview', 'query','import','export'];
 		prefix_str = '#sctn=db';
 		suffix = ['&db=']
-	}else if (data['sctn'] == 'tbl') {
-		order = ['browse', 'structure', 'insert', 'search', 'query', 'import', 'export'];
+	} else if (data['sctn'] == 'tbl') {
+		order = ['browse', 'structure', 'insert', 'query', 'import', 'export'];
 		prefix_str = '#sctn=tbl';
 		suffix = ['&db=','&tbl='];
 	}
@@ -229,7 +229,6 @@ Page.prototype.generateSidebar = function(data, oldData) {
 
 
 Page.prototype.jsifyTable = function(syncHeightWithWindow) {
-	var self = this;
 	// display
 	if ($$('.jsifyTable').length) {
 		$$('.jsifyTable').each(function(cont, cont_in) {
@@ -324,20 +323,19 @@ Page.prototype.jsifyTable = function(syncHeightWithWindow) {
 			// handle a.display_row(s) click events
 			$(tbl).getElements('a.display_row').each(function(al, al_in){
 				if ($(tbl).get('keys' != null)) {	// functionality requires keys
-					al.addEvent('click', function(e) {	// attach click event
-						var where_stmt = generate_where(pg.tbls[tbl_in], al_in);
+					// attach click event
+					al.addEvent('click', function(e) {
+						var where_stmt = generate_where(pg.tbls[tbl_in], al_in, true);
 						// make xhr request
-						var x = new XHR(Object.merge({
-							'method': 'post', 'query': 'get_row','type':'repr',
-							'showLoader': false,
+						var x = new XHR(Object.merge(page_hash(), {
+							query: 'get_row','type':'repr',	'spinnerTarget': tbl,
 							onSuccess : function(text, xml) {
 								showDialog("Entry", text, {
 									offsetTop: null, width: 475, hideFooter: true,
-									overlayOpacity: .1, overlayClick: false
+									overlayOpacity: 0, overlayClick: false
 								});
-							}, data: where_stmt
-						}, page_hash())
-						).send();
+							}
+						})).post(where_stmt.parseQueryString());
 					});
 				}
 			});
@@ -399,11 +397,11 @@ function do_action(tbl, e) {
 	var navObject = page_hash();
 	if (navObject['sctn'] == "db" && navObject['v'] == 'overview')
 		msg += where_stmt.contains(';') ? "tables" : "table";
-	else if (navObject['v'] == "tbl" && navObject['v'] == 'browse')
+	else if (navObject['sctn'] == "tbl" && navObject['v'] == 'browse')
 		msg += where_stmt.contains(';') ? "rows" : "row";
 	// confirm if intention is to be carried out
 	var confirmDiag = new SimpleModal({'btn_ok': 'Yes', overlayClick: false,
-		draggable: True, offsetTop: 0.2 * screen.availHeight
+		draggable: true, offsetTop: 0.2 * screen.availHeight
 	});
 	confirmDiag.show({
 		model: 'confirm', 
@@ -456,44 +454,34 @@ Page.prototype.updateOptions = function(obj) {
 	this.options.extend(obj)
 }
 
+Page.prototype.reload = function() {
+	var context = new Hash();
+	context.extend(location.hash.replace("#",'').parseQueryString(false, true));
+	console.log(context);
+}
 
-Page.prototype.userView = function(){
-	console.log('userView() called!');
-	// xhr request users table and load it
-	var h = getWindowHeight() * .45;
-	this.loadTable('user_rpr','repr',
-		{'height': h, 'with_checkboxes':true},{});
-	window.addEvent('resize', function(){
-		h = getWindowHeight() * .45;
-		$(this.data_table).setStyle('height', 'auto');
-		$(this.data_table).setStyle('max-height', h);
-	});
-	this.loadTableOptions('user')
-	// hide some elmts
-	var sbls_1 = [];var sbls_2 = [];
-	var p1 = $$('.hide_1').getParent().getParent().getParent().getParent().getParent();
-	p1.each(function(item,key){
-		sbls_1.include(item.getSiblings()[0]);
-	});
-	var p2 = $$('.hide_2').getParent().getParent().getParent().getParent().getParent();
-	p2.each(function(item,key){
-		sbls_2.include(item.getSiblings()[0]);
-		sbls_2.include(item.getSiblings()[1]);
-	});
-	hideAll(sbls_1);hideAll(sbls_2);
-	$$('.addevnt').addEvent('change', function(e){
-		if (e.target.id == 'id_access_0') {
-			hideAll(sbls_1);
-		} else if( e.target.id == 'id_privileges_0') {
-			hideAll(sbls_2);
-		}else if (e.target.id == 'id_access_1') {
-			showAll(sbls_1);
-		} else if (e.target.id == 'id_privileges_1'){
-			showAll(sbls_2);
-		}
-	})
-	
-	this.completeForm();
+Page.prototype.completeForm = function(){
+//	console.log('completeForm()!');
+	if (! $('tt_form')) return ; 
+	var form = $('tt_form');
+	var undisplayed_result = $('undisplayed_result');
+	//validation
+	var form_validator = new Form.Validator.Inline(form, {
+        'evaluateFieldsOnBlur':false, 'evaluateFieldsOnChange': false}
+    );
+		
+    // todo: new validation that would force the dropdown to be from a specific list
+    
+//	form_validator.addEvent('onElementFail', function(field, validatorsFailed){
+//		if ($$('div.validation-advice'))
+//			$$('div.validation-advice').each(function(item){
+//				item.addClass('alert-message warning')
+//			});
+//	});
+
+	var request_url = generate_ajax_url(true);
+    self = this;
+
 }
 
 
@@ -515,12 +503,10 @@ var XHR = new Class({
 			options.url += 'commonQuery=' + options.commonQuery;
         else if (options.query){
             options.url += 'q=' + options.query;
-            if (options.type)
-                options.url += '&type=' + options.type;
+            if (options.type) options.url += '&type=' + options.type;
         }
-		// 
+
 		if (options.url.substr(-1) != "?") options.url += "&";
-		//
 		if (options.sctn) options.url += 'sctn=' + options.sctn; 
 		if (options.v) options.url += '&v=' + options.v;
 		if (options.db) options.url += '&db=' + options.db;
@@ -537,30 +523,35 @@ var XHR = new Class({
 		if (options && options.showLoader != false) {
 			var spinnerTarget = (options.spinnerTarget) ? options.spinnerTarget: document.body;
 			var ajaxSpinner = new Spinner(spinnerTarget, {'message': 'loading data...'});
-			show('header-load');
-            ajaxSpinner.show(true);
 			
-			this.addEvent("onSuccess", function() {});
-			
+			this.addEvent('onRequest', function() {
+				show('header-load');
+				ajaxSpinner.show(true);				
+			})
+
 			this.addEvent('onComplete', function(xhr){
 				hide('header-load');
 				ajaxSpinner.hide();
 				ajaxSpinner.destroy();
 			});
-			
-			
-			this.addEvent("onFailure", function(xhr) {
-				var msg = 'An unexpected error was encountered. Please reload the page and try again.';
-				if (xhr.status == 500 && xhr.statusText == "UNKNOWN STATUS CODE") msg = xhr.response;
+		}
+		
+		this.addEvent("onSuccess", function() {});
+		
+		var msg = 'An unexpected error was encountered. Please reload the page and try again.';
+		this.addEvent("onException", function() {
+			showDialog("Exception", msg, {'draggable':false,'overlayClick':false});
+		});
+		
+		this.addEvent("onFailure", function(xhr) {
+			if (xhr.status == 500 && xhr.statusText == "UNKNOWN STATUS CODE") msg = xhr.response;
 //				hide('header-load');
 //                ajaxSpinner.hide();
-                if (msg == 'invalid ajax request!') 
-                    location.reload()
-                else
-                    showDialog('Error!', msg, {'draggable':false,'overlayClick':false})
-			});
-			
-		}
+			if (msg == 'invalid ajax request!') 
+				location.reload()
+			else
+				showDialog('Error!', msg, {'draggable':false,'overlayClick':false})
+		});
 	},
 	
 	// redefined to avoid auto script execution
