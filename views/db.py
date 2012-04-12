@@ -8,6 +8,7 @@ from tiote import forms, utils
 
 
 def overview(request):
+    conn_params = utils.fns.get_conn_params(request)
     # table deletion or emptying request catching and handling
     if request.method == 'POST' and request.GET.get('upd8'):
         l = request.POST.get('where_stmt').strip().split(';');
@@ -20,9 +21,9 @@ def overview(request):
         query_data = {'db':request.GET['db'],'conditions':conditions}
         if request.GET.get('schm'):
             query_data['schm'] = request.GET.get('schm')
-        return utils.db.rpr_query(request, q , query_data)
+        return utils.db.rpr_query(conn_params, q , query_data)
 
-    tbl_data = utils.db.rpr_query(request, 'table_rpr')
+    tbl_data = utils.db.rpr_query(conn_params, 'table_rpr', utils.fns.qd(request.GET))
     from urllib import urlencode
     from django.utils.datastructures import SortedDict
     dest_url = SortedDict({'sctn':'tbl','v':'browse', 

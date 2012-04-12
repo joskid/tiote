@@ -137,6 +137,7 @@ Page.prototype.generateView = function(data, oldData){
 					self.jsifyTable(true);
 					self.browseView();
 				} else {self.jsifyTable(false);}
+				if ($E('#tt_form')) { pg.completeForm();}
 				self.addTableOpts();
 				self.generateSidebar(data, oldData);
 			}
@@ -335,7 +336,7 @@ Page.prototype.jsifyTable = function(syncHeightWithWindow) {
 									overlayOpacity: 0, overlayClick: false
 								});
 							}
-						})).post(where_stmt.parseQueryString());
+						})).post(where_stmt);
 					});
 				}
 			});
@@ -464,12 +465,27 @@ Page.prototype.completeForm = function(){
 //	console.log('completeForm()!');
 	if (! $('tt_form')) return ; 
 	var form = $('tt_form');
-	var undisplayed_result = $('undisplayed_result');
 	//validation
 	var form_validator = new Form.Validator.Inline(form, {
         'evaluateFieldsOnBlur':false, 'evaluateFieldsOnChange': false}
     );
+	
+	// handle submission immediately after validation
+	form_validator.addEvent('formValidate', function(status, form, e){
+		if (!status) return; // form didn't validate
+		e.stop();
+		var x = new XHR({
+			url: generate_ajax_url(false, {}),
+			spinnerTarger: form,
+			onSuccess: function(text, xml) {
+				var resp = JSON.decode(text);
+				if (resp['status'] == 'success')
+					form.reset() // delete the input values
+				$('msg-placeholder').set('html', resp['msg']);
+			}
+		}).post(form.toQueryString());
 		
+	});
     // todo: new validation that would force the dropdown to be from a specific list
     
 //	form_validator.addEvent('onElementFail', function(field, validatorsFailed){
@@ -478,9 +494,6 @@ Page.prototype.completeForm = function(){
 //				item.addClass('alert-message warning')
 //			});
 //	});
-
-	var request_url = generate_ajax_url(true);
-    self = this;
 
 }
 

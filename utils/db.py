@@ -4,14 +4,15 @@ from django.http import HttpResponse
 from tiote import sql
 import fns
 
-def rpr_query(request, query_type, query_data=None):
-    conn_params = fns.get_conn_params(request)
+def rpr_query(conn_params, query_type, get_data={}, post_data={}):
     # common queries that returns success state as a dict only
     no_return_queries = ('create_user', 'drop_user', 'create_db','create_table',
         'drop_table', 'empty_table', 'delete_row', 'create_column', 'delete_column',)
     
     if query_type in no_return_queries:
-        conn_params['db'] = request.GET.get('db') if request.GET.get('db') else conn_params['db']
+        conn_params['db'] = get_data['db'] if get_data.has_key('db') else conn_params['db']
+        query_data = {}
+        query_data.update(get_data, **post_data)
         q = sql.generate_query( query_type, conn_params['dialect'],query_data)
         result = sql.short_query(conn_params, q)
         return HttpResponse( json.dumps(result) )
@@ -28,34 +29,35 @@ def rpr_query(request, query_type, query_data=None):
             return fns.http_500(r)
         
         
-    elif query_type in ('indexes', 'primary_keys'):
-        if query_data is None:
-            query_data = {'db':request.GET.get('db'),'tbl':request.GET.get('tbl')}
-            if request.GET.get('schm'):
-                query_data['schm'] = request.GET.get('schm')
+    elif query_type in ('insert_row',):
+        conn_params['db'] = get_data['db']
+        sub_q_data = {'db': get_data['db'],}
+        if get_data.has_key('tbl'):
+            sub_q_data['tbl'] = get_data['tbl']
+        if get_data.has_key('schm'):
+            sub_q_data['schm'] = get_data['schm']
+
+    elif query_type in ('indexes', 'primary_keys', 'foreign_key_relation'):
         
-        if conn_params['dialect'] == 'postgresql': conn_params['db'] = query_data['db']
-        r = []
-        for q in sql.generate_query(query_type, conn_params['dialect'], query_data):
-            r.append(sql.full_query(conn_params, q) )
-        # format postgresql
-        
-        return r[0]
+        if conn_params['dialect'] == 'postgresql': conn_params['db'] = get_data['db']
+        r = sql.full_query(conn_params,
+            sql.generate_query(query_type, conn_params['dialect'], get_data)[0])
+        return r
         
     elif query_type in ('get_row',):
-        sub_q_data = {'tbl': request.GET.get('tbl'),'db':request.GET.get('db')}
-        sub_q_data['offset'] = request.GET.get('offset') if request.GET.get('offset') else 0
-        sub_q_data['limit'] = request.GET.get('limit') if request.GET.get('limit') else 100
-        if request.GET.get('schm'):
-            sub_q_data['schm'] = request.GET.get('schm')
+        sub_q_data = {'tbl': get_data['tbl'],'db':get_data['db']}
+        sub_q_data['offset'] = get_data['offset'] if get_data.has_key('offset') else 0
+        sub_q_data['limit'] = get_data['limit'] if get_data.has_key('limit') else 100
+        if get_data.has_key('schm'):
+            sub_q_data['schm'] = get_data['schm']
         # generate where statement
         sub_q_data['where'] = ""
-        for ind in range(len(request.POST)):
-            sub_q_data['where'] += request.POST.keys()[ind].strip() + "=" 
-            sub_q_data['where'] += request.POST.values()[ind].strip()
-            if ind != len(request.POST) - 1: sub_q_data['where'] += ' AND '
+        for ind in range(len(post_data)):
+            sub_q_data['where'] += post_data.keys()[ind].strip() + "=" 
+            sub_q_data['where'] += post_data.values()[ind].strip()
+            if ind != len(post_data) - 1: sub_q_data['where'] += ' AND '
         # retrieve and run queries
-        conn_params['db'] = request.GET.get('db')
+        conn_params['db'] = get_data['db']
         # assert False
         q = sql.generate_query(query_type, conn_params['dialect'], sub_q_data)
         r =  sql.full_query(conn_params, q[0])
@@ -70,12 +72,12 @@ def rpr_query(request, query_type, query_data=None):
         return html
 
     elif query_type in ('table_rpr', 'table_structure', 'raw_table_structure'):
-        conn_params['db'] = request.GET.get('db')
-        sub_q_data = {'db': request.GET.get('db'),}
-        if request.GET.get('tbl'):
-            sub_q_data['tbl'] = request.GET.get('tbl')
-        if request.GET.get('schm'):
-            sub_q_data['schm'] = request.GET.get('schm')
+        conn_params['db'] = get_data['db']
+        sub_q_data = {'db': get_data['db'],}
+        if get_data.has_key('tbl'):
+            sub_q_data['tbl'] = get_data['tbl']
+        if get_data.has_key('schm'):
+            sub_q_data['schm'] = get_data['schm']
         # make query
         if conn_params['dialect'] == 'postgresql' and query_type == 'raw_table_structure':
             q = 'table_structure'
@@ -112,14 +114,14 @@ def rpr_query(request, query_type, query_data=None):
         
     elif query_type == 'browse_table':
         # initializations        
-        sub_q_data = {'tbl': request.GET.get('tbl'),'db':request.GET.get('db')}
-        sub_q_data['offset'] = request.GET.get('offset') if request.GET.get('offset') else 0
-        sub_q_data['limit'] = request.GET.get('limit') if request.GET.get('limit') else 100
+        sub_q_data = {'tbl': get_data['tbl'],'db':get_data['db']}
+        sub_q_data['offset'] = get_data['offset'] if get_data.has_key('offset') else 0
+        sub_q_data['limit'] = get_data['limit'] if get_data.has_key('limit') else 100
         for item in ['schm', 'sort_key', 'sort_dir']:
-            if request.GET.get(item): sub_q_data[item] = request.GET.get(item)
+            if get_data.has_key(item): sub_q_data[item] = get_data[item]
         # retrieve and run queries
-        conn_params['db'] = request.GET.get('db')
-        keys = rpr_query(request, 'primary_keys', sub_q_data)
+        conn_params['db'] = get_data['db']
+        keys = rpr_query(conn_params, 'primary_keys', sub_q_data)
         count = sql.full_query(conn_params, 
             sql.generate_query('count_rows', conn_params['dialect'], sub_q_data)[0],
             )['rows']
@@ -136,9 +138,10 @@ def rpr_query(request, query_type, query_data=None):
         
     # queries that just asks formats and return result
     elif query_type in ('existing_tables',):
-        query_data = {'db':request.GET.get('db'),'tbl':request.GET.get('tbl')}
+        query_data = {'db':get_data['db'],}
+        if get_data.has_key('tbl'): query_data['tbl'] = get_data['tbl']
         if conn_params['dialect'] == 'postgresql':
-            query_data['schm'] = request.GET.get('schm')
+            query_data['schm'] = get_data['schm']
             conn_params['db'] = query_data['db']
             
         q = sql.generate_query(query_type, conn_params['dialect'], query_data)

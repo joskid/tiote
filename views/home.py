@@ -9,6 +9,7 @@ from tiote import forms, utils
 
 
 def home(request):
+    conn_params = utils.fns.get_conn_params
     # queries and initializations
     template_list = utils.db.common_query(request, 'template_list')
     user_list = utils.db.common_query(request, 'user_list');
@@ -22,7 +23,7 @@ def home(request):
         form = DbForm(templates=template_list, users=user_list,
             charsets=charset_list, data=request.POST)
         if form.is_valid():
-            return utils.db.rpr_query(request, 'create_db', form.cleaned_data)
+            return utils.db.rpr_query(conn_params, 'create_db', form.cleaned_data)
     else:
         form = DbForm(templates=template_list, users=user_list, charsets=charset_list)
         
@@ -50,8 +51,7 @@ def users(request):
             if conn_params['dialect'] == 'postgresql':
                 # query determination and submission
                 if not request.GET.get('subview'): # new user creation
-                    return utils.db.rpr_query(request,
-                        'create_user', form.cleaned_data)
+                    return utils.db.rpr_query(conn_params, 'create_user', form.cleaned_data)
                 return HttpResponse('valid form submitted!')
             
             elif conn_params['dialect'] == 'mysql':
@@ -63,12 +63,10 @@ def users(request):
                         return HttpResponse('The submitted form is incomplete! No privileges selected!')
                 # query determination and submission
                 if not request.GET.get('subview'): # new user creation
-                    return utils.db.rpr_query(request,
-                        'create_user', form.cleaned_data)
+                    return utils.db.rpr_query(conn_params, 'create_user', form.cleaned_data)
                 return HttpResponse('valid form submitted!')
         else:
-            h = utils.fns.response_shortcut(request,template='form_errors',
-                extra_vars={'form':form});
+            h = utils.fns.response_shortcut(request,template='form_errors', extra_vars={'form':form});
             h.set_cookie('tt_formContainsErrors','true')
             return h
             

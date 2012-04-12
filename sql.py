@@ -180,6 +180,14 @@ setval(sequence_name::regclass, lastval() - 1, true) FROM information_schema.seq
 ORDER BY table_name ASC".format(**query_data)
             # q0 = "SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname='{schm}' ORDER BY tablename ASC".format(**query_data)
             return (q0, )
+
+        elif query_type == 'foreign_key_relation':
+            q0 = 'SELECT conname, confrelid::regclass AS "referenced_table", \
+conkey AS array_local_columns, confkey AS array_foreign_columns \
+FROM pg_constraint WHERE contype = \'f\' AND conrelid::regclass = \'{tbl}\'::regclass \
+AND connamespace = (SELECT oid from pg_namespace WHERE nspname=\'{schm}\') \
+'.format(**query_data)
+            return (q0, )
         
         
     elif dialect == 'mysql': # mysql-only statements

@@ -19,7 +19,6 @@ pgsql_types = ('bigint', 'bigserial', 'bit', 'bit varying', 'boolean', 'bytea',
     'lseg', 'macaddr', 'money', 'real', 'smallint', 'serial', 'text', 'time', 
     'time with time zone', 'timestamp', 'timestamp with time zone', 'uuid', 'xml')
 
-# ('real', 'double', 'float', 'decimal', 'numeric', 'double precision')
 pgsql_encoding = ('UTF8', 'SQL_ASCII', 'BIG5', 'EUC_CN', 'EUC_JP', 'EUC_KR', 'EUC_TW',
     'GB18030', 'GBK', 'ISO_8859_5', 'ISO_8859_6', 'ISO_8859_7', 'ISO_8859_8', 'JOHAB',
     'KOI8R', 'KOI8U', 'LATIN1', 'LATIN2', 'LATIN3', 'LATIN4', 'LATIN5', 'LATIN6', 'LATIN7',
@@ -84,6 +83,7 @@ class InsertForm(forms.BaseForm):
             else: _l[ tbl_indexes[i][0] ] = [i]
         # determing type of form fields for each column
         for row in tbl_struct['rows']:
+            _c = []
             # if _l.has_key( row[0] ):
             #     can_continue = True
             #     for i in _l[row[0]]:
@@ -92,32 +92,36 @@ class InsertForm(forms.BaseForm):
 
             if row[1] in ('character varying', 'varchar','character', 'char'):
                 f[row[0]] = forms.CharField()
-                if row[4]: f[row[0]].max_length = row[4] #max_length
+                # if row[4]: f[row[0]].max_length = row[4] #max_length
 
             elif row[1] in ('varbinary', 'bit', 'bit varying',):
                 f[row[0]] = forms.CharField()
-                if row[4]: f[row[0]].max_length = row[4] #max_length
+                # if row[4]: f[row[0]].max_length = row[4] #max_length
 
             elif row[1] in ('text', 'tinytext', 'mediumtext', 'longtext', ):
                 f[row[0]] = forms.CharField(widget=forms.Textarea(attrs={'cols':'', 'rows':''}))
-                if row[4]: f[row[0]].max_length = row[4] #max_length
+                # if row[4]: f[row[0]].max_length = row[4] #max_length
 
             elif row[1] in ('boolean', ): f[row[0]] = forms.BooleanField()
 
             elif row[1] in ('tinyint', 'smallint', 'mediumint', 'int', 'bigint','integer',):
                 f[row[0]] = forms.IntegerField()
-                if row[5]: f[row[0]].validators.append(validators.MaxLengthValidator(row[5]))
-
+                # if row[5]: f[row[0]].validators.append(validators.MaxLengthValidator(row[5]))
+                _c.append('validate-integer')
+                
             elif row[1] in ('real', 'double', 'float', 'decimal', 'numeric', 'double precision'):
                 f[row[0]] = forms.FloatField()
-                if row[5]: f[row[0]].validators.append(validators.MaxLengthValidator(row[5]))
+                # if row[5]: f[row[0]].validators.append(validators.MaxLengthValidator(row[5]))
+                _c.append('validate-numeric')
 
             elif row[1] in ('decimal', 'numeric', 'money',):
                 f[row[0]] = forms.DecimalField()
-                if row[5]: f[row[0]].validators.append(validators.MaxLengthValidator(row[5]))
+                # if row[5]: f[row[0]].validators.append(validators.MaxLengthValidator(row[5]))
+                _c.append('validate-numeric')
 
             elif row[1] in ('date',):
                 f[row[0]] = forms.DateField()
+                _c.append('validate-date')
 
             elif row[1] in ('time','time with time zone',):
                 f[row[0]] = forms.TimeField()
@@ -143,7 +147,6 @@ class InsertForm(forms.BaseForm):
             f[row[0]].help_text =  " ".join(_il)
             if row[3]: f[row[0]].default = row[3] #default
             #required fields
-            _c = []
             if b(row[2]): _c.append("required")
             # work with indexes
             if _l.has_key( row[0] ):

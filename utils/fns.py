@@ -117,6 +117,8 @@ def get_conn_params(request):
         data['db'] = '' if data['dialect'] =='mysql' else 'postgres'
     return data    
 
+def qd(query_dict):
+    return dict((key, query_dict.get(key)) for key in query_dict)
 
 def table_options(opt_type, with_keys=True, select_actions=False):
     # opt_type = "users || tbls || data
@@ -179,7 +181,7 @@ def generate_sidebar(request):
             s += '<h6 class="icon-schemas">schema</h6>' + schema_selection_form
         
         # table selection ul
-        table_list = db.rpr_query(request, 'existing_tables')
+        table_list = db.rpr_query(conn_params, 'existing_tables', qd(request.GET))
         sfx_list = []
         pg_sfx = '&schm=' + d['schm'] if conn_params['dialect']=='postgresql' else ''
         for tbl_row in table_list:
@@ -325,10 +327,11 @@ class HtmlTable():
     def __str__(self):
         return self.to_element()
 
-def render_template(request, template, context= {}):
+def render_template(request, template, context= {}, is_file=False):
     _context = RequestContext(request, [site_proc])
-    if len(context) > 0: context.update(context)
-    return Template(template).render(_context)
+    if len(context) > 0: _context.update(context)
+    t = loader.get_template(template) if is_file else Template(template) 
+    return t.render(_context)
 
 # cyclic import
 import db
