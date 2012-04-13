@@ -24,10 +24,12 @@ def overview(request):
         return utils.db.rpr_query(conn_params, q , query_data)
 
     tbl_data = utils.db.rpr_query(conn_params, 'table_rpr', utils.fns.qd(request.GET))
+    # setup urls with SortedDict to maintain structure
     from urllib import urlencode
     from django.utils.datastructures import SortedDict
-    dest_url = SortedDict({'sctn':'tbl','v':'browse', 
-        'db': request.GET.get('db'), 'schm': request.GET.get('schm')})
+    dest_url = SortedDict(); d = {'sctn':'tbl','v':'browse'}
+    for k in d: dest_url[k] = d[k]
+    for k in ('db', 'schm',): dest_url[k] = request.GET.get(k) 
     conn_params = utils.fns.get_conn_params(request)
     props_keys = (('table', 'key'),)
     static_addr = utils.fns.render_template(request, '{{STATIC_URL}}')

@@ -81,15 +81,19 @@ def insert(request):
         form = forms.InsertForm(tbl_struct=tbl_struct_data, 
             tbl_indexes=tbl_indexes_data['rows'], data=request.POST)
         if form.is_valid():
-            # r = utils.db.insert_row(request, utils.fns.qd(request.POST))
-            ret = {'status':'fail', 'msg':"feature not yet implemented"}
+            ret = utils.db.insert_row(conn_params, utils.fns.qd(request.GET), 
+                utils.fns.qd(request.POST))
+            # add status messages
+            ret['msg'] = '<div class="alert-message block-message {0} span8"><code>\
+{1}</code></div>'.format('success' if ret['status'] == 'success' else 'error',
+    ret['msg'])
             return HttpResponse(json.dumps(ret))
         else: # form contains error
             ret = {'status': 'fail', 
             'msg': utils.fns.render_template(request,"tt_form_errors.html",
                 {'form': form}, is_file=True).replace('\n','')
             }
-            return HttpResponse(json.dumps(ret))
+            return HttpResponse(str(ret))
 
     form = forms.InsertForm(tbl_struct=tbl_struct_data, 
         tbl_indexes=tbl_indexes_data['rows'])

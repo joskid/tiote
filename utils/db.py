@@ -210,6 +210,24 @@ def common_query(request, query_name):
                 sql.stored_query(query_name, conn_params['dialect']))['rows']
 
 
+def insert_row(conn_params, get_data={}, post_data={}):
+    # set execution context
+    conn_params['db'] = get_data['db']
+    # generate sql statement
+    cols = [] 
+    values = []
+    for k in post_data: 
+        if k == 'csrfmiddlewaretoken': continue
+        cols.append(k)
+        values.append('\''+post_data[k]+'\'')
+    q = "INSERT INTO {0}{tbl} ({1}) VALUES ({2})".format(
+        '{schm}.'.format(**get_data) if conn_params['dialect'] == 'postgresql' else '',
+        ",".join(cols), ",".join(values), **get_data
+        )
+    ret = sql.short_query(conn_params, (q, ))
+    if ret['status'] == 'success': ret['msg'] = 'Insertion succeeded'
+    return ret
+
 def do_login(request, cleaned_data):
     host = cleaned_data['host']
     username = cleaned_data['username']

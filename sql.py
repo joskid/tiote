@@ -329,7 +329,7 @@ def short_query(conn_params, queries):
         conn = eng.connect()
         for query in queries:
             query_result = conn.execute(text(query))
-        return {'status':'success', }
+        return {'status':'success', 'msg':''}
     except Exception as e:
         conn.close()
         return {'status':'fail', 'msg': str(e) }

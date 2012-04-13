@@ -45,16 +45,24 @@ function clearPage(clear_sidebar){
 function Page(obj, oldObj){
 //	console.log('new Page() object created');
 	this.options = new Hash({navObj: obj, oldNavObj: oldObj});
-	this.setTitle();
-	this.generateTopMenu(obj);
 	this.tbls = [];
-	disable_unimplemented_links();
 	self = this; 
 	// unset all window resize events
 	window.removeEvents(['resize']);
 	clearPage();
-	this.generateView(obj, oldObj);
+	this.loadPage(true)
 }
+
+Page.prototype.loadPage = function(clr_sidebar) {
+	clr_sidebar = clr_sidebar || false;
+	var obj = this.options.navObj, oldObj = this.options.OldNavObj;
+	this.setTitle();
+	this.generateTopMenu(obj);
+	disable_unimplemented_links();
+	this.generateView(obj, oldObj);
+	if (clr_sidebar) this.generateSidebar(obj, oldObj);
+}
+
 
 Page.prototype.setTitle = function(new_title){
 	new_title = new_title || false;
@@ -137,9 +145,9 @@ Page.prototype.generateView = function(data, oldData){
 					self.jsifyTable(true);
 					self.browseView();
 				} else {self.jsifyTable(false);}
-				if ($E('#tt_form')) { pg.completeForm();}
+				// attach events to forms
+				if ($$('.tt_form')) { pg.completeForm();}
 				self.addTableOpts();
-				self.generateSidebar(data, oldData);
 			}
             runXHRJavascript();
         }
@@ -415,7 +423,7 @@ function do_action(tbl, e) {
 					if (resp['status'] == "fail") {
 						showDialog("Action not successful", resp['msg']);
 					} else if (resp['status'] == 'success')
-						reloadPage();
+						pg.reload();
 				}
 			}).post({'where_stmt': where_stmt});
 		}, 
@@ -455,46 +463,37 @@ Page.prototype.updateOptions = function(obj) {
 	this.options.extend(obj)
 }
 
-Page.prototype.reload = function() {
-	var context = new Hash();
-	context.extend(location.hash.replace("#",'').parseQueryString(false, true));
-	console.log(context);
-}
+Page.prototype.reload = function() {this.loadPage();}
 
 Page.prototype.completeForm = function(){
 //	console.log('completeForm()!');
-	if (! $('tt_form')) return ; 
-	var form = $('tt_form');
-	//validation
-	var form_validator = new Form.Validator.Inline(form, {
-        'evaluateFieldsOnBlur':false, 'evaluateFieldsOnChange': false}
-    );
+	if (! $$('.tt_form').length) return ; 
 	
-	// handle submission immediately after validation
-	form_validator.addEvent('formValidate', function(status, form, e){
-		if (!status) return; // form didn't validate
-		e.stop();
-		var x = new XHR({
-			url: generate_ajax_url(false, {}),
-			spinnerTarger: form,
-			onSuccess: function(text, xml) {
-				var resp = JSON.decode(text);
-				if (resp['status'] == 'success')
-					form.reset() // delete the input values
-				$('msg-placeholder').set('html', resp['msg']);
-			}
-		}).post(form.toQueryString());
-		
-	});
-    // todo: new validation that would force the dropdown to be from a specific list
-    
-//	form_validator.addEvent('onElementFail', function(field, validatorsFailed){
-//		if ($$('div.validation-advice'))
-//			$$('div.validation-advice').each(function(item){
-//				item.addClass('alert-message warning')
-//			});
-//	});
+	$$('.tt_form').each(function(form){
+		//attach validation object
+		var form_validator = new Form.Validator.Inline(form, {
+			'evaluateFieldsOnBlur':false, 'evaluateFieldsOnChange': false}
+		);
+		// handle submission immediately after validation
+		form_validator.addEvent('formValidate', function(status, form, e){
+			if (!status) return; // form didn't validate
+			e.stop();
+			var x = new XHR({
+				url: generate_ajax_url(false, {}),
+				spinnerTarger: form,
+				onSuccess: function(text, xml) {
+					var resp = JSON.decode(text);
+					if (resp['status'] == 'success')
+						form.reset() // delete the input values
+					var html = ("" + resp['msg']).replace("\n","&nbsp;")
+					console.log(html);
+					$E('.msg-placeholder', form).set('html', html);
+					console.log(html.indexOf('\n'));
+				}
+			}).post(form.toQueryString());
 
+		});		
+	});
 }
 
 
@@ -592,24 +591,6 @@ function show(a) {
 	$(a).style.display = 'block';
 }
 
-function hideAll(a){
-	a.each(function(item, key){
-		$(item).style.display = 'none'
-	});
-}
-function showAll(a){
-	a.each(function(item, key){
-		$(item).style.display = ''
-	});
-}
-function toggleDisplayEls(a, force){
-	a.each(function(item, key){
-		if ( $(item).style.display == 'none' ) show(item);
-		else hide(item);
-	});
-}
 function hide(a) {
 	$(a).style.display = 'none';
 }
-
-
