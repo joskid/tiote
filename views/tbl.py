@@ -11,10 +11,6 @@ def browse(request):
     conn_params = utils.fns.get_conn_params(request)
     # row(s) deletion request handling
     if request.method == 'POST' and request.GET.get('upd8') == 'delete':
-#        query_data = {'db': request.GET.get('db'),'tbl': request.GET.get('tbl'),
-#             'where_stmt': request.POST.get('where_stmt').strip()}
-#        if request.GET.get('schm'):
-#            query_data['schm'] = request.GET.get('schm')
         return utils.db.rpr_query(conn_params, 'delete_row', 
             utils.fns.qd(request.GET), utils.fns.qd(request.POST))
     # row(s) edit/updating request handling
@@ -22,7 +18,7 @@ def browse(request):
         return utils.fns.http_500('feature not yet implemented!')
     tbl_data = utils.db.rpr_query(conn_params, 'browse_table', utils.fns.qd(request.GET), utils.fns.qd(request.POST))
     static_addr = utils.fns.render_template(request, '{{STATIC_URL}}')
-    browse_table_html = utils.fns.HtmlTable(
+    browse_table = utils.fns.HtmlTable(
         static_addr = static_addr,
         props={'count':tbl_data['count'], 'keys': tbl_data['keys']['rows'],
             'with_checkboxes': True, 'display_row': True,
@@ -30,7 +26,10 @@ def browse(request):
         store = {'total_count':tbl_data['total_count'], 'offset': tbl_data['offset'],
             'limit': tbl_data['limit']
         }, **tbl_data
-    ).to_element().replace('\n', '<br />') # html doesn't display newlines(\n)
+    )
+    if not browse_table.has_body():
+        return HttpResponse('<div style="color:#888">[This table contains no entry]</div>')
+    browse_table_html = browse_table.to_element().replace('\n', '<br />') # html doesn't display newlines(\n)
     table_options_html = utils.fns.table_options('data', 
         with_keys=bool(tbl_data['keys']['rows']), select_actions=True)
     return HttpResponse(table_options_html + browse_table_html)
@@ -55,19 +54,42 @@ def structure(request):
         
     # view data
     static_addr = utils.fns.render_template(request, '{{STATIC_URL}}')
-    tbl_struct_data = utils.db.rpr_query(conn_params, 'table_structure', utils.fns.qd(request.GET))
-    columns_table_html = utils.fns.HtmlTable(attribs = {'id': 'tbl_columns'},
-        props = {'count': tbl_struct_data['count'], 'with_checkboxes': True,},
-        static_addr = static_addr, **tbl_struct_data
-    ).to_element()
-    indexes_data = utils.db.rpr_query(conn_params, 'indexes', utils.fns.qd(request.GET))
-    indexes_table_html = utils.fns.HtmlTable(static_addr = static_addr,
-        props = {'count': indexes_data['count'], 'with_checkboxes': True},
-        **indexes_data
-    ).to_element()
-    return HttpResponse("".join(['<h5 class="heading">Columns:</h5>',      
-        columns_table_html,'<h5 class="heading">Indexes:</h5>', indexes_table_html])
-    )
+    subv = request.GET.get('subv', 'cols')
+    d = {}
+    _subnav = {'cols': 'columns', 'idxs':'indexes'}
+    if subv == 'cols':
+        d['title'] = _subnav[subv]
+        tbl_struct_data = utils.db.rpr_query(conn_params, 'table_structure', utils.fns.qd(request.GET))
+        columns_table = utils.fns.HtmlTable(attribs = {'id': 'tbl_columns'},
+            props = {'count': tbl_struct_data['count'], 'with_checkboxes': True,},
+            static_addr = static_addr, **tbl_struct_data
+        )
+        d['table'] = columns_table.to_element() if columns_table.has_body() else "[Table contains no columns]"
+    elif subv == 'idxs':
+        d['title'] = _subnav[subv]
+        indexes_data = utils.db.rpr_query(conn_params, 'indexes', utils.fns.qd(request.GET))
+        indexes_table = utils.fns.HtmlTable(static_addr = static_addr,
+            props = {'count': indexes_data['count'], 'with_checkboxes': True},
+            **indexes_data
+        )
+        d['table'] = indexes_table.to_element() if indexes_table.has_body() else "[Table contains no indexes]"
+    # generate arranged href
+    from urllib import urlencode
+    from django.utils.datastructures import SortedDict
+    dest_url = SortedDict(); _d = {'sctn':'tbl','v':'structure'}
+    for k in _d: dest_url[k] = _d[k]
+    for k in ('db', 'schm','tbl',): 
+        if request.GET.get(k): dest_url[k] = request.GET.get(k)
+    _l = []
+    # generate navigation ul
+    for k in ('cols', 'idxs',):
+        _l.append('<li{0}><a href="{1}{2}">{3}<span>|</span></a></li>'.format(
+            ' class="active"' if _subnav[k] == d['title'] else '',
+            '#'+urlencode(dest_url)+'&subv=', k, _subnav[k])
+        )
+    ret_str = '<div style="margin-bottom:-5px;"><ul class="subnav">{0}</ul></div>{table}'.format(
+         "".join(_l),**d)
+    return HttpResponse(ret_str)
 
 def insert(request):
     # make queries and inits
@@ -78,7 +100,7 @@ def insert(request):
     # new form
 
     if request.method == 'POST':
-        form = forms.InsertForm(tbl_struct=tbl_struct_data, 
+        form = forms.InsertForm(tbl_struct=tbl_struct_data, dialect=conn_params['dialect'],
             tbl_indexes=tbl_indexes_data['rows'], data=request.POST)
         if form.is_valid():
             ret = utils.db.insert_row(conn_params, utils.fns.qd(request.GET), 
@@ -95,7 +117,7 @@ def insert(request):
             }
             return HttpResponse(str(ret))
 
-    form = forms.InsertForm(tbl_struct=tbl_struct_data, 
+    form = forms.InsertForm(tbl_struct=tbl_struct_data, dialect=conn_params['dialect'],
         tbl_indexes=tbl_indexes_data['rows'])
 
     return utils.fns.response_shortcut(request, extra_vars={'form':form,})

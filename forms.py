@@ -73,8 +73,8 @@ class wCheckboxSelectMultiple(forms.SelectMultiple):
         return mark_safe(u'\n'.join(output))
 
 class InsertForm(forms.BaseForm):
-    def __init__(self, tbl_struct, tbl_indexes=(), **kwargs):
-# keys = ['column','type','null','default','character_maximum_length','numeric_precision', 'column_type']
+    def __init__(self, dialect, tbl_struct, tbl_indexes=(), **kwargs):
+# keys = ['column','type','null','default','character_maximum_length','numeric_precision', 'extra','column_type']
         f = SortedDict()
         # dict to increase performance
         _l = {}
@@ -84,11 +84,8 @@ class InsertForm(forms.BaseForm):
         # determing type of form fields for each column
         for row in tbl_struct['rows']:
             _c = []
-            # if _l.has_key( row[0] ):
-            #     can_continue = True
-            #     for i in _l[row[0]]:
-            #         if tbl_indexes[i][2] == "FOREIGN KEY": can_continue = False
-            #     if not can_continue: continue; # next loop
+            #required fields
+            if b(row[2]): _c.append("required")
 
             if row[1] in ('character varying', 'varchar','character', 'char'):
                 f[row[0]] = forms.CharField()
@@ -144,14 +141,14 @@ class InsertForm(forms.BaseForm):
             # options common to all fields
             # help_text
             _il = [ row[len(row) - 1], ]
+            if dialect == 'mysql': _il.append(row[len(row) -2 ])
             f[row[0]].help_text =  " ".join(_il)
             if row[3]: f[row[0]].default = row[3] #default
-            #required fields
-            if b(row[2]): _c.append("required")
             # work with indexes
             if _l.has_key( row[0] ):
                 for i in _l[row[0]]:
-                    if tbl_indexes[i][2] == "PRIMARY KEY": _c.pop(0) # make it not required
+                    if dialect == 'mysql' and tbl_indexes[i][2] == "PRIMARY KEY":
+                        if row[len(row) - 2].count('auto_increment'): _c.pop(0) # make it not required
 
             # width of the fields
             if type(f[row[0]].widget) not in (forms.CheckboxSelectMultiple, wCheckboxSelectMultiple,):

@@ -43,7 +43,6 @@ function clearPage(clear_sidebar){
 
 // A single tiote page
 function Page(obj, oldObj){
-//	console.log('new Page() object created');
 	this.options = new Hash({navObj: obj, oldNavObj: oldObj});
 	this.tbls = [];
 	self = this; 
@@ -74,6 +73,7 @@ Page.prototype.setTitle = function(new_title){
 		});
 		if (Object.keys(r).contains('offset')) title += ' / page ' + (r['offset'] / 100 + 1);
 		title += ' / ' + r['v'];
+		if (Object.keys(r).contains('subv')) title += ' / ' + r['subv'];
 	} else {
 		title = new_title;
 	}
@@ -133,7 +133,7 @@ Page.prototype.generateView = function(data, oldData){
 //	console.log(data), console.log(oldData);
     var self = this;
 	// decide if the there should be a request for sidebar
-	var x = new XHR(Object.merge({'method':'get',
+	var x = new XHR(Object.merge(data, {'method':'get',
         'onSuccess': function(text,xml){
             var viewData = {'text' : text,'xml' : xml};
             if (!data['sctn']) {
@@ -151,8 +151,7 @@ Page.prototype.generateView = function(data, oldData){
 			}
             runXHRJavascript();
         }
-    },data)
-    ).send()
+    })).send()
 }
 
 
@@ -441,6 +440,7 @@ function sort_dir() {
 	
 	
 Page.prototype.browseView = function() {	
+	if (! document.getElement('.tbl-header')) return;
 	var theads = document.getElement('.tbl-header table tr').getElements('td[class!=controls]');
 	theads.setStyle('cursor', 'pointer');
 	theads.each(function(thead, thead_in){
@@ -527,6 +527,7 @@ var XHR = new Class({
 		if (options.offset)	options.url += '&offset=' + options.offset;
 		if (options.sort_key) options.url += '&sort_key=' + options.sort_key;
 		if (options.sort_dir) options.url += "&sort_dir=" + options.sort_dir;
+		if (options.subv) options.url += '&subv=' + options.subv;
 		
 		// append ajax validation key
 		options.url += '&ajaxKey=' + ajaxKey;

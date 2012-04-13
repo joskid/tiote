@@ -29,7 +29,8 @@ def overview(request):
     from django.utils.datastructures import SortedDict
     dest_url = SortedDict(); d = {'sctn':'tbl','v':'browse'}
     for k in d: dest_url[k] = d[k]
-    for k in ('db', 'schm',): dest_url[k] = request.GET.get(k) 
+    for k in ('db', 'schm',): 
+        if request.GET.get(k): dest_url[k] = request.GET.get(k) 
     conn_params = utils.fns.get_conn_params(request)
     props_keys = (('table', 'key'),)
     static_addr = utils.fns.render_template(request, '{{STATIC_URL}}')

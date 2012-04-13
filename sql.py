@@ -275,12 +275,15 @@ AND (tc.constraint_type='PRIMARY KEY')".format(**query_data)
             return (q0, )
         
         elif query_type == 'table_structure':
-            q0 = "DESCRIBE {db}.{tbl}".format(**query_data)
+            q0 = 'SELECT column_name AS "column", column_type AS "type", is_nullable AS "null", \
+column_default AS "default", extra \
+FROM information_schema.columns WHERE table_schema="{db}" AND table_name="{tbl}" \
+ORDER BY ordinal_position ASC'.format(**query_data)
             return (q0, )
 
         elif query_type == 'raw_table_structure':
             q0 = 'SELECT column_name AS "column", data_type AS "type", is_nullable AS "null", \
-column_default AS "default", character_maximum_length, numeric_precision, numeric_scale, column_type \
+column_default AS "default", character_maximum_length, numeric_precision, numeric_scale, extra, column_type \
 FROM information_schema.columns WHERE table_schema="{db}" AND table_name="{tbl}" \
 ORDER BY ordinal_position ASC'.format(**query_data)
             return (q0, )

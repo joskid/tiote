@@ -130,6 +130,46 @@ h5.heading {
 	margin-left: 5px;
 }
 
+.subnav {
+     list-style: none outside none;
+     padding: 0pt;
+}
+
+.subnav:before, .subnav:after {
+     content: "";
+     display: table;
+}
+
+.subnav:after {
+     clear: both;
+}
+
+.subnav > li {
+     float: left;
+}
+
+.subnav > li > a {
+     display: block;
+}
+
+.subnav a {
+     color: #0069D6;
+	 font-size: 14px;
+}
+
+.subnav a span {
+     padding-left: 10px;
+     padding-right: 10px;
+	 color: #404040;
+}
+
+.subnav li:last-child span {
+     display: none;
+}
+
+.subnav .active a {
+     color: #404040;
+}
 /*
 	JSIFIED TABLE
 */
