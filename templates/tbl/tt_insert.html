@@ -1,0 +1,18 @@
+<div class="row">
+	<div class="span7">
+		<form class="tt_form form-stacked" action="" method="post" accept-charset="utf-8">
+			<div class="msg-placeholder span6"></div>
+			<fieldset>
+			{% csrf_token %}
+			{% for field in form %}
+			<div class="clearfix">
+				<label for="id_{{field.html_name}}">{{field.label}}<span class="help_text">{{field.help_text}}</span></label>
+				<div class='input'>{{ field }}</div>
+			</div>
+			{% endfor %}
+			</fieldset>
+		  <div class='actions'><input type="submit" class='btn primary submit-button' value="Submit &rarr;"/></div>
+		</form>
+	</div>
+</div>
+

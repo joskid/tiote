@@ -26,6 +26,7 @@ def index(request):
         
 @gzip_page
 def ajax(request):
+    conn_params = utils.fns.get_conn_params(request)
     #check XmlHttpRequest
     if not request.is_ajax():
         # return 500 error
@@ -55,9 +56,10 @@ def ajax(request):
         if q == 'sidebar':
             return utils.fns.generate_sidebar(request)
         elif request.GET.get('type') == 'repr':
-            return HttpResponse( utils.db.rpr_query(request, q) )
+            return HttpResponse( utils.db.rpr_query(conn_params, q, utils.fns.qd(request.GET),
+                utils.fns.qd(request.POST)) )
         elif request.GET.get('type') == 'full':
-            return HttpResponse( utils.db.full_query(request, q) )
+            return HttpResponse( utils.db.full_query(conn_params, q, utils.fns.qd(request.GET), utils.fns.qd(request.POST)) )
         else:
             return utils.fns.http_500('feature not yet implemented!')
         
@@ -68,7 +70,7 @@ def ajax(request):
     # call corresponding function as request.GET.get('view', False)
     
     if request.GET.get('sctn', False) == 'begin':
-        return begin(request, request.GET.get('v', False))
+        return begin(request, utils.fns.qd(request.GET).get('v', False))
     if request.GET.get('sctn', False) == 'home':
         return views.home.route(request)
     elif request.GET.get('sctn', False) == 'db':
@@ -107,19 +109,15 @@ def login(request):
         c['form'] = form
         if form.is_valid():
             dict_cd = utils.db.do_login(request, form.cleaned_data)
-            if dict_cd['login'] == True:
-                return HttpResponseRedirect(redi)
-            else:
-                c['errors'] = [ dict_cd['msg'] ] 
+            if dict_cd['login'] == True: return HttpResponseRedirect(redi)
+            else: c['errors'] = [ dict_cd['msg'] ] 
 
     if request.method == 'GET':
         form = forms.LoginForm(choices=choices)
         c['form'] = form
     
     t = loader.get_template('tt_login.html')
-    context = RequestContext(request, {
-        }, [utils.fns.site_proc]
-    )
+    context = RequestContext(request, {}, [utils.fns.site_proc])
     context.update(c)
     h = HttpResponse(t.render(context))
     return h

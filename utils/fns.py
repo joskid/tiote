@@ -91,28 +91,6 @@ def get_conditions(l):
         conditions.append(d)
     return conditions
 
-def dict_conds(st):
-    '''returns a list of list containing the cond name and cond value'''
-    l = [s.strip() for s in st.split(';')]
-    l_d = []
-    for ii in range(len(l)):
-        ll = l[ii].split('=')
-        l_d.append([ll[0],ll[1]])
-    return l_d
-
-
-def construct_cond(k, v):
-    ''' fix cases where SQL WHERE expects quotes for strings and no quotes for ints and floats'''
-    st = k+'='
-    try:
-        st += int(v)
-    except Exception:
-        try:
-            st += float(v)
-        except Exception:
-            st += '\''+v+'\''
-    return st
-
 def response_shortcut(request, template = False, extra_vars=False ):
     # extra_vars are more context variables
     template = skeleton(template) if template else skeleton(request.GET['v'], request.GET['sctn'])
@@ -139,8 +117,10 @@ def get_conn_params(request):
         data['db'] = '' if data['dialect'] =='mysql' else 'postgres'
     return data    
 
+def qd(query_dict):
+    return dict((key, query_dict.get(key)) for key in query_dict)
 
-def table_options(opt_type, pagination=False, with_keys=True):
+def table_options(opt_type, with_keys=True, select_actions=False):
     # opt_type = "users || tbls || data
     l = ['<div class="table-options">'] # unclosed tag
     ctrls = ['all', 'none']
@@ -152,14 +132,15 @@ def table_options(opt_type, pagination=False, with_keys=True):
         l.append('<span>{0}</span>'.format("Columns:" if opt_type=='tbls' else "Select: "))
         for ctrl in ctrls:
             l.append('<a class="selecters select_{0}">select {0}</a>'.format(ctrl))
-        l.append("<span>With Selected: </span>")
-        # action(ctrls) html
-        if opt_type == 'users' or opt_type == 'data': 
-            ctrls = ['edit', 'delete']
-        elif opt_type == 'tbls':
-            ctrls = ['empty', 'drop']
-        for ctrl in ctrls:
-            l.append('<a class="doers action_{0}">{0}</a>'.format(ctrl))
+        if select_actions == True:
+            l.append("<span>With Selected: </span>")
+            # action(ctrls) html
+            if opt_type == 'user' or opt_type == 'data': 
+                ctrls = ['edit', 'delete']
+            elif opt_type == 'tbl':
+                ctrls = ['empty', 'drop']
+            for ctrl in ctrls:
+                l.append('<a class="doers action_{0}">{0}</a>'.format(ctrl))
     l.append("</p></div>") # closing unopen tags
     return "".join(l)
 
@@ -200,7 +181,7 @@ def generate_sidebar(request):
             s += '<h6 class="icon-schemas">schema</h6>' + schema_selection_form
         
         # table selection ul
-        table_list = db.rpr_query(request, 'existing_tables')
+        table_list = db.rpr_query(conn_params, 'existing_tables', qd(request.GET))
         sfx_list = []
         pg_sfx = '&schm=' + d['schm'] if conn_params['dialect']=='postgresql' else ''
         for tbl_row in table_list:
@@ -315,7 +296,10 @@ class HtmlTable():
 
         for i in range(len(row)):
             if len(str(row[i])) > 40 and hasattr(self, 'keys_column') and not self.keys_column.count(self.columns[i]):
-                column_data = str(row[i])[0:40] + '<span class="to-be-continued">...</span>'
+                if str(row[i]).count('\n') and str(row[i]).find('\n') < 40:
+                    column_data = str(row[i])[0:str(row[i]).find('\n')]
+                else: column_data = str(row[i])[0:40]
+                column_data += '<span class="to-be-continued">...</span>'
             else:
                 column_data = str(row[i])
             column_data = column_data.replace(' ', '&nbsp;') # tds with spaces in them have its width set to its min-width
@@ -343,10 +327,11 @@ class HtmlTable():
     def __str__(self):
         return self.to_element()
 
-def render_template(request, template, context= {}):
+def render_template(request, template, context= {}, is_file=False):
     _context = RequestContext(request, [site_proc])
-    if len(context) > 0: context.update(context)
-    return Template(template).render(_context)
+    if len(context) > 0: _context.update(context)
+    t = loader.get_template(template) if is_file else Template(template) 
+    return t.render(_context)
 
 # cyclic import
 import db
