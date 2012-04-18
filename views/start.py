@@ -1,11 +1,12 @@
 # Create your views here.
+import json
 from django.http import HttpResponse, Http404, HttpResponseRedirect
 from django.template import loader, RequestContext, Template
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.gzip import gzip_page
 from django.core import serializers
 
-from tiote import forms, utils, views
+from tiote import forms, utils, views, sql
 
 @gzip_page
 def index(request):
@@ -68,7 +69,8 @@ def ajax(request):
         return utils.fns.http_500('not a complete ajax request!')
     
     # call corresponding function as request.GET.get('view', False)
-    
+    if request.GET.get('v', False) == 'query':
+        return query(request)
     if request.GET.get('sctn', False) == 'begin':
         return begin(request, utils.fns.qd(request.GET).get('v', False))
     if request.GET.get('sctn', False) == 'home':
@@ -135,3 +137,38 @@ def begin(request, page, **kwargs):
     context.update(c)
     h =  HttpResponse(t.render(context))
     return h
+
+def query(request):
+    conn_params = utils.fns.get_conn_params(request)
+    if request.method == 'POST':
+        f = forms.QueryForm(request.POST)
+        if f.is_valid():
+            query_string = request.POST.get('query')
+            if request.GET.get('db', False): conn_params['db'] = request.GET.get('db')
+            r = sql.full_query(conn_params, query_string)
+            # if query encountered an error
+            if type(r) == str:
+                ret = '<div class="alert-message error block-message .span6">{0}</div>'.format(
+                    r.replace('\n', '<br />').replace('  ', '&nbsp;&nbsp;&nbsp;')
+                )
+            # query was successful
+            else:
+                ret = '<div class="undefined" style="margin-bottom:10px;">[Query return {0}]</div>'.format(
+                    str( r['count'] ) + " rows" if r['count'] > 0 else "no rows")
+                results_table = utils.fns.HtmlTable(**r)
+                if results_table.has_body():
+                    ret += results_table.to_element()
+            return HttpResponse(ret)
+
+        else:
+            ret = {'status': 'fail', 
+            'msg': utils.fns.render_template(request,"tt_form_errors.html",
+                {'form': f}, is_file=True).replace('\n','')
+            }
+            return HttpResponse(unicode(ret))
+        
+    f = forms.QueryForm() 
+    return utils.fns.response_shortcut(request, 
+        extra_vars={'form':f,'sub':'Run query', 'small_form': True}, template='form')
+    
+    

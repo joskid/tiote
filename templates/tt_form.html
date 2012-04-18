@@ -11,8 +11,10 @@
 			</div>
 			{% endfor %}
 			</fieldset>
-		  <div class='actions'><input type="submit" class='btn primary submit-button' value="Submit &rarr;"/></div>
+		  <div class="{% if small_form %}{{small_form}}{% else %} actions{% endif %}">
+		  	<input type="submit" class='btn primary submit-button' value="{% if sub %}{{sub}}{% else %}Submit{% endif %} &rarr;"/>
+		  	</div>
 		</form>
 	</div>
 </div>
-
+<div class='query-results'></div>

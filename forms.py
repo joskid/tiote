@@ -512,6 +512,9 @@ class pgsqlSequenceForm(forms.Form):
     )
     
     
+class QueryForm(forms.Form):
+    query = forms.CharField(label = u"Enter your query:", 
+        widget = forms.Textarea(attrs={'class':'required span10','rols':0, 'cols':0, 'style':'height:100px;resize:none;'},) )
     
 def get_dialect_form(form_name, dialect):
     '''

@@ -214,7 +214,7 @@ class HtmlTable():
         - columns - an iterable containing the table heads
         - rows - and iterable containing some iterables
     '''
-    def __init__(self, columns=None, rows=None, attribs={}, props=None, store={}, 
+    def __init__(self, columns=[], rows=[], attribs={}, props={}, store={}, 
         static_addr = "", **kwargs):
         self.props = props
         self.tbody_chldrn = []
@@ -225,7 +225,7 @@ class HtmlTable():
         self.store_list = self._build_store_list(store)
         # store the keys in the table's markup
         self.keys_list = []
-        if self.props.keys().count('keys') > 0:
+        if self.props.has_key('keys'):
             self.keys_list = self._build_keys_list(self.props['keys'])
             self.keys_column = [x[0] for x in self.props['keys']]
         # build <thead><tr> children
@@ -271,13 +271,13 @@ class HtmlTable():
         count = len(self.tbody_chldrn)
         row_list = ["<tr id='row_{0}'>".format(str(count))]
         l_props = []
-        if self.props is not None and self.props.keys().count('keys') > 0 \
+        if self.props is not None and self.props.has_key('keys') \
                 and len(self.props['keys']) > 0 :
             # els a.checkers would be added for all tables with self.props['keys'] set
             l_props.append("<input class='checker' id='check_{0}' type='checkbox' />".format(count))
             # go_link adds anchors in every row 
             # go_link_type determines the characteristics of the anchor: href || onclick
-            if self.props.keys().count('go_link') > 0 and self.props['go_link'] == True:
+            if self.props.has_key('go_link') > 0 and self.props['go_link'] == True:
                 l_props.append( 
                     '<a href="{0}={1}" class="go_link">{2}</a>'.format(
                         self.props['go_link_dest'],row[0],

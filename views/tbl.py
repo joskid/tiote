@@ -28,7 +28,7 @@ def browse(request):
         }, **tbl_data
     )
     if not browse_table.has_body():
-        return HttpResponse('<div style="color:#888">[This table contains no entry]</div>')
+        return HttpResponse('<div class="undefined">[This table contains no entry]</div>')
     browse_table_html = browse_table.to_element().replace('\n', '<br />') # html doesn't display newlines(\n)
     table_options_html = utils.fns.table_options('data', 
         with_keys=bool(tbl_data['keys']['rows']), select_actions=True)
@@ -64,7 +64,7 @@ def structure(request):
             props = {'count': tbl_struct_data['count'], 'with_checkboxes': True,},
             static_addr = static_addr, **tbl_struct_data
         )
-        d['table'] = columns_table.to_element() if columns_table.has_body() else "[Table contains no columns]"
+        d['table'] = columns_table.to_element() if columns_table.has_body() else '<div class="undefined">[Table contains no columns]</div>'
     elif subv == 'idxs':
         d['title'] = _subnav[subv]
         indexes_data = utils.db.rpr_query(conn_params, 'indexes', utils.fns.qd(request.GET))
@@ -72,7 +72,7 @@ def structure(request):
             props = {'count': indexes_data['count'], 'with_checkboxes': True},
             **indexes_data
         )
-        d['table'] = indexes_table.to_element() if indexes_table.has_body() else "[Table contains no indexes]"
+        d['table'] = indexes_table.to_element() if indexes_table.has_body() else '<div class="undefined">[Table contains no indexes]</div>'
     # generate arranged href
     from urllib import urlencode
     from django.utils.datastructures import SortedDict
@@ -106,21 +106,23 @@ def insert(request):
             ret = utils.db.insert_row(conn_params, utils.fns.qd(request.GET), 
                 utils.fns.qd(request.POST))
             # add status messages
-            ret['msg'] = '<div class="alert-message block-message {0} span8"><code>\
-{1}</code></div>'.format('success' if ret['status'] == 'success' else 'error',
-    ret['msg'])
+            ret['msg'] = '<div class="alert-message block-message {0} span8 data-entry"><code>\
+{1}</code></div>'.format(
+                'success' if ret['status'] == 'success' else 'error',
+                ret['msg'].replace('  ', '&nbsp;&nbsp;&nbsp;').replace('\n', '<br />')
+            )
             return HttpResponse(json.dumps(ret))
         else: # form contains error
             ret = {'status': 'fail', 
             'msg': utils.fns.render_template(request,"tt_form_errors.html",
                 {'form': form}, is_file=True).replace('\n','')
             }
-            return HttpResponse(str(ret))
+            return HttpResponse(unicode(ret))
 
     form = forms.InsertForm(tbl_struct=tbl_struct_data, dialect=conn_params['dialect'],
         tbl_indexes=tbl_indexes_data['rows'])
 
-    return utils.fns.response_shortcut(request, extra_vars={'form':form,})
+    return utils.fns.response_shortcut(request, extra_vars={'form':form,}, template='form')
     
 def route(request):
     if request.GET.get('v') == 'browse':

@@ -272,4 +272,3 @@ def get_home_variables(request):
         else:
             return fns.http_500(result)
 
-

@@ -170,6 +170,14 @@ h5.heading {
 .subnav .active a {
      color: #404040;
 }
+
+.undefined {
+	color: #888;
+}
+
+div.white-bg, p.white-bg {
+	background-color: #fff;
+}
 /*
 	JSIFIED TABLE
 */
@@ -283,18 +291,6 @@ input:focus, textarea:focus {
 .actions {
     padding: 10px 20px 10px 41%;
 	background-color: #fff;
-}
-
-table.compact-form td, table.compact-form, table.compact-form th {
-    border: medium none;
-}
-
-table.compact-form td label {
-    width: auto;
-}
-
-table.compact-form td.occupy label {
-    padding-right: 20px;
 }
 
 .form-controls a {

@@ -145,9 +145,9 @@ Page.prototype.generateView = function(data, oldData){
 					self.jsifyTable(true);
 					self.browseView();
 				} else {self.jsifyTable(false);}
-				// attach events to forms
-				if ($$('.tt_form')) { pg.completeForm();}
 				self.addTableOpts();
+				// attach events to forms
+				if ($$('.tt_form')) { pg.completeForm();}				
 			}
             runXHRJavascript();
         }
@@ -355,7 +355,7 @@ Page.prototype.jsifyTable = function(syncHeightWithWindow) {
 
 Page.prototype.addTableOpts = function() {
 	// .table-options processing : row selection
-	if ($$('.table-options') != null) {
+	if ($$('.table-options') != null && Object.keys(pg.tbls).length) {
 		$$('.table-options').each(function(tbl_opt, tbl_opt_index){
 			// enable selection of rows
 			$(tbl_opt).getElements('a.selecters').each(function(a_sel){
@@ -465,11 +465,40 @@ Page.prototype.updateOptions = function(obj) {
 
 Page.prototype.reload = function() {this.loadPage();}
 
+// function that is called on on every form request
+function formResponseListener(text, xml, form, navObject) {
+	if (navObject['v'] == 'query') {
+		$E('.query-results').set('html', text);
+		if ($E('.query-results').getElement('div.alert-message')) {
+			tweenBgToWhite($E('.query-results div.alert-message'))
+		}
+		// jsifyTable
+		pg.jsifyTable();
+		return; // end this function here
+	}
+	var resp = JSON.decode(text);
+	if (resp['status'] == 'success')
+		form.reset() // delete the input values
+	var html = ("" + resp['msg']).replace("\n","&nbsp;")
+	if (navObject['v']=='insert') {
+		$E('.msg-placeholder', form).set('html', html);
+		tweenBgToWhite($E('.msg-placeholder').getElement('div.alert-message'))
+	}
+	
+}
+
+
 Page.prototype.completeForm = function(){
 //	console.log('completeForm()!');
 	if (! $$('.tt_form').length) return ; 
 	
 	$$('.tt_form').each(function(form){
+		// - function calls formResponseListener with needed variables
+		// - hack to pass out the needed variables to an first class function
+		var onFormResponse = function(text,xml) {
+			formResponseListener(text,xml,form, page_hash());
+		};
+		
 		//attach validation object
 		var form_validator = new Form.Validator.Inline(form, {
 			'evaluateFieldsOnBlur':false, 'evaluateFieldsOnChange': false}
@@ -481,15 +510,7 @@ Page.prototype.completeForm = function(){
 			var x = new XHR({
 				url: generate_ajax_url(false, {}),
 				spinnerTarger: form,
-				onSuccess: function(text, xml) {
-					var resp = JSON.decode(text);
-					if (resp['status'] == 'success')
-						form.reset() // delete the input values
-					var html = ("" + resp['msg']).replace("\n","&nbsp;")
-					console.log(html);
-					$E('.msg-placeholder', form).set('html', html);
-					console.log(html.indexOf('\n'));
-				}
+				onSuccess: onFormResponse
 			}).post(form.toQueryString());
 
 		});		

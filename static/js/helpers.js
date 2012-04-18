@@ -213,9 +213,9 @@ function tbl_pagination(total_count, limit, offset) {
 
 function disable_unimplemented_links(){
 	var implemented = {
-		'home': ['home'],
-		'db': ['overview'],
-		'tbl': ['browse', 'structure', 'insert']
+		'home': ['home', 'query'],
+		'db': ['overview', 'query'],
+		'tbl': ['browse', 'structure', 'insert', 'query']
 	}
 	var section = page_hash()['sctn']
 	$$('.nav a').each(function(nav_link){
@@ -260,4 +260,13 @@ function where_from_selected(tbl) {
 		if (sel_row_in != selected_rows.length - 1) stmt += ';';
 	});
 	return stmt;
+}
+
+function tweenBgToWhite(el) {
+	var elFx = new Fx.Tween($(el), {
+		duration: 'long', 
+		property: 'background-color',
+		link: 'cancel'
+	});
+	elFx.start('#fff')
 }

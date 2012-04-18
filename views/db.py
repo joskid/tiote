@@ -34,16 +34,19 @@ def overview(request):
     conn_params = utils.fns.get_conn_params(request)
     props_keys = (('table', 'key'),)
     static_addr = utils.fns.render_template(request, '{{STATIC_URL}}')
-    tables_html = utils.fns.HtmlTable(static_addr=static_addr,
+    tables_table = utils.fns.HtmlTable(static_addr=static_addr,
         props={'count':tbl_data['count'],'with_checkboxes': True,
             'go_link': True, 'go_link_type': 'href', 
             'go_link_dest': '#'+urlencode(dest_url)+'&tbl',
             'keys': props_keys
         }, **tbl_data
-        ).to_element()
+        )
+    if not tables_table.has_body():
+        return HttpResponse('<div class="undefined">[No table has been defined in this table]</div>')
+    tables_table_html = tables_table.to_element()
     table_options_html = utils.fns.table_options('tbl', with_keys=True, 
         select_actions=True)
-    return HttpResponse(table_options_html + tables_html)
+    return HttpResponse(table_options_html + tables_table_html)
     
 
 def route(request):
