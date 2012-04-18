@@ -23,9 +23,13 @@ def stored_query(query, dialect):
                 "SELECT rolname FROM pg_catalog.pg_roles",
             'table_list':
                 "SELECT schemaname, tablename FROM pg_catalog.pg_tables ORDER BY schemaname DESC",
-            'schema_list':
+            'full_schema_list':
                 "SELECT schema_name, schema_owner FROM information_schema.schemata \
-WHERE schema_name NOT LIKE '%pg_toast%' AND schema_name NOT LIKE '%pg_temp%'"
+WHERE schema_name NOT LIKE '%pg_toast%' AND schema_name NOT LIKE '%pg_temp%'",
+            'user_schema_list':
+                "SELECT schema_name, schema_owner FROM information_schema.schemata \
+WHERE schema_name NOT LIKE '%pg_toast%' AND schema_name NOT LIKE '%pg_temp%' \
+AND schema_name NOT IN ('pg_catalog', 'information_schema')"
         },
 
         'mysql': {
@@ -176,9 +180,11 @@ setval(sequence_name::regclass, lastval() - 1, true) FROM information_schema.seq
         
         elif query_type == 'existing_tables':
             # selects both tables and views
-            q0 = "SELECT table_name FROM information_schema.tables WHERE table_schema='{schm}' \
-ORDER BY table_name ASC".format(**query_data)
-            # q0 = "SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname='{schm}' ORDER BY tablename ASC".format(**query_data)
+#            q0 = "SELECT table_name FROM information_schema.tables WHERE table_schema='{schm}' \
+#ORDER BY table_name ASC".format(**query_data)
+            # selects only tables
+            q0 = "SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname='{schm}' \
+ORDER BY tablename ASC".format(**query_data)
             return (q0, )
 
         elif query_type == 'foreign_key_relation':

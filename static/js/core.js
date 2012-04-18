@@ -555,19 +555,20 @@ var XHR = new Class({
 		this.parent(options);
 		
 		if (options && options.showLoader != false) {
-			var spinnerTarget = (options.spinnerTarget) ? options.spinnerTarget: document.body;
-			var ajaxSpinner = new Spinner(spinnerTarget, {'message': 'loading data...'});
 			
 			this.addEvent('onRequest', function() {
+				var spinnerTarget = (options.spinnerTarget) ? options.spinnerTarget: document.body;
+				var ajaxSpinner = new Spinner(spinnerTarget, {'message': 'loading data...'});
 				show('header-load');
-				ajaxSpinner.show(true);				
+				ajaxSpinner.show(true);
+				
+				this.addEvent('onComplete', function(xhr){
+					hide('header-load');
+					ajaxSpinner.hide();
+					ajaxSpinner.destroy();
+				});				
 			})
 
-			this.addEvent('onComplete', function(xhr){
-				hide('header-load');
-				ajaxSpinner.hide();
-				ajaxSpinner.destroy();
-			});
 		}
 		
 		this.addEvent("onSuccess", function() {});

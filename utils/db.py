@@ -1,5 +1,6 @@
 import json
 from django.http import HttpResponse
+from django.conf import settings
 
 from tiote import sql
 import fns
@@ -152,17 +153,7 @@ def rpr_query(conn_params, query_type, get_data={}, post_data={}):
         
     # queries with dissimilar implementations
     elif conn_params['dialect'] == 'postgresql':
-        
-        if query_type == 'table_list':
-            # change default database
-            if 'db' in query_data:
-                conn_params['db'] = query_data['db']
-            return sql.full_query(conn_params,
-                sql.stored_query(query_type, conn_params['dialect']))
-        
-        else:
-            return fns.http_500('query not implemented!')
-            
+            return fns.http_500('query ({query_type}) not implemented!'.format(query_type=query_type))
             
     elif conn_params['dialect'] == 'mysql':
         
@@ -184,27 +175,18 @@ def common_query(request, query_name):
     
     if conn_params['dialect'] == 'postgresql' and query_name in pgsql_redundant_queries :
             # this kind of queries require no special attention
+            if query_name == 'schema_list':
+                if hasattr(settings, 'TT_SHOW_SYSTEM_CATALOGS'):
+                    query_name = 'full_schema_list' if settings.TT_SHOW_SYSTEM_CATALOGS == True else "user_schema_list"
+                else: query_name = "user_schema_list" # default
+            
             conn_params['db'] == request.GET.get('db') if request.GET.get('db') else conn_params['db']
             r = sql.full_query(conn_params,
                 sql.stored_query(query_name, conn_params['dialect']))
             return r['rows']
                 
     elif conn_params['dialect'] == 'mysql':
-        
-        if query_name == 'db_names':
-            db_names =  sql.get_databases( fns.get_conn_params(request) )
-            return result_to_json(db_names)
-        
-        elif query_name == 'describe_databases':
-            result = rpr_query(request, query_name)
-            d = SortedDict()
-            for tup in result['rows']:
-                if tup[0] not in d:
-                    d[ tup[0] ] = []
-                d[ tup[0] ].append((tup[1],tup[2]))
-            return json.dumps(d)
-        
-        elif query_name in mysql_redundant_queries :
+        if query_name in mysql_redundant_queries :
             # this kind of queries require no special attention
             return sql.full_query(conn_params,
                 sql.stored_query(query_name, conn_params['dialect']))['rows']

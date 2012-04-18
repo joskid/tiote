@@ -214,8 +214,7 @@ class HtmlTable():
         - columns - an iterable containing the table heads
         - rows - and iterable containing some iterables
     '''
-    def __init__(self, columns=[], rows=[], attribs={}, props={}, store={}, 
-        static_addr = "", **kwargs):
+    def __init__(self, columns=[], rows=[], attribs={}, props={}, store={}, static_addr = "", **kwargs):
         self.props = props
         self.tbody_chldrn = []
         # build attributes
