@@ -6,3 +6,6 @@
 .pydevproject
 *.sublime*
 .to-commit
+build
+dist
+tiote.egg-info
