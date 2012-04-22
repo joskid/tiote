@@ -89,12 +89,6 @@ function runXHRJavascript(){
 	}
 }
 
-function f(g) {
-	if (g == undefined || g == "undefined" || g == null)
-		return "";
-	else
-		return g;
-}
 
 var $E = function(selector, filter) {
 	return ($(filter) || document).getElement(selector);

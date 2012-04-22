@@ -131,7 +131,7 @@ def table_options(opt_type, with_keys=True, select_actions=False):
     else:
         l.append('<span>{0}</span>'.format("Columns:" if opt_type=='tbls' else "Select: "))
         for ctrl in ctrls:
-            l.append('<a class="selecters select_{0}">select {0}</a>'.format(ctrl))
+            l.append('<a class="selector select_{0}">{1}</a>'.format(ctrl, ctrl.title()))
         if select_actions == True:
             l.append("<span>With Selected: </span>")
             # action(ctrls) html
@@ -140,7 +140,11 @@ def table_options(opt_type, with_keys=True, select_actions=False):
             elif opt_type == 'tbl':
                 ctrls = ['empty', 'drop']
             for ctrl in ctrls:
-                l.append('<a class="doers action_{0}">{0}</a>'.format(ctrl))
+                l.append('<a class="doer action_{0}">{1}</a>'.format(ctrl, ctrl.title()))
+            # add a refresh link for opt_type 'data'
+            if opt_type == 'data':
+                l.append('<a class="doer action_refresh" style="margin-left:20px">Refresh</a>')
+
     l.append("</p></div>") # closing unopen tags
     return "".join(l)
 

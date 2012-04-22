@@ -27,7 +27,9 @@ window.addEvent('domready', function() {
 	});
     
 	if (! location.pathname.contains('login/') ) {
+		// if the location string contains hash tags
         if (location.hash) {reloadPage();} 
+		// there are no hashes set a default
         else {nav.set({'sctn': 'home', 'v': 'home'});}
     }
 	
@@ -52,9 +54,10 @@ function Page(obj, oldObj){
 	this.loadPage(true)
 }
 
+
 Page.prototype.loadPage = function(clr_sidebar) {
 	clr_sidebar = clr_sidebar || false;
-	var obj = this.options.navObj, oldObj = this.options.OldNavObj;
+	var obj = this.options.navObj, oldObj = this.options.oldNavObj;
 	this.setTitle();
 	this.generateTopMenu(obj);
 	disable_unimplemented_links();
@@ -62,7 +65,7 @@ Page.prototype.loadPage = function(clr_sidebar) {
 	if (clr_sidebar) this.generateSidebar(obj, oldObj);
 }
 
-
+// generates the title from the hashes
 Page.prototype.setTitle = function(new_title){
 	new_title = new_title || false;
 	if (! new_title) {
@@ -129,67 +132,75 @@ Page.prototype.generateTopMenu = function(data){
 	$$('.topbar .container-fluid')[0].adopt(nava);
 }
 
-Page.prototype.generateView = function(data, oldData){
-//	console.log(data), console.log(oldData);
+Page.prototype.generateView = function(navObj, oldNavObj){
+//	console.log(navObj), console.log(oldNavObj);
     var self = this;
 	// decide if the there should be a request for sidebar
-	var x = new XHR(Object.merge(data, {'method':'get',
+	var x = new XHR(Object.merge(navObj, {'method':'get',
         'onSuccess': function(text,xml){
             var viewData = {'text' : text,'xml' : xml};
-            if (!data['sctn']) {
+            if (!navObj['sctn']) {
                 nav.state.empty()
                 nav.set({'sctn': 'home','v': 'home'});
             } else {
 				$('tt-content').set('html', viewData['text']);
-				if (data['sctn']=='tbl' && data['v'] =='browse') {
+				if (navObj['sctn']=='tbl' && navObj['v'] =='browse') {
 					self.jsifyTable(true);
 					self.browseView();
 				} else {self.jsifyTable(false);}
 				self.addTableOpts();
 				// attach events to forms
-				if ($$('.tt_form')) { pg.completeForm();}				
+				if ($$('.tt_form')) {pg.completeForm();}				
 			}
             runXHRJavascript();
         }
     })).send()
 }
 
-
-Page.prototype.generateSidebar = function(data, oldData) {
-	var resize_sidebar = function() {
-		if ($('sidebar').getScrollSize().y > (getHeight() - 50) || 
-		$('sidebar').getSize().y < (getHeight() - 50)) {
-			$('sidebar').setStyle('height', getHeight() - 50);
-		}
-	};
-	// xhr request for table list
-	var clear_sidebar = true;
+// decide if the sidebar needs to be refreshed
+function updateSidebar(navObj, oldNavObj) {
+	var clear_sidebar = true; // default action is to clear the sidebar
 	if (Cookie.read('TT_UPDATE_SIDEBAR')){
 		clear_sidebar = true;
 		Cookie.dispose('TT_UPDATE_SIDEBAR');
 	} else {
 		// other necessary conditions
 		if ($('sidebar') && $('sidebar').getChildren().length) {
-			if (oldData && 
-					(oldData['sctn'] == data['sctn'] 
-						&& oldData['tbl'] == data['tbl']
-						&& oldData['db'] == data['db']
-					)) {
-						if (Object.keys(oldData).contains('schm') 
-							&& Object.keys(data).contains('schm')) { // pg dialect
-							if (oldData['schm'] == data['schm'])
-								clear_sidebar = false;
-						} else {										// mysql dialect
-							clear_sidebar = false;
-						}
-					}
+			if (oldNavObj == undefined || oldNavObj == null || oldNavObj == "")
+				return clear_sidebar; // short circuit the function
+			
+		if (oldNavObj['sctn'] == navObj['sctn'] && oldNavObj['tbl'] == navObj['tbl']
+			&& oldNavObj['db'] == navObj['db']
+		) {
+			// check if the hash obj contains a schema key
+			if (Object.keys(oldNavObj).contains('schm') && Object.keys(navObj).contains('schm')) {
+				// postgresql dialect
+				if (oldNavObj['schm'] == navObj['schm']) clear_sidebar = false;
+			} else {
+				// mysql dialect
+				clear_sidebar = false;
+			}
+		}
 		}
 	}
+	return clear_sidebar;
+}
+
+Page.prototype.generateSidebar = function(navObj, oldNavObj) {
+	// autosize the sidebar to the available height after below the #topbar
+	var resize_sidebar = function() {
+		if ($('sidebar').getScrollSize().y > (getHeight() - 50) || 
+		$('sidebar').getSize().y < (getHeight() - 50)) {
+			$('sidebar').setStyle('height', getHeight() - 50);
+		}
+	};
+	
+	var clear_sidebar = updateSidebar(navObj, oldNavObj);
 	
 	if (clear_sidebar) {
 		var x = new XHR(Object.merge({'query':'sidebar', 'type':'repr', 'method': 'get',
 			onSuccess: function(text,xml){
-				// if there is already sidebar data clear it
+				// if the sidebar contains elements destroy them
 				if ($('sidebar').getChildren())
 					$('sidebar').getChildren().destroy();
 				$('sidebar').set('html', text);
@@ -199,9 +210,7 @@ Page.prototype.generateSidebar = function(data, oldData) {
 				if ($('db_select')) {
 					$('db_select').addEvent('change', function(e){
 						if (e.target.value != page_hash()['db']) {
-							var context = {'sctn':'db','v':'overview',
-								'db': e.target.value
-							}
+							var context = {'sctn':'db','v':'overview', 'db': e.target.value};
 							if (Object.keys(page_hash()).contains('schm'))
 								context['schm'] = 'public';
 							redirectPage(context);
@@ -356,30 +365,37 @@ Page.prototype.jsifyTable = function(syncHeightWithWindow) {
 Page.prototype.addTableOpts = function() {
 	// .table-options processing : row selection
 	if ($$('.table-options') != null && Object.keys(pg.tbls).length) {
-		$$('.table-options').each(function(tbl_opt, tbl_opt_index){
+		$$('.table-options').each(function(tbl_opt, opt_in){
 			// enable selection of rows
-			$(tbl_opt).getElements('a.selecters').each(function(a_sel){
+			$(tbl_opt).getElements('a.selector').each(function(a_sel) {
 				a_sel.addEvent('click', function() {
+					// loop through all the classes to find the "select_" class
 					a_sel.get('class').split(' ').each(function(cl){
 						if (cl.contains('select_')) {
-							var option = cl.replace('select_', '');
-							set_all_tr_state(pg.tbls[tbl_opt_index], (option == 'all') ? true : false);
+							var option = cl.replace('select_', '').toLowerCase();
+							set_all_tr_state(pg.tbls[opt_in], (option == 'all') ? true : false);
 						}
 					});
 				});
 			});
 			
 			// table's needing pagination
-			if (Object.keys(pg.tbls[tbl_opt_index]['vars']).contains('data')) {
+			if (Object.keys(pg.tbls[opt_in]['vars']).contains('data')) {
 				$(tbl_opt).adopt(tbl_pagination(
-					pg.tbls[tbl_opt_index]['vars']['data']['total_count'],
-					pg.tbls[tbl_opt_index]['vars']['data']['limit'], 
-					pg.tbls[tbl_opt_index]['vars']['data']['offset']));
+					pg.tbls[opt_in]['vars']['data']['total_count'],
+					pg.tbls[opt_in]['vars']['data']['limit'], 
+					pg.tbls[opt_in]['vars']['data']['offset'])
+				);
 			}
 			
-			$ES('a.doers', tbl_opt).each(function(doer, doer_in){
+			// links that do something (edit, delete ...)
+			$ES('a.doer', tbl_opt).each(function(doer){
 				doer.addEvent('click', function(e) {
-					do_action(pg.tbls[tbl_opt_index], e);
+					if (doer.hasClass('action_refresh'))
+						// action to be performed is a page refresh
+						pg.loadPage(false)
+					else 
+						do_action(pg.tbls[opt_in], e);
 				});
 
 			});
