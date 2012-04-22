@@ -16,7 +16,8 @@ def browse(request):
     # row(s) edit/updating request handling
     elif request.method == 'POST' and request.GET.get('upd8') == 'edit':
         return utils.fns.http_500('feature not yet implemented!')
-    tbl_data = utils.db.rpr_query(conn_params, 'browse_table', utils.fns.qd(request.GET), utils.fns.qd(request.POST))
+    tbl_data = utils.db.rpr_query(conn_params, 'browse_table',
+        utils.fns.qd(request.GET), utils.fns.qd(request.POST))
     static_addr = utils.fns.render_template(request, '{{STATIC_URL}}')
     browse_table = utils.fns.HtmlTable(
         static_addr = static_addr,
@@ -64,7 +65,8 @@ def structure(request):
             props = {'count': tbl_struct_data['count'], 'with_checkboxes': True,},
             static_addr = static_addr, **tbl_struct_data
         )
-        d['table'] = columns_table.to_element() if columns_table.has_body() else '<div class="undefined">[Table contains no columns]</div>'
+        d['table'] = columns_table.to_element() if columns_table.has_body() \
+            else '<div class="undefined">[Table contains no columns]</div>'
     elif subv == 'idxs':
         d['title'] = _subnav[subv]
         indexes_data = utils.db.rpr_query(conn_params, 'indexes', utils.fns.qd(request.GET))
@@ -72,7 +74,8 @@ def structure(request):
             props = {'count': indexes_data['count'], 'with_checkboxes': True},
             **indexes_data
         )
-        d['table'] = indexes_table.to_element() if indexes_table.has_body() else '<div class="undefined">[Table contains no indexes]</div>'
+        d['table'] = indexes_table.to_element() if indexes_table.has_body() \
+            else '<div class="undefined">[Table contains no indexes]</div>'
     # generate arranged href
     from urllib import urlencode
     from django.utils.datastructures import SortedDict

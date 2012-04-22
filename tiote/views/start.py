@@ -5,14 +5,16 @@ from django.template import loader, RequestContext, Template
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.gzip import gzip_page
 from django.core import serializers
+from django.conf import settings
 
 from tiote import forms, utils, views, sql
 
 @gzip_page
 def index(request):
     utils.fns.set_ajax_key(request)
-    request.session.set_expiry(1800)
+    request.session.set_expiry(getattr(settings, 'TT_SESSION_EXPIRY', 1800) )
     
+    # redirect based on the return of check_login()
     if not utils.fns.check_login(request):
         return HttpResponseRedirect('login/')
     
@@ -25,10 +27,17 @@ def index(request):
     context.update(c)
     return HttpResponse(template.render(context))
         
+# ajax calls router
 @gzip_page
 def ajax(request):
     conn_params = utils.fns.get_conn_params(request)
-    #check XmlHttpRequest
+    # check if the session is still logged in
+    if not utils.fns.check_login(request):
+        h = HttpResponse('')
+        h.set_cookie('TT_SESSION_TIMEOUT', 'true')
+        return h
+
+    # check if its and XmlHttpRequest
     if not request.is_ajax():
         # return 500 error
         return utils.fns.http_500('not an ajax request!')
@@ -84,10 +93,13 @@ def ajax(request):
    
 @gzip_page
 def login(request):
-    c = {}
-    errors = []
+    c , errors = {}, []
     redi = request.META['PATH_INFO'].replace('login/', '')
-
+    
+    # if the user is already logged in take him back to the home page
+    if utils.fns.check_login(request):
+        return HttpResponseRedirect(redi + '#sctn=home&v=home')
+    
     # dialects' info
     c['dialects'] = [
         {'dialect': 'PostgreSQL', 'dialect_package':'python-psycopg2'},

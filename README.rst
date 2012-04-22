@@ -11,7 +11,7 @@ Requirements
 * python-mysqldb ( enables support for MySQL databases)
 * static-files app for Django versions less than 1.3
 * django session app
-* Enabled javascript in your browser (if not already enabled)
+* Enabled javascript and Cookies in your browser (if not already enabled)
 
 Installation
 ============
@@ -22,14 +22,15 @@ and run
 
 In the ``urls.py`` of your project, add a url mapping for the tiote application (any address you want)
 
-		(r'^<custom_url_map>/', include('tiote.urls')),
+				(r'^<custom_url_map>/', include('tiote.urls')),
 
 Open link ``<your_project>/<custom_url_map>`` to begin using tiote. Where ``<your_project>`` is the top level of your django project and ``<custom_url_map>`` is the url mapping for the application
 
 Customization
 =============
-To have the system catalogs be also displayed as part of the schemas under the Postgresql dialect add the foolowing to your settings.py 
+All this settings are to be entered in settings.py or its equivalent
 
-		TT_SHOW_SYSTEM_CATALOGS = True
-		
-It can be set to True or False
+* ``TT_SHOW_SYSTEM_CATALOGS`` Include (set to True) or exclude (set to False) System Catalogs. Excluding System catalogs is the default and increases individual page load
+
+* ``TT_SESSION_EXPIRY``: accepts an integer (default 1800) which is the amount of seconds before the session expires (to be asked to log on again). It doesn't conflict with other sessions from other django applications.
+

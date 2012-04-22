@@ -287,6 +287,11 @@ td.sort-desc{
 	FORMS
 */
 
+.tt_form label {
+	font-family: Arial, sans-serif;
+	font-size: 12px;
+}
+
 input[type="text"], textarea, select {
     font-family: mono;
     font-size: 12px;

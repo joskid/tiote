@@ -1,39 +1,31 @@
-var pg, nav, pageLoadSpinner; // global variables
+var pg, nav; // global variables
 
 window.addEvent('domready', function() {
-    // spinners 
-    pageLoadSpinner = new Spinner(document.body, {'message': 'loading page...'});
-    
 	nav = new Navigation();
-    
-	nav.addEvent('navigationChanged', function(navObject, OldNavObject){
-		// do page initialization here
-        var loginState = shortXHR({'loginCheck': 'yeah'});
-//		console.log('navigationChanged event fired');
-		if (loginState) {
-			if (Cookie.read('TT_NEXT')){
-				navObject = Cookie.read('TT_NEXT').parseQueryString(false, true);
-				location.hash = '#' + Cookie.read('TT_NEXT');
-				Cookie.dispose('TT_NEXT');
-			}
-		} else {
-			Cookie.write('TT_NEXT', new Hash(navObject).toQueryString());
-			navObject = new Hash({'sctn': 'begin', 'v': 'login'});
-            // funny redirect
-            location.href = location.protocol + '//'+ location.host + location.pathname + 'login/'
-		}
-		pg = new Page(navObject, OldNavObject);
-		highlightActiveMenu();
-	});
-    
-	if (! location.pathname.contains('login/') ) {
-		// if the location string contains hash tags
-        if (location.hash) {reloadPage();} 
-		// there are no hashes set a default
-        else {nav.set({'sctn': 'home', 'v': 'home'});}
-    }
 	
+	nav.addEvent('navigationChanged', function(navObject, OldNavObject){
+		// redirect to the next page as gotten from the location hash
+		if (Cookie.read('TT_NEXT')){
+			navObject = Cookie.read('TT_NEXT').parseQueryString(false, true);
+			location.hash = '#' + Cookie.read('TT_NEXT');
+			Cookie.dispose('TT_NEXT');
+		}
+		// create a new Page object which begins page rendering
+		pg = new Page(navObject, OldNavObject);
+	});
+	
+	// if the location string contains hash tags
+	if (location.hash) {
+		// begin page rendering
+		pg = new Page(location.hash.replace("#",'').parseQueryString(false, true), null)
+	}
+	// there are no hashes set a default
+	else
+		nav.set({'sctn': 'home', 'v': 'home'});
+	// higlight the element (.navbar a) that corresponds to the currently displayed view
+
 });
+
 
 function clearPage(clear_sidebar){
 	clear_sidebar = clear_sidebar || false; // init
@@ -47,7 +39,6 @@ function clearPage(clear_sidebar){
 function Page(obj, oldObj){
 	this.options = new Hash({navObj: obj, oldNavObj: oldObj});
 	this.tbls = [];
-	self = this; 
 	// unset all window resize events
 	window.removeEvents(['resize']);
 	clearPage();
@@ -63,6 +54,7 @@ Page.prototype.loadPage = function(clr_sidebar) {
 	disable_unimplemented_links();
 	this.generateView(obj, oldObj);
 	if (clr_sidebar) this.generateSidebar(obj, oldObj);
+	highlightActiveMenu();
 }
 
 // generates the title from the hashes
@@ -134,7 +126,6 @@ Page.prototype.generateTopMenu = function(data){
 
 Page.prototype.generateView = function(navObj, oldNavObj){
 //	console.log(navObj), console.log(oldNavObj);
-    var self = this;
 	// decide if the there should be a request for sidebar
 	var x = new XHR(Object.merge(navObj, {'method':'get',
         'onSuccess': function(text,xml){
@@ -145,10 +136,10 @@ Page.prototype.generateView = function(navObj, oldNavObj){
             } else {
 				$('tt-content').set('html', viewData['text']);
 				if (navObj['sctn']=='tbl' && navObj['v'] =='browse') {
-					self.jsifyTable(true);
-					self.browseView();
-				} else {self.jsifyTable(false);}
-				self.addTableOpts();
+					pg.jsifyTable(true);
+					pg.browseView();
+				} else {pg.jsifyTable(false);}
+				pg.addTableOpts();
 				// attach events to forms
 				if ($$('.tt_form')) {pg.completeForm();}				
 			}
@@ -583,11 +574,23 @@ var XHR = new Class({
 					ajaxSpinner.hide();
 					ajaxSpinner.destroy();
 				});				
-			})
+			});
 
 		}
 		
 		this.addEvent("onSuccess", function() {});
+		
+		// redirect page based on Cookie
+		this.addEvent('onComplete', function() {
+			if (Cookie.read('TT_SESSION_TIMEOUT')) {
+				console.log('session timeout');
+				Cookie.dispose('TT_SESSION_TIMEOUT');
+				Cookie.write('TT_NEXT', Object.toQueryString(page_hash()));
+			    // funny redirect
+		        location.href = location.protocol + '//'+ location.host + location.pathname + 'login/'
+
+			}
+		});
 		
 		var msg = 'An unexpected error was encountered. Please reload the page and try again.';
 		this.addEvent("onException", function() {
