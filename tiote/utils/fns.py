@@ -83,7 +83,7 @@ def form_errors(request, form):
 def get_conditions(l):
     conditions = []
     for i in range( len(l) ):
-        ll = l[i].strip().split('AND')
+        ll = l[i].strip().split('/i/AND/o/')
         d = {}
         for ii in range( len(ll) ):
             lll = ll[ii].strip().split('=')
@@ -330,11 +330,21 @@ class HtmlTable():
     def __str__(self):
         return self.to_element()
 
+# render the given template with a RequestContext(main reeason)
 def render_template(request, template, context= {}, is_file=False):
     _context = RequestContext(request, [site_proc])
     if len(context) > 0: _context.update(context)
     t = loader.get_template(template) if is_file else Template(template) 
     return t.render(_context)
 
+# create a dict which maps column name to the type of index it has
+def parse_indexes_query(tbl_indexes, needed_index=None):
+    _l = {}
+    for i in range(len(tbl_indexes)):
+        if needed_index != None:
+            if tbl_indexes[i][2] != needed_index: continue
+        if _l.has_key(tbl_indexes[i][0]): _l[ tbl_indexes[i][0] ].append(i)
+        else: _l[ tbl_indexes[i][0] ] = tbl_indexes[i][2]
+    return _l
 # cyclic import
 import db

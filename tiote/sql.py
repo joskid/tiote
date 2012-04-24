@@ -1,7 +1,6 @@
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine.url import URL
-from sqlalchemy.exc import OperationalError, ProgrammingError, \
-    DatabaseError
+from sqlalchemy.exc import OperationalError, ProgrammingError, DatabaseError
 import datetime
 # sqlaclehemy modules
 
@@ -64,7 +63,7 @@ def generate_query(query_type, dialect='postgresql', query_data=None):
     else: prfx = ""
 
     #queries
-    if query_type == 'get_row':
+    if query_type == 'get_single_row':
         q0 = "SELECT * FROM {0}{tbl} WHERE {where} LIMIT 1".format(prfx, **query_data)
         return (q0,)
 

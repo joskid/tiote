@@ -5,6 +5,7 @@ from django.conf import settings
 from tiote import sql
 import fns
 
+
 def rpr_query(conn_params, query_type, get_data={}, post_data={}):
     # common queries that returns success state as a dict only
     no_return_queries = ('create_user', 'drop_user', 'create_db','create_table',
@@ -29,15 +30,6 @@ def rpr_query(conn_params, query_type, get_data={}, post_data={}):
         else:
             return fns.http_500(r)
         
-        
-    elif query_type in ('insert_row',):
-        conn_params['db'] = get_data['db']
-        sub_q_data = {'db': get_data['db'],}
-        if get_data.has_key('tbl'):
-            sub_q_data['tbl'] = get_data['tbl']
-        if get_data.has_key('schm'):
-            sub_q_data['schm'] = get_data['schm']
-
     elif query_type in ('indexes', 'primary_keys', 'foreign_key_relation'):
         
         if conn_params['dialect'] == 'postgresql': conn_params['db'] = get_data['db']
@@ -45,10 +37,8 @@ def rpr_query(conn_params, query_type, get_data={}, post_data={}):
             sql.generate_query(query_type, conn_params['dialect'], get_data)[0])
         return r
         
-    elif query_type in ('get_row',):
+    elif query_type in ('get_single_row',):
         sub_q_data = {'tbl': get_data['tbl'],'db':get_data['db']}
-        sub_q_data['offset'] = get_data['offset'] if get_data.has_key('offset') else 0
-        sub_q_data['limit'] = get_data['limit'] if get_data.has_key('limit') else 100
         if get_data.has_key('schm'):
             sub_q_data['schm'] = get_data['schm']
         # generate where statement
@@ -62,15 +52,8 @@ def rpr_query(conn_params, query_type, get_data={}, post_data={}):
         # assert False
         q = sql.generate_query(query_type, conn_params['dialect'], sub_q_data)
         r =  sql.full_query(conn_params, q[0])
-        # prepare html
-        html = ""
-        if type(r) == str: return r
-        for ind in range(len(r['columns'])):
-            html += '<span class="column-entry">' + str(r['columns'][ind]) + '</span>'
-            html += '<br /><div class="data-entry"><code>' + str(r['rows'][0][ind]) + '</code></div>'
-        # replace all newlines with <br /> because html doesn't render newlines (\n) directly
-        html = html.replace('\n', '<br />')
-        return html
+        return r
+        
 
     elif query_type in ('table_rpr', 'table_structure', 'raw_table_structure'):
         conn_params['db'] = get_data['db']
@@ -168,6 +151,17 @@ def rpr_query(conn_params, query_type, get_data={}, post_data={}):
         return fns.http_500('dialect not supported!')
 
 
+# reduces the growth rate of the rpr_query function above
+# it uses a mapping to know which function to call
+# all its queries are functions to be called not sections of stored logic like rpr_query
+def fn_query(conn_params, query_name, get_data={}, post_data={}):
+    query_map = {
+        'get_row': get_row
+    }
+    
+    return query_map[query_name](conn_params, get_data, post_data)
+
+
 def common_query(request, query_name):
     conn_params = fns.get_conn_params(request)
     pgsql_redundant_queries = ('template_list', 'group_list', 'user_list', 'db_list', 'schema_list')
@@ -192,23 +186,84 @@ def common_query(request, query_name):
                 sql.stored_query(query_name, conn_params['dialect']))['rows']
 
 
+def get_row(conn_params, get_data={}, post_data={}):
+    r = rpr_query(conn_params, 'get_single_row', get_data, post_data)
+    html = ""
+    if type(r) == str: return r
+    for ind in range(len(r['columns'])):
+        html += '<span class="column-entry">' + str(r['columns'][ind]) + '</span>'
+        html += '<br /><div class="data-entry"><code>' + str(r['rows'][0][ind]) + '</code></div>'
+    # replace all newlines with <br /> because html doesn't render newlines (\n) directly
+    html = html.replace('\n', '<br />')
+    return html
+
+
 def insert_row(conn_params, get_data={}, post_data={}):
     # set execution context
     conn_params['db'] = get_data['db']
     # generate sql statement
     cols = [] 
     values = []
+    # add quotes to every variable
     for k in post_data: 
-        if k == 'csrfmiddlewaretoken': continue
+        if k in ('csrfmiddlewaretoken', 'save_changes_to'): continue
         cols.append(k)
-        values.append('\''+post_data[k]+'\'')
+        values.append( repr(  str( post_data[k] )  ) )
+    # generate sql insert statement
     q = "INSERT INTO {0}{tbl} ({1}) VALUES ({2})".format(
         '{schm}.'.format(**get_data) if conn_params['dialect'] == 'postgresql' else '',
         ",".join(cols), ",".join(values), **get_data
         )
+    # run query and return results
     ret = sql.short_query(conn_params, (q, ))
     if ret['status'] == 'success': ret['msg'] = 'Insertion succeeded'
+    # format status messages used in flow control (javascript side)
+    # replaces with space and new lines with the HTML equivalents
+    ret['msg'] = '<div class="alert-message block-message {0} span8 data-entry"><code>\
+{1}</code></div>'.format(
+        'success' if ret['status'] == 'success' else 'error',
+        ret['msg'].replace('  ', '&nbsp;&nbsp;&nbsp;').replace('\n', '<br />')
+    )
     return ret
+
+
+def update_row(conn_params, indexed_cols={}, get_data={}, post_data={}):
+    # set execution context
+    conn_params['db'] = get_data['db']
+    # add single qoutes to the variables
+    cols, values = [], []
+    for k in post_data:
+        if k in ('csrfmiddlewaretoken', 'save_changes_to'): continue
+        cols.append(k), values.append(  repr( str(post_data[k]) )  )
+
+    # generate SET sub statment
+    _l_set = []
+    for i in range(len(cols)):
+        short_stmt = "=".join([cols[i], values[i]])
+        _l_set.append(short_stmt)
+    # generate WHERE sub statement
+    _l_where = []
+    for key in indexed_cols:
+        short_stmt = "=".join([ key, repr(  str(post_data[key])  ) ])
+        _l_where.append(short_stmt)
+
+    # generate full query
+    q = "UPDATE {0}{tbl} SET {set_stmts} WHERE {where_stmts}".format(
+        '{schm}.'.format(**get_data) if conn_params['dialect'] == 'postgresql' else '',
+        set_stmts = ", ".join(_l_set), where_stmts = "AND ".join(_l_where), **get_data 
+    )
+    # run query and return results
+    ret = sql.short_query(conn_params, (q, ))
+    if ret['status'] == 'success': ret['msg'] = 'Row update succeeded'
+    # format status messages used in flow control (javascript side)
+    # replaces with space and new lines with the HTML equivalents
+    ret['msg'] = '<div class="alert-message block-message {0} span12 data-entry"><code>\
+{1}</code></div>'.format(
+        'success' if ret['status'] == 'success' else 'error',
+        ret['msg'].replace('  ', '&nbsp;&nbsp;&nbsp;').replace('\n', '<br />')
+    )
+    return ret
+
 
 def do_login(request, cleaned_data):
     host = cleaned_data['host']

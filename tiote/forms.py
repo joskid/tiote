@@ -1,11 +1,11 @@
 from django import forms
-from django.forms.formsets import formset_factory
 from django.core import validators
 from django.utils.datastructures import SortedDict
 from itertools import chain
 from django.utils.encoding import StrAndUnicode, force_unicode
 from django.utils.html import escape, conditional_escape
 from django.utils.safestring import mark_safe
+from django.forms import widgets
 
 from tiote import utils
 
@@ -72,15 +72,40 @@ class wCheckboxSelectMultiple(forms.SelectMultiple):
         output.append(u'</ul>')
         return mark_safe(u'\n'.join(output))
 
+
+class RadioFieldRenderer(StrAndUnicode):
+    """
+    An object used by RadioSelect to enable customization of radio widgets.
+    """
+
+    def __init__(self, name, value, attrs, choices):
+        self.name, self.value, self.attrs = name, value, attrs
+        self.choices = choices
+
+    def __iter__(self):
+        for i, choice in enumerate(self.choices):
+            yield widgets.RadioInput(self.name, self.value, self.attrs.copy(), choice, i)
+
+    def __getitem__(self, idx):
+        choice = self.choices[idx] # Let the IndexError propogate
+        return widgets.RadioInput(self.name, self.value, self.attrs.copy(), choice, idx)
+
+    def __unicode__(self):
+        return self.render()
+
+    def render(self):
+        """Outputs a <ul> for this set of radio fields."""
+        return mark_safe(u'<ul class="inputs-list">\n%s\n</ul>' % u'\n'.join([u'<li>%s</li>'
+                % force_unicode(w) for w in self]))
+
+
 class InsertForm(forms.BaseForm):
     def __init__(self, dialect, tbl_struct, tbl_indexes=(), **kwargs):
 # keys = ['column','type','null','default','character_maximum_length','numeric_precision', 'extra','column_type']
         f = SortedDict()
         # dict to increase performance
-        _l = {}
-        for i in range(len(tbl_indexes)):
-            if _l.has_key(tbl_indexes[i][0]): _l[ tbl_indexes[i][0] ].append(i)
-            else: _l[ tbl_indexes[i][0] ] = [i]
+        indexed_cols = utils.fns.parse_indexes_query(tbl_indexes)
+        
         # determing type of form fields for each column
         for row in tbl_struct['rows']:
             _c = []
@@ -145,8 +170,8 @@ class InsertForm(forms.BaseForm):
             f[row[0]].help_text =  " ".join(_il)
             if row[3]: f[row[0]].default = row[3] #default
             # work with indexes
-            if _l.has_key( row[0] ):
-                for i in _l[row[0]]:
+            if indexed_cols.has_key( row[0] ):
+                for i in indexed_cols[row[0]]:
                     if dialect == 'mysql' and tbl_indexes[i][2] == "PRIMARY KEY":
                         if row[len(row) - 2].count('auto_increment'): _c.pop(0) # make it not required
 
@@ -162,7 +187,25 @@ class InsertForm(forms.BaseForm):
 
         self.base_fields = f
         forms.BaseForm.__init__(self, **kwargs)
-    
+
+
+class EditForm(InsertForm):
+
+    def __init__(self, dialect, tbl_struct, tbl_indexes=(), **kwargs):
+        InsertForm.__init__(self, dialect, tbl_struct, tbl_indexes, **kwargs)
+
+        # working with self.fields attribute because this is an instance of InsertForm
+        # - and not a whole form class definition
+        self.fields['save_changes_to'] = forms.ChoiceField(
+            label = 'save changes to',
+            choices = (('update_row', 'Same row (UPDATE statment)',),
+                ('insert_row', 'Another row (INSERT statement)')
+            ), 
+            initial = 'update_row',
+            widget = forms.RadioSelect(attrs={'class':'inputs-list'}, renderer = RadioFieldRenderer)
+        )
+
+
 # New Database Form
 class mysqlDbForm(forms.Form):
     def __init__(self, templates=None, users=None, charsets=None, **kwargs):
@@ -515,7 +558,8 @@ class pgsqlSequenceForm(forms.Form):
 class QueryForm(forms.Form):
     query = forms.CharField(label = u"Enter your query:", 
         widget = forms.Textarea(attrs={'class':'required span10','rols':0, 'cols':0, 'style':'height:100px;resize:none;'},) )
-    
+
+
 def get_dialect_form(form_name, dialect):
     '''
     structure of dialect_forms:

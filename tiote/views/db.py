@@ -3,7 +3,8 @@ import json
 from django.http import HttpResponse, Http404
 from django.template import loader, RequestContext, Template
 from django.views.decorators.http import require_http_methods
-
+from urllib import urlencode
+from django.utils.datastructures import SortedDict
 from tiote import forms, utils
 
 
@@ -25,8 +26,6 @@ def overview(request):
 
     tbl_data = utils.db.rpr_query(conn_params, 'table_rpr', utils.fns.qd(request.GET))
     # setup urls with SortedDict to maintain structure
-    from urllib import urlencode
-    from django.utils.datastructures import SortedDict
     dest_url = SortedDict(); d = {'sctn':'tbl','v':'browse'}
     for k in d: dest_url[k] = d[k]
     for k in ('db', 'schm',): 

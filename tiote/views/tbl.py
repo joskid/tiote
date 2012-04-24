@@ -1,9 +1,9 @@
 import json
 
-from django.http import HttpResponse, Http404
-from django.template import loader, RequestContext, Template
-from django.views.decorators.http import require_http_methods
-
+from django.http import HttpResponse
+from django.template import loader, Template
+from django.utils.datastructures import SortedDict
+from urllib import urlencode
 from tiote import forms, utils
 
 
@@ -77,8 +77,6 @@ def structure(request):
         d['table'] = indexes_table.to_element() if indexes_table.has_body() \
             else '<div class="undefined">[Table contains no indexes]</div>'
     # generate arranged href
-    from urllib import urlencode
-    from django.utils.datastructures import SortedDict
     dest_url = SortedDict(); _d = {'sctn':'tbl','v':'structure'}
     for k in _d: dest_url[k] = _d[k]
     for k in ('db', 'schm','tbl',): 
@@ -94,26 +92,24 @@ def structure(request):
          "".join(_l),**d)
     return HttpResponse(ret_str)
 
+
 def insert(request):
     # make queries and inits
     conn_params = utils.fns.get_conn_params(request)
     tbl_struct_data = utils.db.rpr_query(conn_params, 'raw_table_structure', utils.fns.qd(request.GET))
     # keys = ['column','type','null','default','character_maximum_length','numeric_precision','numeric_scale']
     tbl_indexes_data = utils.db.rpr_query(conn_params, 'indexes', utils.fns.qd(request.GET))
-    # new form
 
     if request.method == 'POST':
+        # the form is a submission so it doesn't require initialization from a database request
+        # every needed field would already be in the form (applies to forms for 'edit' view)
         form = forms.InsertForm(tbl_struct=tbl_struct_data, dialect=conn_params['dialect'],
             tbl_indexes=tbl_indexes_data['rows'], data=request.POST)
+        # validate form
         if form.is_valid():
             ret = utils.db.insert_row(conn_params, utils.fns.qd(request.GET), 
                 utils.fns.qd(request.POST))
-            # add status messages
-            ret['msg'] = '<div class="alert-message block-message {0} span8 data-entry"><code>\
-{1}</code></div>'.format(
-                'success' if ret['status'] == 'success' else 'error',
-                ret['msg'].replace('  ', '&nbsp;&nbsp;&nbsp;').replace('\n', '<br />')
-            )
+
             return HttpResponse(json.dumps(ret))
         else: # form contains error
             ret = {'status': 'fail', 
@@ -126,13 +122,81 @@ def insert(request):
         tbl_indexes=tbl_indexes_data['rows'])
 
     return utils.fns.response_shortcut(request, extra_vars={'form':form,}, template='form')
-    
+
+
+def edit(request):
+    # get METHOD is not allowed. the POST fields which was used to intialized the form
+    # - would not be availble. Redirect the page to the mother page ('v' of request.GET )
+    if request.method == 'GET':
+        h = HttpResponse(''); d = SortedDict()
+        for key in ('sctn', 'v', 'db', 'schm', 'tbl'):
+            if request.GET.get(key): d[key] = request.GET.get(key)
+        h.set_cookie('TT_NEXT', str( urlencode(d) )  )
+        return h
+    # inits and queries
+    conn_params = utils.fns.get_conn_params(request)
+    tbl_struct_data = utils.db.rpr_query(conn_params, 'raw_table_structure', utils.fns.qd(request.GET))
+    # keys = ['column','type','null','default','character_maximum_length','numeric_precision','numeric_scale']
+    tbl_indexes_data = utils.db.rpr_query(conn_params, 'indexes', utils.fns.qd(request.GET))
+
+    # generate the form(s)
+    if request.method == 'POST' and request.POST.get('where_stmt'):
+        # parse the POST structure and generate a list of dict.
+        l = request.POST.get('where_stmt').strip().split(';')
+        conditions = utils.fns.get_conditions(l)
+        # loop through the dict, request for the row which have _dict as its where clause
+        # - and used that information to bind the EditForm
+        _l_forms = []
+        for _dict in conditions:
+            single_row_data = utils.db.rpr_query(conn_params, 'get_single_row',
+                utils.fns.qd(request.GET), _dict
+            )
+            # make single row data a dict mapping of columns to rows
+            init_data = dict(  zip( single_row_data['columns'], single_row_data['rows'][0] )  )
+            # create form and store in a the forms list
+            f = forms.EditForm(tbl_struct=tbl_struct_data, dialect=conn_params['dialect'],
+                tbl_indexes=tbl_indexes_data['rows'], initial=init_data)
+            _l_forms.append(f)
+
+        return utils.fns.response_shortcut(request, extra_vars={'forms':_l_forms,}, template='multi_form')
+    # submissions of a form
+    else:
+        f = forms.EditForm(tbl_struct=tbl_struct_data, dialect=conn_params['dialect'],
+            tbl_indexes=tbl_indexes_data['rows'], data = request.POST)
+        if f.is_valid():
+            # two options during submission: update_row or insert_row
+            if f.cleaned_data['save_changes_to'] == 'insert_row':
+                # pretty straight forward (lifted from insert view above)
+                ret = utils.db.insert_row(conn_params, utils.fns.qd(request.GET), 
+                    utils.fns.qd(request.POST))
+
+                return HttpResponse(json.dumps(ret))
+            else:
+                indexed_cols = utils.fns.parse_indexes_query(tbl_indexes_data['rows'])
+                ret = utils.db.update_row(conn_params, indexed_cols, 
+                    utils.fns.qd(request.GET), utils.fns.qd(request.POST))
+
+                return HttpResponse(json.dumps(ret))
+
+        else:
+            # format and return form errors
+            ret = {'status': 'fail', 
+            'msg': utils.fns.render_template(request,"tt_form_errors.html",
+                {'form': f}, is_file=True).replace('\n','')
+            }
+            return HttpResponse(json.dumps(ret))
+
+
+
+# view router
 def route(request):
-    if request.GET.get('v') == 'browse':
+    if request.GET.get('subv') == 'edit':
+        return edit(request)
+    elif request.GET.get('v') == 'browse':
         return browse(request)
     elif request.GET.get('v') == 'structure':
         return structure(request)
     elif request.GET.get('v') == 'insert':
         return insert(request)
     else:
-        return utils.fns.http_500('malformed URL')
+        return utils.fns.http_500('malformed URL of section "table"')

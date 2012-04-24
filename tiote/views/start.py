@@ -1,10 +1,8 @@
 # Create your views here.
 import json
-from django.http import HttpResponse, Http404, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect
 from django.template import loader, RequestContext, Template
-from django.views.decorators.http import require_http_methods
 from django.views.decorators.gzip import gzip_page
-from django.core import serializers
 from django.conf import settings
 
 from tiote import forms, utils, views, sql
@@ -65,6 +63,9 @@ def ajax(request):
         q = request.GET.get('q')
         if q == 'sidebar':
             return utils.fns.generate_sidebar(request)
+        elif request.GET.get('type') == 'fn':
+            return HttpResponse(utils.db.fn_query(conn_params, q, utils.fns.qd(request.GET),
+                utils.fns.qd(request.POST)) )
         elif request.GET.get('type') == 'repr':
             return HttpResponse( utils.db.rpr_query(conn_params, q, utils.fns.qd(request.GET),
                 utils.fns.qd(request.POST)) )

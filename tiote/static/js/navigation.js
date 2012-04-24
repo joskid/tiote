@@ -100,6 +100,10 @@ var Navigation = new Class({
 	},
 	
 	agent: function() {
+		if ( Cookie.read('_nav_dnt_fire') ) {
+			Cookie.dispose('_nav_dnt_fire');
+			return;
+		}
 		if(this.oldLocation.length < 1 || this.oldLocation != window.location.hash.substr(1, window.location.hash.length-1)) { //only update if the location changed
 			if (this.oldLocation != "") {
 				this.oldState.empty();
@@ -114,7 +118,10 @@ var Navigation = new Class({
 	updateLocation: function() {
 		window.location.hash = this.state.toQueryString().cleanQueryString();	
 	},
-	set: function(key, value) {
+	set: function(key, value, dnt_fire_event) {
+		dnt_fire_event = dnt_fire_event || false;
+		if (dnt_fire_event)
+			Cookie.write('_nav_dnt_fire', true);
 		if(typeOf(key) != "string" && value == null) {
 			this.state.extend(key);
 		} else {

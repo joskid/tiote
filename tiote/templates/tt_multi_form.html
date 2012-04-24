@@ -1,0 +1,22 @@
+<div class="row">
+	<div class="span7">
+		<div class="msg-placeholder span12"></div>
+		{% for form in forms %}
+			<form class="tt_form form-stacked" action="" method="post" accept-charset="utf-8">
+				<fieldset>
+				{% csrf_token %}
+				{% for field in form %}
+				<div class="clearfix">
+					<label for="id_{{field.html_name}}">{{field.label}}<span class="help_text">{{field.help_text}}</span></label>
+					<div class='input'>{{ field }}</div>
+				</div>
+				{% endfor %}
+				</fieldset>
+			  <div class="{% if small_form %}{{small_form}}{% else %} actions{% endif %}">
+			  	<input type="submit" class='btn primary submit-button' value="{% if sub %}{{sub}}{% else %}Submit{% endif %} &rarr;"/>
+			  	</div>
+			</form>
+		{% endfor %}
+	</div>
+</div>
+<div class='query-results'></div>

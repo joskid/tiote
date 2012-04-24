@@ -1,23 +1,25 @@
 var pg, nav; // global variables
 
+function navigationChangedListener(navObject, oldNavObject){
+	// redirect to the next page as gotten from the location hash
+	if (Cookie.read('TT_NEXT')){
+		navObject = Cookie.read('TT_NEXT').parseQueryString(false, true);
+		location.hash = '#' + Cookie.read('TT_NEXT');
+		Cookie.dispose('TT_NEXT');
+	}
+	// create a new Page object which begins page rendering
+	pg = new Page(navObject, oldNavObject);
+}
+
 window.addEvent('domready', function() {
-	nav = new Navigation();
-	
-	nav.addEvent('navigationChanged', function(navObject, OldNavObject){
-		// redirect to the next page as gotten from the location hash
-		if (Cookie.read('TT_NEXT')){
-			navObject = Cookie.read('TT_NEXT').parseQueryString(false, true);
-			location.hash = '#' + Cookie.read('TT_NEXT');
-			Cookie.dispose('TT_NEXT');
-		}
-		// create a new Page object which begins page rendering
-		pg = new Page(navObject, OldNavObject);
-	});
+	nav = new Navigation();	
+	nav.addEvent('navigationChanged', navigationChangedListener);
 	
 	// if the location string contains hash tags
 	if (location.hash) {
 		// begin page rendering
-		pg = new Page(location.hash.replace("#",'').parseQueryString(false, true), null)
+		var navObj = page_hash();
+		pg = new Page(navObj, null);
 	}
 	// there are no hashes set a default
 	else
@@ -27,24 +29,23 @@ window.addEvent('domready', function() {
 });
 
 
-function clearPage(clear_sidebar){
-	clear_sidebar = clear_sidebar || false; // init
-	if (clear_sidebar && $('sidebar').getChildren()) {
-		$('sidebar').getChildren().destroy();
-	}
-	$('tt-content').getChildren().destroy();
-}
-
 // A single tiote page
 function Page(obj, oldObj){
 	this.options = new Hash({navObj: obj, oldNavObj: oldObj});
 	this.tbls = [];
 	// unset all window resize events
 	window.removeEvents(['resize']);
-	clearPage();
+	this.clearPage();
 	this.loadPage(true)
 }
 
+Page.prototype.clearPage = function(clr_sidebar) {
+	clr_sidebar = clr_sidebar || false; // init
+	if (clr_sidebar && $('sidebar').getChildren()) {
+		$('sidebar').getChildren().destroy();
+	}
+	$('tt-content').getChildren().destroy();
+}
 
 Page.prototype.loadPage = function(clr_sidebar) {
 	clr_sidebar = clr_sidebar || false;
@@ -126,26 +127,33 @@ Page.prototype.generateTopMenu = function(data){
 
 Page.prototype.generateView = function(navObj, oldNavObj){
 //	console.log(navObj), console.log(oldNavObj);
-	// decide if the there should be a request for sidebar
-	var x = new XHR(Object.merge(navObj, {'method':'get',
-        'onSuccess': function(text,xml){
-            var viewData = {'text' : text,'xml' : xml};
-            if (!navObj['sctn']) {
-                nav.state.empty()
-                nav.set({'sctn': 'home','v': 'home'});
-            } else {
-				$('tt-content').set('html', viewData['text']);
-				if (navObj['sctn']=='tbl' && navObj['v'] =='browse') {
-					pg.jsifyTable(true);
-					pg.browseView();
-				} else {pg.jsifyTable(false);}
-				pg.addTableOpts();
-				// attach events to forms
-				if ($$('.tt_form')) {pg.completeForm();}				
+	new XHR({
+		url: generate_ajax_url(), 
+		method: 'GET',
+		onSuccess: function(text, xml) {
+			if (Cookie.read('TT_NEXT')){
+				// don't understand why but this cookie is usually appended with 
+				// - quotes at the beginning and at the end (not its representation)
+				var o = Cookie.read('TT_NEXT').parseQueryString(true, true);
+				o2 = {};
+				Object.keys(o).each(function(k){
+					o2[ k.replace("\"", "") ] = o[k].replace("\"",'');
+				});
+				Cookie.dispose('TT_NEXT');
+				redirectPage(o2);
+				return;
 			}
-            runXHRJavascript();
-        }
-    })).send()
+			$('tt-content').set('html', text);
+			if (navObj['sctn']=='tbl' && navObj['v'] =='browse') {
+				pg.jsifyTable(true);
+				pg.browseView();
+			} else {pg.jsifyTable(false);}
+			pg.addTableOpts();
+			// attach events to forms
+			if ($$('.tt_form')) {pg.completeForm();}
+			runXHRJavascript();
+		}
+	}).send();
 }
 
 // decide if the sidebar needs to be refreshed
@@ -189,7 +197,9 @@ Page.prototype.generateSidebar = function(navObj, oldNavObj) {
 	var clear_sidebar = updateSidebar(navObj, oldNavObj);
 	
 	if (clear_sidebar) {
-		var x = new XHR(Object.merge({'query':'sidebar', 'type':'repr', 'method': 'get',
+		var x = new XHR({
+			url : generate_ajax_url() + '&q=sidebar&type=repr',
+			method: 'get',
 			onSuccess: function(text,xml){
 				// if the sidebar contains elements destroy them
 				if ($('sidebar').getChildren())
@@ -229,7 +239,7 @@ Page.prototype.generateSidebar = function(navObj, oldNavObj) {
 					});
 				}
 			}
-		}, page_hash())).send();
+		}).send();
 	}
 	window.addEvent('resize', resize_sidebar);
 	window.fireEvent('resize');
@@ -335,15 +345,16 @@ Page.prototype.jsifyTable = function(syncHeightWithWindow) {
 					al.addEvent('click', function(e) {
 						var where_stmt = generate_where(pg.tbls[tbl_in], al_in, true);
 						// make xhr request
-						var x = new XHR(Object.merge(page_hash(), {
-							query: 'get_row','type':'repr',	'spinnerTarget': tbl,
+						var x = new XHR({
+							url: generate_ajax_url() + '&q=get_row&type=fn',
+							spinnerTarget: tbl,
 							onSuccess : function(text, xml) {
 								showDialog("Entry", text, {
 									offsetTop: null, width: 475, hideFooter: true,
 									overlayOpacity: 0, overlayClick: false
 								});
 							}
-						})).post(where_stmt);
+						}).post(where_stmt);
 					});
 				}
 			});
@@ -395,6 +406,35 @@ Page.prototype.addTableOpts = function() {
 	
 }
 
+function edit_page(where_stmt) {
+//	console.log('row have been selected for edition');
+	// 1. clear page
+	pg.clearPage(false);
+	// 2. request edit page
+	var navObj = page_hash(); navObj['subv'] = 'edit';
+	new XHR({
+		url: 'ajax/?' + Object.toQueryString(navObj), spinTarget: $('tt_content'),
+		onSuccess: function(text, xml) {
+			$('tt-content').set('html', text);
+			pg.completeForm();
+		}
+	}).post({where_stmt: where_stmt});
+
+	// update location hash
+	nav.set('subv', 'edit', true);
+
+	// 3. add edit handle to the topbar
+	$$('#topbar .nav li').removeClass('active')
+	$E('#topbar .nav').adopt(
+		new Element('li', {'class': 'active'}).adopt(
+			new Element('a',{'href':'#' + Object.toQueryString(navObj), text: 'Edit' })
+		)
+	);
+	// 4. during form request either print error message or destroy the form and redirect to browse page 
+		// implemented as an if block under Page.prototype.completeForm()
+}
+
+
 function do_action(tbl, e) {
 //	console.log('do_action()!');
 	if (!tbl.getSelected()) return; // necessary condition to begin
@@ -421,17 +461,21 @@ function do_action(tbl, e) {
 	confirmDiag.show({
 		model: 'confirm', 
 		callback: function() {
-			var x = new XHR({
-				url: generate_ajax_url(false, {}) + '&upd8=' + action,
-				spinnerTarget: $(tbl), 
-				onSuccess: function(text, xml) {
-					var resp = JSON.decode(text);
-					if (resp['status'] == "fail") {
-						showDialog("Action not successful", resp['msg']);
-					} else if (resp['status'] == 'success')
-						pg.reload();
-				}
-			}).post({'where_stmt': where_stmt});
+			if (action == 'edit') {
+				edit_page(where_stmt);
+			} else {
+				new XHR({
+					url: generate_ajax_url(false, {}) + '&upd8=' + action,
+					spinnerTarget: $(tbl), 
+					onSuccess: function(text, xml) {
+						var resp = JSON.decode(text);
+						if (resp['status'] == "fail") {
+							showDialog("Action not successful", resp['msg']);
+						} else if (resp['status'] == 'success')
+							pg.reload();
+					}
+				}).post({'where_stmt': where_stmt});
+			}
 		}, 
 		title: 'Confirm intent',
 		contents: msg
@@ -470,25 +514,38 @@ Page.prototype.updateOptions = function(obj) {
 	this.options.extend(obj)
 }
 
-Page.prototype.reload = function() {this.loadPage();}
+Page.prototype.reload = function() {
+	this.loadPage();
+}
 
 // function that is called on on every form request
 function formResponseListener(text, xml, form, navObject) {
+	$E('.msg-placeholder').getChildren().destroy();
 	if (navObject['v'] == 'query') {
 		$E('.query-results').set('html', text);
 		if ($E('.query-results').getElement('div.alert-message')) {
 			tweenBgToWhite($E('.query-results div.alert-message'))
 		}
-		// jsifyTable
 		pg.jsifyTable();
 		return; // end this function here
 	}
 	var resp = JSON.decode(text);
-	if (resp['status'] == 'success')
-		form.reset() // delete the input values
+	if (resp['status'] == 'success'){
+		if (navObject['subv'] == 'edit') {
+			$(form).destroy();
+			if (!$$('.tt_form').length) {
+				delete navObject.subv;
+				// first reset
+				location.reload();
+				return;
+			}
+		} else {
+			form.reset(); // delete the input values
+		}
+	}
 	var html = ("" + resp['msg']).replace("\n","&nbsp;")
-	if (navObject['v']=='insert') {
-		$E('.msg-placeholder', form).set('html', html);
+	if (navObject['v']=='insert' || navObject['subv']=='edit') {
+		$E('.msg-placeholder').set('html', html);
 		tweenBgToWhite($E('.msg-placeholder').getElement('div.alert-message'))
 	}
 	
@@ -513,10 +570,11 @@ Page.prototype.completeForm = function(){
 		// handle submission immediately after validation
 		form_validator.addEvent('formValidate', function(status, form, e){
 			if (!status) return; // form didn't validate
-			e.stop();
-			var x = new XHR({
+			e.stop(); // stop propagation of event and also prevent default
+			// submit the values of the form
+			new XHR({
 				url: generate_ajax_url(false, {}),
-				spinnerTarger: form,
+				spinnerTarget: form,
 				onSuccess: onFormResponse
 			}).post(form.toQueryString());
 
@@ -534,28 +592,6 @@ var XHR = new Class({
 			'X-CSRFToken': Cookie.read('csrftoken')
 		};
 		options.chain = 'link';
-				
-		if (!options.url)
-			options.url = 'ajax/?';
-		if (options.loginCheck)
-			options.url += 'check=login';	
-		else if (options.commonQuery)
-			options.url += 'commonQuery=' + options.commonQuery;
-        else if (options.query){
-            options.url += 'q=' + options.query;
-            if (options.type) options.url += '&type=' + options.type;
-        }
-
-		if (options.url.substr(-1) != "?") options.url += "&";
-		if (options.sctn) options.url += 'sctn=' + options.sctn; 
-		if (options.v) options.url += '&v=' + options.v;
-		if (options.db) options.url += '&db=' + options.db;
-		if (options.schm) options.url += '&schm=' + options.schm;
-		if (options.tbl) options.url += '&tbl=' + options.tbl;
-		if (options.offset)	options.url += '&offset=' + options.offset;
-		if (options.sort_key) options.url += '&sort_key=' + options.sort_key;
-		if (options.sort_dir) options.url += "&sort_dir=" + options.sort_dir;
-		if (options.subv) options.url += '&subv=' + options.subv;
 		
 		// append ajax validation key
 		options.url += '&ajaxKey=' + ajaxKey;
@@ -614,19 +650,6 @@ var XHR = new Class({
 	}
 	
 });
-
-
-function shortXHR(data){
-	var op = new Hash(data)
-	op.extend({'method': 'get', 'async': false, 'timeout': 10000, 'showLoader':false})
-	var x = new XHR(op).send();
-	
-	if (x.isSuccess() ) {
-		return x.response.text;
-	} else {
-		return '!! request failed !!';
-	}
-}
 
 
 function show(a) {

@@ -133,7 +133,6 @@ function highlightActiveMenu(){
 	aas.each(function(item){
 		if (location.href.contains(item.hash)){
 			item.getParent().addClass('active');
-			item.setStyle('font-weight', 'bold');
 		}
 	});
 }
@@ -195,7 +194,7 @@ function tbl_pagination(total_count, limit, offset) {
 	
 	return new Element('p', {'class':'paginatn pull-right'}).adopt(ancs,
 		// span to display no of pages created
-		new Element('span',{'style':'color:#888;padding-left:20px;', 
+		new Element('span',{'style':'padding-left:20px;', 
 			'text': '[ {0} {1} | {2} {3} ]'.substitute( [ 
 					total_count, ((total_count > 1) ? 'entries' : 'entry'),
 					(pag_max+1), (pag_max > 0) ? 'pages' : 'page' ]
@@ -231,11 +230,11 @@ function page_hash(){
 
 // generate a where stmt for a selected row with index row_in in table tbl
 function generate_where(tbl, row_in, for_post) {
-	var stmt = "", delimitr = "";
+	var stmt = "";
+	if (!tbl.vars.keys) return stmt; // the table must have keys stored
 	for_post = for_post || false;
-	if (for_post) delimitr = "&"
-	else delimitr = "AND";
-	if (!tbl.vars.keys) return stmt;		// the table must have keys stored
+	var delimitr = (for_post) ? "&" : "/i/AND/o/"; // the second delimtr is selected so
+												   // - as to avoid collision with data
 	var keys = tbl.vars.keys;
 	for (var i = 0; i < keys.length; i++) {
 		if (keys[i][0] == "") continue;
@@ -262,5 +261,5 @@ function tweenBgToWhite(el) {
 		property: 'background-color',
 		link: 'cancel'
 	});
-	elFx.start('#fff')
+	elFx.start('#fff');
 }
