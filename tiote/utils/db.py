@@ -100,7 +100,7 @@ def rpr_query(conn_params, query_type, get_data={}, post_data={}):
         # initializations        
         sub_q_data = {'tbl': get_data['tbl'],'db':get_data['db']}
         sub_q_data['offset'] = get_data['offset'] if get_data.has_key('offset') else 0
-        sub_q_data['limit'] = get_data['limit'] if get_data.has_key('limit') else 100
+        sub_q_data['limit'] = get_data['limit'] if get_data.has_key('limit') else getattr(settings, 'TT_MAX_ROW_COUNT', 100)
         for item in ['schm', 'sort_key', 'sort_dir']:
             if get_data.has_key(item): sub_q_data[item] = get_data[item]
         # retrieve and run queries
