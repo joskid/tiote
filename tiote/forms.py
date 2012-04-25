@@ -149,7 +149,7 @@ class InsertForm(forms.BaseForm):
                 f[row[0]] = forms.TimeField()
 
             elif row[1] in ('datetime', 'timestamp', 'timestamp with time zone',):
-                f[row[0]] = forms.DateTimeField()
+                f[row[0]] = forms.CharField()
 
             elif row[1] == 'set':
                 f[row[0]] = forms.ChoiceField(widget=wCheckboxSelectMultiple())
@@ -171,9 +171,11 @@ class InsertForm(forms.BaseForm):
             if row[3]: f[row[0]].default = row[3] #default
             # work with indexes
             if indexed_cols.has_key( row[0] ):
-                for i in indexed_cols[row[0]]:
-                    if dialect == 'mysql' and tbl_indexes[i][2] == "PRIMARY KEY":
-                        if row[len(row) - 2].count('auto_increment'): _c.pop(0) # make it not required
+                # make an indexed column with auto_increment flag not required
+                if dialect == 'mysql' and indexed_cols[ row[0] ].count("PRIMARY KEY"):
+                    if row[len(row) - 2].count('auto_increment'): 
+                        _c.pop(0)
+                        f[ row[0] ].required = False
 
             # width of the fields
             if type(f[row[0]].widget) not in (forms.CheckboxSelectMultiple, wCheckboxSelectMultiple,):

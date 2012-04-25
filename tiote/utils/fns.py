@@ -337,14 +337,24 @@ def render_template(request, template, context= {}, is_file=False):
     t = loader.get_template(template) if is_file else Template(template) 
     return t.render(_context)
 
-# create a dict which maps column name to the type of index it has
+
 def parse_indexes_query(tbl_indexes, needed_index=None):
+    '''
+    Creates a dict mapping with key as name of the column which maps to a list
+    which contains all the indexes on the said key. Bucket Dicts like in QuerySets
+
+    e.g.
+        {
+            'id': ['PRIMARY KEY'],
+            'NAME': ['UNIQUE', 'FOREIGN KEY'],
+        }
+    '''
     _l = {}
     for i in range(len(tbl_indexes)):
         if needed_index != None:
             if tbl_indexes[i][2] != needed_index: continue
         if _l.has_key(tbl_indexes[i][0]): _l[ tbl_indexes[i][0] ].append(i)
-        else: _l[ tbl_indexes[i][0] ] = tbl_indexes[i][2]
+        else: _l[ tbl_indexes[i][0] ] = [ tbl_indexes[i][2] ]
     return _l
 # cyclic import
 import db

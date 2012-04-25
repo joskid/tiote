@@ -535,8 +535,7 @@ function formResponseListener(text, xml, form, navObject) {
 			$(form).destroy();
 			if (!$$('.tt_form').length) {
 				delete navObject.subv;
-				// first reset
-				location.reload();
+				redirectPage(navObject);
 				return;
 			}
 		} else {

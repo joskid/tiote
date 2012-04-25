@@ -99,15 +99,15 @@ var $ES = function(selector, filter) {
 };
 
 function redirectPage(context){
-	location.hash = '#' + Object.toQueryString(context);
+	nav.state.empty();
+	nav.set(context);
+	nav.fireEvent('navigationChanged', context);
 }
 
 function reloadPage(){
 	var context = new Hash();
 	context.extend(location.hash.replace("#",'').parseQueryString(false, true));
-	nav.state.empty();
-	nav.set(context);
-	nav.fireEvent('navigationChanged', context);
+	redirectPage(context);
 }
 
 function showDialog(title, msg, options){

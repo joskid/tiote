@@ -1,7 +1,7 @@
 ======================================
 Django Database Management Application
 ======================================
-Tiote enables django websites to administer PostgreSQL and MySQL databases. It has been tested both on linux (ubuntu), and epio (https://ep.io) environments
+Tiote enables django websites to administer PostgreSQL and MySQL databases. It provides a clean and intuitive interface to your database(s) with which you can use Database level functions. This functions can be summarised as CRUD (Create, Read, Update and Delete). It has been tested both on linux (ubuntu), and epio (https://ep.io) environments.
 
 Requirements
 =============
@@ -15,6 +15,12 @@ Requirements
 
 Installation
 ============
+Install from pypi with the handle ``tiote``. i.e. ``pip install tiote``
+
+Or you can grab a copy of this repository. Switch your directory into the root folder of the directory and run ``python setup.py install`` for it to be available system wide or just place the tiote folder in a location that can be accessed by your django project. 
+
+Configuration
+-------------
 In the ``settings.py`` of your django project add 'tiote' to the ``INSTALLED_APPS`` settings and ``django.contrib.sessions`` if it is not already there.
 and run 
 
@@ -30,7 +36,7 @@ Customization
 =============
 All this settings are to be entered in settings.py or its equivalent
 
-* ``TT_SHOW_SYSTEM_CATALOGS`` Include (set to True) or exclude (set to False) System Catalogs. Excluding System catalogs is the default and increases individual page load
+* ``TT_SHOW_SYSTEM_CATALOGS`` Include (set to True) or exclude (set to False) system catalogs. Excluding system catalogs is the default and increases individual page load
 
 * ``TT_SESSION_EXPIRY``: accepts an integer (default 1800) which is the amount of seconds before the session expires (to be asked to log on again). It doesn't conflict with other sessions from other django applications.
 
