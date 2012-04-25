@@ -430,8 +430,6 @@ function edit_page(where_stmt) {
 			new Element('a',{'href':'#' + Object.toQueryString(navObj), text: 'Edit' })
 		)
 	);
-	// 4. during form request either print error message or destroy the form and redirect to browse page 
-		// implemented as an if block under Page.prototype.completeForm()
 }
 
 
@@ -482,14 +480,7 @@ function do_action(tbl, e) {
 	});
 }
 
-function sort_dir() {
-	if (page_hash()['sort_dir'] == undefined) return "asc"
-	else if (!['asc','desc'].contains(page_hash()['sort_dir']) ) return "asc";
-	else if (page_hash()['sort_dir']=='desc') return "asc";
-	else return "desc"
-}
-	
-	
+
 Page.prototype.browseView = function() {	
 	if (! document.getElement('.tbl-header')) return;
 	var theads = document.getElement('.tbl-header table tr').getElements('td[class!=controls]');
@@ -497,16 +488,22 @@ Page.prototype.browseView = function() {
 	theads.each(function(thead, thead_in){
 		// add click event
 		thead.addEvent('click', function(e){
-			var o = Object.merge(page_hash(), {'sort_key': thead.get('text'),
-				'method': 'get', 'sort_dir': sort_dir()
-				});
-			redirectPage(o);
+			var o = page_hash(); var key = thead.get('text'); var dir = '';
+			if (o.sort_key != undefined && o.sort_key != key ) {
+				dir = 'asc'
+			} else {
+				if (o.sort_dir == 'asc') dir = 'desc';
+				else if (o.sort_dir == 'desc') dir = 'asc';
+				else dir = 'asc';
+			}
+			o['sort_dir'] = dir; o['sort_key'] = key;
+			location.hash = "#" + Object.toQueryString(o);
 		});
 		// mark as sort key
 		if (thead.get('text') == page_hash()['sort_key']) {
 			thead.setStyle('font-weight', 'bold');
 			thead.addClass(page_hash()['sort_dir'] == 'asc'? 'sort-asc': 'sort-desc');
-		} 
+		}
 	});
 }
 

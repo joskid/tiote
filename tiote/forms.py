@@ -149,7 +149,9 @@ class InsertForm(forms.BaseForm):
                 f[row[0]] = forms.TimeField()
 
             elif row[1] in ('datetime', 'timestamp', 'timestamp with time zone',):
-                f[row[0]] = forms.CharField()
+                f[row[0]] = forms.CharField() # no longer used a datetime field because
+                                              # - of error generated when submitting fields which
+                                              # - are populated from the database
 
             elif row[1] == 'set':
                 f[row[0]] = forms.ChoiceField(widget=wCheckboxSelectMultiple())

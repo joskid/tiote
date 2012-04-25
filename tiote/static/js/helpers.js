@@ -26,7 +26,7 @@ function make_checkable(data_table) {
 		var id =  e.target.getProperty('id');
 		id = id.replace('check', 'row'); // id of equivalent <tr>
 		selected_tr = $(id)
-		if (e.shift && typeof(last_selected_tr == 'element')){
+		if (e.shift && typeof(last_selected_tr == 'element') && last_selected_tr != selected_tr){
 			var checker_status;
 			if (data_table.isSelected(last_selected_tr)) {
 				data_table.selectRange(last_selected_tr, selected_tr);
