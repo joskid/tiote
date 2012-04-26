@@ -1,4 +1,13 @@
 var pg, nav; // global variables
+// catalog of all abbreviations in use
+var _abbrev = {
+	'sctn': 'section',
+	'tbl': 'table',
+	'v': 'view',
+	'schm': 'schema',
+	'idxs': 'indexes',
+	'cols': 'columns'
+};
 
 function navigationChangedListener(navObject, oldNavObject){
 	// redirect to the next page as gotten from the location hash
@@ -73,12 +82,12 @@ Page.prototype.setTitle = function(new_title){
 		title += ' / ' + r['v'];
 		// append spilter to the title of the page
 		//- functions(more like navigation depth) : objects ( db or tbl or schm we are working on)
-		title += " : ";
+		title += " :  ";
 		['db','schm','tbl'].each(function(or_item){
 			if (Object.keys(r).contains(or_item)) title += ' / ' + r[or_item];
 		});
 		if (Object.keys(r).contains('offset')) title += ' / page ' + (r['offset'] / 100 + 1);
-		if (Object.keys(r).contains('subv')) title += ' / ' + r['subv'];
+		if (Object.keys(r).contains('subv')) title += ' / ' + _abbrev[ r['subv'] ];
 	} else {
 		title = new_title;
 	}
@@ -410,6 +419,24 @@ Page.prototype.addTableOpts = function() {
 				});
 
 			});
+			
+			// disable or enable if no row is selected or rows are selected respectively.
+			var needy_doer_options = function(tr, tr_all) {
+				if (tr_all.length) {
+					$$('a.needy_doer').setStyles({
+						'color': '#0069D6',
+						'cursor': 'pointer'
+					});
+				} else {
+					$$('a.needy_doer').setStyles({
+						'color': '#888', 
+						'cursor': 'default'
+					});
+				}
+			}
+			
+			pg.tbls[opt_in].addEvent('rowFocus', needy_doer_options).addEvent('rowUnfocus', needy_doer_options);
+			
 		});
 	}
 	

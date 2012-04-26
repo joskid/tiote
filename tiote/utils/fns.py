@@ -140,7 +140,7 @@ def table_options(opt_type, with_keys=True, select_actions=False):
             elif opt_type == 'tbl':
                 ctrls = ['empty', 'drop']
             for ctrl in ctrls:
-                l.append('<a class="doer action_{0}">{1}</a>'.format(ctrl, ctrl.title()))
+                l.append('<a class="doer needy_doer action_{0}">{1}</a>'.format(ctrl, ctrl.title()))
             # add a refresh link for opt_type 'data'
             if opt_type == 'data':
                 l.append('<a class="doer action_refresh" style="margin-left:20px">Refresh</a>')

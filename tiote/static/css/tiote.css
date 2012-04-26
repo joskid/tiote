@@ -37,6 +37,11 @@ div.table-options a, div.table-options span, div.table-options p {
     margin-bottom: 3px;
 }
 
+div.table-options a.needy_doer {
+	color: #888;
+	cursor: default;
+}
+
 div.table-options p span {
 	color: #888;
 }
