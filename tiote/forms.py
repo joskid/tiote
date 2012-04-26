@@ -47,7 +47,13 @@ def b(cond):
     if cond == 'NO' or cond == False or cond == 'no': return "NOT NULL"
     else: return ""
 
-class wCheckboxSelectMultiple(forms.SelectMultiple):
+
+class ttCheckboxSelectMultiple(forms.SelectMultiple):
+    """
+    Copy of that found in stock django but added here in other to change its rendering (
+    addition of a class to part of its rendered html)
+    """
+
     def render(self, name, value, attrs=None, choices=()):
         if value is None: value = []
         has_id = attrs and 'id' in attrs
@@ -73,25 +79,11 @@ class wCheckboxSelectMultiple(forms.SelectMultiple):
         return mark_safe(u'\n'.join(output))
 
 
-class RadioFieldRenderer(StrAndUnicode):
+class ttRadioFieldRenderer(widgets.RadioFieldRenderer):
     """
-    An object used by RadioSelect to enable customization of radio widgets.
+    Copy of that found in stock django but added here in other to change its rendering (
+    addition of a class to part of its rendered html)
     """
-
-    def __init__(self, name, value, attrs, choices):
-        self.name, self.value, self.attrs = name, value, attrs
-        self.choices = choices
-
-    def __iter__(self):
-        for i, choice in enumerate(self.choices):
-            yield widgets.RadioInput(self.name, self.value, self.attrs.copy(), choice, i)
-
-    def __getitem__(self, idx):
-        choice = self.choices[idx] # Let the IndexError propogate
-        return widgets.RadioInput(self.name, self.value, self.attrs.copy(), choice, idx)
-
-    def __unicode__(self):
-        return self.render()
 
     def render(self):
         """Outputs a <ul> for this set of radio fields."""
@@ -100,6 +92,18 @@ class RadioFieldRenderer(StrAndUnicode):
 
 
 class InsertForm(forms.BaseForm):
+    '''
+    Dynamically created form which generates its fields along with the fields' options
+    from its parameters. 
+
+    Does not make use of metaclasses so it subclasses forms.BaseForm directly.
+
+    It loops through the parameter ``tbl_struct``(the structure of a table) and then generates
+    fiels which would fit the description of respective columns
+
+    It also treats some fields specially as defined in ``tbl_indexes`` and the form's ``dialect``
+    '''
+
     def __init__(self, dialect, tbl_struct, tbl_indexes=(), **kwargs):
 # keys = ['column','type','null','default','character_maximum_length','numeric_precision', 'extra','column_type']
         f = SortedDict()
@@ -109,8 +113,6 @@ class InsertForm(forms.BaseForm):
         # determing type of form fields for each column
         for row in tbl_struct['rows']:
             _c = []
-            #required fields
-            if b(row[2]): _c.append("required")
 
             if row[1] in ('character varying', 'varchar','character', 'char'):
                 f[row[0]] = forms.CharField()
@@ -154,7 +156,7 @@ class InsertForm(forms.BaseForm):
                                               # - are populated from the database
 
             elif row[1] == 'set':
-                f[row[0]] = forms.ChoiceField(widget=wCheckboxSelectMultiple())
+                f[row[0]] = forms.ChoiceField(widget=ttCheckboxSelectMultiple())
                 f[row[0]].choices = utils.fns.make_choices(
                     row[len(row)-1].replace("set(", "").replace(")","").split(","), True) 
 
@@ -165,6 +167,10 @@ class InsertForm(forms.BaseForm):
             # any field not currently understood
             else: f[row[0]] = forms.CharField(widget=forms.Textarea(attrs={'cols':'', 'rows':''}))
 
+            #required fields
+            if b(row[2]): _c.append("required")
+            else:
+                f[row[0]].required = False
             # options common to all fields
             # help_text
             _il = [ row[len(row) - 1], ]
@@ -180,7 +186,7 @@ class InsertForm(forms.BaseForm):
                         f[ row[0] ].required = False
 
             # width of the fields
-            if type(f[row[0]].widget) not in (forms.CheckboxSelectMultiple, wCheckboxSelectMultiple,):
+            if type(f[row[0]].widget) not in (forms.CheckboxSelectMultiple, ttCheckboxSelectMultiple,):
                 _c.append("span6")
             # add the attribute classes                
             if f[row[0]].widget.attrs.has_key('class'):
@@ -194,6 +200,11 @@ class InsertForm(forms.BaseForm):
 
 
 class EditForm(InsertForm):
+    '''
+    Subclasses InsertForm to include the dynamic property of InsertForm as well as to 
+    add and option that specifies if the request would be for a new row or would be 
+    an update for that row
+    '''
 
     def __init__(self, dialect, tbl_struct, tbl_indexes=(), **kwargs):
         InsertForm.__init__(self, dialect, tbl_struct, tbl_indexes, **kwargs)
@@ -206,7 +217,7 @@ class EditForm(InsertForm):
                 ('insert_row', 'Another row (INSERT statement)')
             ), 
             initial = 'update_row',
-            widget = forms.RadioSelect(attrs={'class':'inputs-list'}, renderer = RadioFieldRenderer)
+            widget = forms.RadioSelect(attrs={'class':'inputs-list'}, renderer = ttRadioFieldRenderer)
         )
 
 

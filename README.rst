@@ -15,9 +15,15 @@ Requirements
 
 Installation
 ============
-Install from pypi with the handle ``tiote``. i.e. ``pip install tiote``
+Install from pypi with the handle ``tiote``. i.e. 
 
-Or you can grab a copy of this repository. Switch your directory into the root folder of the directory and run ``python setup.py install`` for it to be available system wide or just place the tiote folder in a location that can be accessed by your django project. 
+		pip install tiote
+
+Or you can grab a copy of this repository. Switch your directory into the root folder of the directory and run 
+
+		python setup.py install
+
+for it to be available system wide or just place the tiote folder in a location that can be accessed by your django project. 
 
 Configuration
 -------------

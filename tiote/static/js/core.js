@@ -58,17 +58,26 @@ Page.prototype.loadPage = function(clr_sidebar) {
 	highlightActiveMenu();
 }
 
-// generates the title from the hashes
+
+/*
+ * Generates the title of the current page from location.hash
+ * It follows the following format
+ *
+ *		tiote / view [ / subview ] :  / database [ / schm  ]/ table [/ subv] [/ page ]
+ */
 Page.prototype.setTitle = function(new_title){
 	new_title = new_title || false;
 	if (! new_title) {
 		var title = 'tiote';
 		var r = location.hash.replace('#','').parseQueryString();
+		title += ' / ' + r['v'];
+		// append spilter to the title of the page
+		//- functions(more like navigation depth) : objects ( db or tbl or schm we are working on)
+		title += " : ";
 		['db','schm','tbl'].each(function(or_item){
 			if (Object.keys(r).contains(or_item)) title += ' / ' + r[or_item];
 		});
 		if (Object.keys(r).contains('offset')) title += ' / page ' + (r['offset'] / 100 + 1);
-		title += ' / ' + r['v'];
 		if (Object.keys(r).contains('subv')) title += ' / ' + r['subv'];
 	} else {
 		title = new_title;

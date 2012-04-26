@@ -116,7 +116,7 @@ def insert(request):
             'msg': utils.fns.render_template(request,"tt_form_errors.html",
                 {'form': form}, is_file=True).replace('\n','')
             }
-            return HttpResponse(unicode(ret))
+            return HttpResponse(json.dumps(ret))
 
     form = forms.InsertForm(tbl_struct=tbl_struct_data, dialect=conn_params['dialect'],
         tbl_indexes=tbl_indexes_data['rows'])
