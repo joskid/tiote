@@ -26,7 +26,7 @@ def rpr_query(conn_params, query_type, get_data={}, post_data={}):
         r = sql.full_query(conn_params, 
             sql.stored_query(request.GET.get('query'),conn_params['dialect']) )
         if type(r) == dict:
-            return jsonize_result(r)
+            r
         else:
             return fns.http_500(r)
         
@@ -198,22 +198,29 @@ def get_row(conn_params, get_data={}, post_data={}):
     return html
 
 
-def insert_row(conn_params, get_data={}, post_data={}):
+def insert_row(conn_params, get_data={}, form_data={}):
     # set execution context
     conn_params['db'] = get_data['db']
-    # generate sql statement
-    cols = [] 
-    values = []
-    # add quotes to every variable
-    for k in post_data: 
+    
+    # format form_data ( from a form) according to the following rules
+    # * add single qoutes to the variables
+    # * make lists a concatenation of lists
+    cols, values = [], []
+    for k in form_data:
         if k in ('csrfmiddlewaretoken', 'save_changes_to'): continue
         cols.append(k)
-        values.append( repr(  str( post_data[k] )  ) )
+        if type(form_data[k]) == list:
+            value = ",".join(  form_data[k]  )
+            values.append( fns.quote(value) )
+        else: 
+            values.append(  fns.quote( unicode(form_data[k]) )  )
+
     # generate sql insert statement
     q = "INSERT INTO {0}{tbl} ({1}) VALUES ({2})".format(
         '{schm}.'.format(**get_data) if conn_params['dialect'] == 'postgresql' else '',
         ",".join(cols), ",".join(values), **get_data
         )
+    
     # run query and return results
     ret = sql.short_query(conn_params, (q, ))
     if ret['status'] == 'success': ret['msg'] = 'Insertion succeeded'
@@ -227,14 +234,21 @@ def insert_row(conn_params, get_data={}, post_data={}):
     return ret
 
 
-def update_row(conn_params, indexed_cols={}, get_data={}, post_data={}):
+def update_row(conn_params, indexed_cols={}, get_data={}, form_data={}):
     # set execution context
     conn_params['db'] = get_data['db']
-    # add single qoutes to the variables
+    # format form_data ( from a form) according to the following rules
+    # * add single qoutes to the variables
+    # * make lists a concatenation of lists
     cols, values = [], []
-    for k in post_data:
+    for k in form_data:
         if k in ('csrfmiddlewaretoken', 'save_changes_to'): continue
-        cols.append(k), values.append(  repr( str(post_data[k]) )  )
+        cols.append(k)
+        if type(form_data[k]) == list:
+            value = ",".join(  form_data[k]  )
+            values.append( fns.quote(value) )
+        else: 
+            values.append(  fns.quote( unicode(form_data[k]) )  )
 
     # generate SET sub statment
     _l_set = []
@@ -244,7 +258,7 @@ def update_row(conn_params, indexed_cols={}, get_data={}, post_data={}):
     # generate WHERE sub statement
     _l_where = []
     for key in indexed_cols:
-        short_stmt = "=".join([ key, repr(  str(post_data[key])  ) ])
+        short_stmt = "=".join([ key, fns.quote(  unicode(form_data[key])  ) ])
         _l_where.append(short_stmt)
 
     # generate full query
@@ -308,4 +322,3 @@ def get_home_variables(request):
             return variables
         else:
             return fns.http_500(result)
-

@@ -29,28 +29,16 @@ def validateAjaxRequest(request):
         return True
     else:
         return False
-        
-def inside_query(request, query_name):
-    if query_name == 'db_names':
-        db_names =  sql.get_databases( get_conn_params(request) )
-        return db_names.fetchall()
-    
-def result_to_json(result):
-    l=[row for row in result]
-    ll = []
-    for i in range(len(l)):
-        for row in l[i]:
-            ll.append(str(row))
-    return json.dumps(ll)
-
-def jsonize_result(result):
-    ll = result['rows']
-    for row_index in range(len(ll)):
-        ll[row_index] = list( ll[row_index] )
-    return json.dumps(result)
 
     
 def make_choices(choices, begin_empty=False, begin_value='', append_label=''):
+    '''
+    Duplicate each item in choices to make a (stored_name, display_name) pair.
+
+    Prepends the return sequence with an empty pair if begin_empty is True.
+
+    Or could accept and optional begin_value to be the prepended pair as explained above.
+    '''
     ret = [] if begin_empty else [('',
                         begin_value if begin_value else ''),]
     for i in range( len(choices) ):
@@ -92,6 +80,11 @@ def get_conditions(l):
     return conditions
 
 def response_shortcut(request, template = False, extra_vars=False ):
+    '''
+    A view response shortcut which finds the required template by some concatenating and then
+    process the return object with a RequestContext and some optional context as specified in 
+    the ``extra_vars`` parameter
+    '''
     # extra_vars are more context variables
     template = skeleton(template) if template else skeleton(request.GET['v'], request.GET['sctn'])
     context = RequestContext(request, {
@@ -121,6 +114,10 @@ def qd(query_dict):
     return dict((key, query_dict.get(key)) for key in query_dict)
 
 def table_options(opt_type, with_keys=True, select_actions=False):
+    '''
+    Generates a textual represenation (not unicode) of div.table-options for jsified Tables.
+    This html serves as a sort of toolbars (compulsory) to the operations on a jsified table.
+    '''
     # opt_type = "users || tbls || data
     l = ['<div class="table-options">'] # unclosed tag
     ctrls = ['all', 'none']
@@ -217,7 +214,19 @@ class HtmlTable():
         - properties - a dict of table attributes
         - columns - an iterable containing the table heads
         - rows - and iterable containing some iterables
+
+    structure of return string (html)
+
+    <div class='jsifyTable'>
+        <div class='tbl-header'><table><tbody><tr></tr></tbody></table></div>
+        <div class='tbl-body'>
+            <table class='sql'><tbody>
+                <tr><td><div class='data-entry'><code>{{data}}</code></div></td></tr>
+            </tbody></table>
+        </div>
+    </div>
     '''
+
     def __init__(self, columns=[], rows=[], attribs={}, props={}, store={}, static_addr = "", **kwargs):
         self.props = props
         self.tbody_chldrn = []
@@ -332,16 +341,22 @@ class HtmlTable():
 
 # render the given template with a RequestContext(main reeason)
 def render_template(request, template, context= {}, is_file=False):
+    '''
+    Helper function which uses ``request`` to get the RequestContext which is used 
+    to provide extras context to a template.
+    '''
     _context = RequestContext(request, [site_proc])
     if len(context) > 0: _context.update(context)
     t = loader.get_template(template) if is_file else Template(template) 
     return t.render(_context)
 
 
-def parse_indexes_query(tbl_indexes, needed_index=None):
+def parse_indexes_query(tbl_indexes, needed_indexes=None):
     '''
     Creates a dict mapping with key as name of the column which maps to a list
-    which contains all the indexes on the said key. Bucket Dicts like in QuerySets
+    which contains all the indexes on the said key. 
+
+    Returns a Bucket dict (like django QuerySets)
 
     e.g.
         {
@@ -349,12 +364,20 @@ def parse_indexes_query(tbl_indexes, needed_index=None):
             'NAME': ['UNIQUE', 'FOREIGN KEY'],
         }
     '''
-    _l = {}
-    for i in range(len(tbl_indexes)):
-        if needed_index != None:
-            if tbl_indexes[i][2] != needed_index: continue
-        if _l.has_key(tbl_indexes[i][0]): _l[ tbl_indexes[i][0] ].append(i)
-        else: _l[ tbl_indexes[i][0] ] = [ tbl_indexes[i][2] ]
-    return _l
+    _dict = {}
+
+    for row in tbl_indexes:
+        if needed_indexes != None and row[2] not in needed_indexes: continue
+        if _dict.has_key(row[0]): _dict[ row[0] ].append( row[2] )
+        else: _dict[ row[0] ] = [ row[2] ]
+    return _dict
+
+
+def quote(_str):
+    '''
+    return a single quoted version of the passed in string _str
+    '''
+    return "'%s'" % _str
+    
 # cyclic import
 import db

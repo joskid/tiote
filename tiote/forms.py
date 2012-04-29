@@ -43,12 +43,8 @@ export_choices = ( ('structure', 'structure'),('data', 'data') )
 
 foreign_key_action_choices = ['no action', 'restrict', 'cascade', 'set null', 'set default']
 
-def b(cond):
-    if cond == 'NO' or cond == False or cond == 'no': return "NOT NULL"
-    else: return ""
 
-
-class ttCheckboxSelectMultiple(forms.SelectMultiple):
+class tt_CheckboxSelectMultiple(widgets.CheckboxSelectMultiple):
     """
     Copy of that found in stock django but added here in other to change its rendering (
     addition of a class to part of its rendered html)
@@ -79,7 +75,7 @@ class ttCheckboxSelectMultiple(forms.SelectMultiple):
         return mark_safe(u'\n'.join(output))
 
 
-class ttRadioFieldRenderer(widgets.RadioFieldRenderer):
+class tt_RadioFieldRenderer(widgets.RadioFieldRenderer):
     """
     Copy of that found in stock django but added here in other to change its rendering (
     addition of a class to part of its rendered html)
@@ -112,7 +108,7 @@ class InsertForm(forms.BaseForm):
         
         # determing type of form fields for each column
         for row in tbl_struct['rows']:
-            _c = []
+            _classes = []
 
             if row[1] in ('character varying', 'varchar','character', 'char'):
                 f[row[0]] = forms.CharField()
@@ -131,68 +127,78 @@ class InsertForm(forms.BaseForm):
             elif row[1] in ('tinyint', 'smallint', 'mediumint', 'int', 'bigint','integer',):
                 f[row[0]] = forms.IntegerField()
                 # if row[5]: f[row[0]].validators.append(validators.MaxLengthValidator(row[5]))
-                _c.append('validate-integer')
+                _classes.append('validate-integer')
                 
             elif row[1] in ('real', 'double', 'float', 'decimal', 'numeric', 'double precision'):
                 f[row[0]] = forms.FloatField()
                 # if row[5]: f[row[0]].validators.append(validators.MaxLengthValidator(row[5]))
-                _c.append('validate-numeric')
+                _classes.append('validate-numeric')
 
             elif row[1] in ('decimal', 'numeric', 'money',):
                 f[row[0]] = forms.DecimalField()
                 # if row[5]: f[row[0]].validators.append(validators.MaxLengthValidator(row[5]))
-                _c.append('validate-numeric')
+                _classes.append('validate-numeric')
 
             elif row[1] in ('date',):
                 f[row[0]] = forms.DateField()
-                _c.append('validate-date')
+                _classes.append('validate-date')
 
-            elif row[1] in ('time','time with time zone',):
-                f[row[0]] = forms.TimeField()
-
-            elif row[1] in ('datetime', 'timestamp', 'timestamp with time zone',):
-                f[row[0]] = forms.CharField() # no longer used a datetime field because
-                                              # - of error generated when submitting fields which
-                                              # - are populated from the database
-
+            elif row[1] in ('datetime', 'time','time with time zone','timestamp', 'timestamp with time zone',):
+                # no longer used a python field (date, datetime) because
+                # - of error generated when submitting fields which
+                # - are populated from the database
+                f[row[0]] = forms.CharField() 
+                
             elif row[1] == 'set':
-                f[row[0]] = forms.ChoiceField(widget=ttCheckboxSelectMultiple())
-                f[row[0]].choices = utils.fns.make_choices(
-                    row[len(row)-1].replace("set(", "").replace(")","").split(","), True) 
+                f[row[0]] = forms.MultipleChoiceField(widget=tt_CheckboxSelectMultiple())
+                # parse the field description to list with all the unnecssary quotes removed
+                choices = row[len(row)-1].replace("set(", "").replace(")","")
+                choices = choices.replace("'", "").split(",")
+                f[row[0]].choices = utils.fns.make_choices(choices, True) 
 
             elif row[1] == 'enum':
                 f[row[0]] = forms.ChoiceField()
-                f[row[0]].choices = utils.fns.make_choices(
-                    row[len(row)-1].replace("enum(", "").replace("\"","").replace(")","").split(","), False) 
-            # any field not currently understood
+                # parse the field description to list with all the unnecssary quotes removed
+                choices = row[len(row)-1].replace("enum(", "").replace("\"","").replace(")","")
+                choices = choices.replace("'", "").split(",")
+                f[row[0]].choices = utils.fns.make_choices(choices, False) 
+            
+            # any field not currently understood (PostgreSQL makes use of a lot of user defined fields
+                # which is difficult to keep track of)
             else: f[row[0]] = forms.CharField(widget=forms.Textarea(attrs={'cols':'', 'rows':''}))
 
             #required fields
-            if b(row[2]): _c.append("required")
+            if row[2].lower() == 'no' or row[2] == False:
+                # the field row[2] is required
+                _classes.append("required")
+                # the option  above must be the last assignment to _classes because it's index
+                # - must be the last one for the next lines of logic to work
             else:
                 f[row[0]].required = False
+                
             # options common to all fields
             # help_text
             _il = [ row[len(row) - 1], ]
             if dialect == 'mysql': _il.append(row[len(row) -2 ])
             f[row[0]].help_text =  " ".join(_il)
             if row[3]: f[row[0]].default = row[3] #default
+            
             # work with indexes
             if indexed_cols.has_key( row[0] ):
-                # make an indexed column with auto_increment flag not required
                 if dialect == 'mysql' and indexed_cols[ row[0] ].count("PRIMARY KEY"):
-                    if row[len(row) - 2].count('auto_increment'): 
-                        _c.pop(0)
+                    # make an indexed column with auto_increment flag not required (MySQL)
+                    if row[len(row) - 2].count('auto_increment') > 0: 
+                        if _classes.count('required') > 0: _classes.pop()
                         f[ row[0] ].required = False
 
             # width of the fields
-            if type(f[row[0]].widget) not in (forms.CheckboxSelectMultiple, ttCheckboxSelectMultiple,):
-                _c.append("span6")
+            if type(f[row[0]].widget) not in (forms.CheckboxSelectMultiple, tt_CheckboxSelectMultiple,):
+                _classes.append("span6")
             # add the attribute classes                
             if f[row[0]].widget.attrs.has_key('class'):
-                f[row[0]].widget.attrs['class'] += " ".join(_c)
+                f[row[0]].widget.attrs['class'] += " ".join(_classes)
             else:
-                f[row[0]].widget.attrs.update({'class':" ".join(_c)})
+                f[row[0]].widget.attrs.update({'class':" ".join(_classes)})
 
 
         self.base_fields = f
@@ -217,7 +223,7 @@ class EditForm(InsertForm):
                 ('insert_row', 'Another row (INSERT statement)')
             ), 
             initial = 'update_row',
-            widget = forms.RadioSelect(attrs={'class':'inputs-list'}, renderer = ttRadioFieldRenderer)
+            widget = forms.RadioSelect(attrs={'class':'inputs-list'}, renderer = tt_RadioFieldRenderer)
         )
 
 

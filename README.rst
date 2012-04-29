@@ -15,7 +15,7 @@ Requirements
 
 Installation
 ============
-Install from pypi with the handle ``tiote``. i.e. 
+Install from pypi with the handle ``tiote``. i.e.:: 
 
 		pip install tiote
 
@@ -28,11 +28,11 @@ for it to be available system wide or just place the tiote folder in a location 
 Configuration
 -------------
 In the ``settings.py`` of your django project add 'tiote' to the ``INSTALLED_APPS`` settings and ``django.contrib.sessions`` if it is not already there.
-and run 
+and run::
 
 		python manage.py syncdb
 
-In the ``urls.py`` of your project, add a url mapping for the tiote application (any address you want)
+In the ``urls.py`` of your project, add a url mapping for the tiote application (any address you want)::
 
 				(r'^<custom_url_map>/', include('tiote.urls')),
 

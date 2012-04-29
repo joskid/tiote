@@ -168,13 +168,13 @@ def edit(request):
             if f.cleaned_data['save_changes_to'] == 'insert_row':
                 # pretty straight forward (lifted from insert view above)
                 ret = utils.db.insert_row(conn_params, utils.fns.qd(request.GET), 
-                    utils.fns.qd(request.POST))
+                    f.cleaned_data)
 
                 return HttpResponse(json.dumps(ret))
             else:
                 indexed_cols = utils.fns.parse_indexes_query(tbl_indexes_data['rows'])
                 ret = utils.db.update_row(conn_params, indexed_cols, 
-                    utils.fns.qd(request.GET), utils.fns.qd(request.POST))
+                    utils.fns.qd(request.GET), f.cleaned_data)
 
                 return HttpResponse(json.dumps(ret))
 

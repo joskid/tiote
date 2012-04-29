@@ -11,3 +11,6 @@ dist
 tiote.egg-info
 /tiote/nbproject/private/tiote/nbproject
 tiote/nbproject
+docs/_build
+docs/_static
+docs/_templates
