@@ -162,7 +162,7 @@ padding-bottom: 0px;
 margin: 5px 0px 5px 0px;
 }
 #sidebar select {
-    width: 180px;
+    width: 170px;
 }
 #sidebar ul {
      font-size: 11px;
@@ -172,6 +172,11 @@ margin: 5px 0px 5px 0px;
 
 #sidebar ul a { color: #777777; }
 #sidebar ul li.active { font-weight: bold;}
+
+#sidebar .sidebar-item {
+	margin-bottom: 5px;
+	margin-left: -5px;
+}
 
 /*
 	ICONS

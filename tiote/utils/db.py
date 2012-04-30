@@ -24,7 +24,7 @@ def rpr_query(conn_params, query_type, get_data={}, post_data={}):
         if conn_params['dialect'] == 'mysql':
             conn_params['db'] = 'mysql'
         r = sql.full_query(conn_params, 
-            sql.stored_query(request.GET.get('query'),conn_params['dialect']) )
+            sql.stored_query(get_data['query'],conn_params['dialect']) )
         if type(r) == dict:
             r
         else:
@@ -162,8 +162,10 @@ def fn_query(conn_params, query_name, get_data={}, post_data={}):
     return query_map[query_name](conn_params, get_data, post_data)
 
 
-def common_query(request, query_name):
-    conn_params = fns.get_conn_params(request)
+def common_query(conn_params, query_name, get_data={}):
+    '''
+    get_data is a django QueryDict structure
+    '''
     pgsql_redundant_queries = ('template_list', 'group_list', 'user_list', 'db_list', 'schema_list')
     mysql_redundant_queries = ('db_list','charset_list', 'supported_engines')
     
@@ -174,7 +176,7 @@ def common_query(request, query_name):
                     query_name = 'full_schema_list' if settings.TT_SHOW_SYSTEM_CATALOGS == True else "user_schema_list"
                 else: query_name = "user_schema_list" # default
             
-            conn_params['db'] == request.GET.get('db') if request.GET.get('db') else conn_params['db']
+            conn_params['db'] == get_data.get('db') if get_data.get('db') else conn_params['db']
             r = sql.full_query(conn_params,
                 sql.stored_query(query_name, conn_params['dialect']))
             return r['rows']
