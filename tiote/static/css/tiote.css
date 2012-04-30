@@ -172,6 +172,9 @@ margin: 5px 0px 5px 0px;
 
 #sidebar ul a { color: #777777; }
 #sidebar ul li.active { font-weight: bold;}
+#sidebar ul a:hover {
+	color: #999;
+}
 
 #sidebar .sidebar-item {
 	margin-bottom: 5px;
@@ -193,15 +196,22 @@ margin: 5px 0px 5px 0px;
 .icon-schemas {
     background: url("../img/schemas.png") no-repeat scroll 0 0 transparent;
 }
+
+.icon-schema {
+    background: url("../img/schema.png") no-repeat scroll 0 0 transparent;
+}
+
 .icon-go {
     background: url("../img/goto.png") no-repeat scroll 0 0 transparent;
     vertical-align: bottom;
     margin-left: 5px;
 }
-.icon-schemas, .icon-databases, .icon-table, .icon-database {
+
+.icon-schemas, .icon-databases, .icon-table, .icon-database, .icon-schema {
     padding: 0 0 10px 20px;
     vertical-align: middle;
 }
+
 a:hover {
     color: #404040;
     text-decoration: none;

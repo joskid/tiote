@@ -7,6 +7,12 @@ import fns
 
 
 def rpr_query(conn_params, query_type, get_data={}, post_data={}):
+    '''
+    Run queries that have to be generated on the fly. Most queries depends on get_data, 
+    while some few depends on post_data
+
+    get_data and post_data are gotten from request.GET and request.POST or form.cleaned_data
+    '''
     # common queries that returns success state as a dict only
     no_return_queries = ('create_user', 'drop_user', 'create_db','create_table',
         'drop_table', 'empty_table', 'delete_row', 'create_column', 'delete_column',)
@@ -151,10 +157,15 @@ def rpr_query(conn_params, query_type, get_data={}, post_data={}):
         return fns.http_500('dialect not supported!')
 
 
-# reduces the growth rate of the rpr_query function above
-# it uses a mapping to know which function to call
-# all its queries are functions to be called not sections of stored logic like rpr_query
+
 def fn_query(conn_params, query_name, get_data={}, post_data={}):
+    '''
+    reduces the growth rate of the rpr_query function above
+    
+    it uses a mapping to know which function to call
+    
+    all its queries are functions to be called not sections of stored logic like rpr_query
+    '''
     query_map = {
         'get_row': get_row
     }
@@ -164,6 +175,9 @@ def fn_query(conn_params, query_name, get_data={}, post_data={}):
 
 def common_query(conn_params, query_name, get_data={}):
     '''
+    Run queries that needs no dynamic generation. Queries here are already stored and would
+    only need to be executed on the database selected
+
     get_data is a django QueryDict structure
     '''
     pgsql_redundant_queries = ('template_list', 'group_list', 'user_list', 'db_list', 'schema_list')

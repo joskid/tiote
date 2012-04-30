@@ -45,7 +45,7 @@ function Page(obj, oldObj){
 	// unset all window resize events
 	window.removeEvents(['resize']);
 	this.clearPage();
-	this.loadPage(true)
+	this.loadPage(true);
 }
 
 Page.prototype.clearPage = function(clr_sidebar) {
@@ -62,8 +62,8 @@ Page.prototype.loadPage = function(clr_sidebar) {
 	this.setTitle();
 	this.generateTopMenu(obj);
 	disable_unimplemented_links();
-	this.generateView(obj, oldObj);
-	if (clr_sidebar) this.generateSidebar(obj, oldObj);
+	this.generateView(obj, oldObj); 
+	this.generateSidebar(clr_sidebar);
 	highlightActiveMenu();
 }
 
@@ -153,7 +153,7 @@ Page.prototype.generateView = function(navObj, oldNavObj){
 				// don't understand why but this cookie is usually appended with 
 				// - quotes at the beginning and at the end (not its representation)
 				var o = Cookie.read('TT_NEXT').parseQueryString(true, true);
-				o2 = {};
+				var o2 = {};
 				Object.keys(o).each(function(k){
 					o2[ k.replace("\"", "") ] = o[k].replace("\"",'');
 				});
@@ -175,17 +175,20 @@ Page.prototype.generateView = function(navObj, oldNavObj){
 }
 
 // decide if the sidebar needs to be refreshed
-function updateSidebar(navObj, oldNavObj) {
-	var clear_sidebar = true; // default action is to clear the sidebar
+function canUpdateSidebar(navObj, oldNavObj) {
+	var clear_sidebar = false; // default action is not to clear the sidebar
 	if (Cookie.read('TT_UPDATE_SIDEBAR')){
 		clear_sidebar = true;
 		Cookie.dispose('TT_UPDATE_SIDEBAR');
 	} else {
 		// other necessary conditions
+		// if the #sidebar element is empty reload the sidebar
 		if ($('sidebar') && $('sidebar').getChildren().length) {
 			if (oldNavObj == undefined || oldNavObj == null || oldNavObj == "")
 				return clear_sidebar; // short circuit the function
 			
+		// if there is no percievable change in the location.hash of the page
+		// - dont clear sidebar
 		if (oldNavObj['sctn'] == navObj['sctn'] && oldNavObj['tbl'] == navObj['tbl']
 			&& oldNavObj['db'] == navObj['db']
 		) {
@@ -203,7 +206,7 @@ function updateSidebar(navObj, oldNavObj) {
 	return clear_sidebar;
 }
 
-Page.prototype.generateSidebar = function(navObj, oldNavObj) {
+Page.prototype.generateSidebar = function(clear_sidebar) {
 	// autosize the sidebar to the available height after below the #topbar
 	var resize_sidebar = function() {
 		if ($('sidebar').getScrollSize().y > (getHeight() - 50) || 
@@ -212,7 +215,13 @@ Page.prototype.generateSidebar = function(navObj, oldNavObj) {
 		}
 	};
 	
-	var clear_sidebar = updateSidebar(navObj, oldNavObj);
+	// decide if there should be a sidebar update
+	// if clear_sidebar is already true then there must be a sidebar update
+	// - if it isn't decide from the context of the current view if there should be
+	clear_sidebar = clear_sidebar || false;
+	var navObj = this.options.navObj, oldNavObj = this.options.oldNavObj;
+	if (!clear_sidebar)
+		clear_sidebar = canUpdateSidebar(navObj, oldNavObj);
 	
 	if (clear_sidebar) {
 		var x = new XHR({
@@ -328,9 +337,9 @@ Page.prototype.jsifyTable = function(syncHeightWithWindow) {
 			make_checkable(pg.tbls[tbl_in]);
 			// attach the variables passed down as javascript objects to the 
 			// table object
-			pg.tbls[tbl_in]['vars'] = {}; // container
+			pg.tbls[tbl_in]['vars'] = {}; var data;// containers
 			if ($(pg.tbls[tbl_in]).get('data')) {
-				var data = {}
+				data = {}
 				$(pg.tbls[tbl_in]).get('data').split(';').each(function(d){
 					var ar = d.split(':');
 					data[ar[0]] = ar[1];
@@ -338,7 +347,7 @@ Page.prototype.jsifyTable = function(syncHeightWithWindow) {
 				pg.tbls[tbl_in]['vars']['data'] = data; // schema: [key: value]
 			}
 			if ($(pg.tbls[tbl_in]).get('keys')) {
-				var data = []; // data[[1,2,3],...] indexes 1: name of column,
+				data = []; // data[[1,2,3],...] indexes 1: name of column,
 							   // 2 : index type
 						       // 3 : column position in tr
 				$(pg.tbls[tbl_in]).get('keys').split(';').each(function(d){

@@ -28,7 +28,8 @@ WHERE schema_name NOT LIKE '%pg_toast%' AND schema_name NOT LIKE '%pg_temp%'",
             'user_schema_list':
                 "SELECT schema_name, schema_owner FROM information_schema.schemata \
 WHERE schema_name NOT LIKE '%pg_toast%' AND schema_name NOT LIKE '%pg_temp%' \
-AND schema_name NOT IN ('pg_catalog', 'information_schema')"
+AND schema_name NOT IN ('pg_catalog', 'information_schema')" # manually filled, might need to be adjusted if new
+                                                             # - system catalogs are discovered
         },
 
         'mysql': {
@@ -57,6 +58,11 @@ AND schema_name NOT IN ('pg_catalog', 'information_schema')"
 
 
 def generate_query(query_type, dialect='postgresql', query_data=None):
+    '''
+    Generates queries of ``query_type`` with the given ``query_data``.
+
+    The generated queries are returned as a tuple of strings.
+    '''
     # init
     if query_data.has_key('schm'):
         prfx = "{schm}.".format(**query_data) if dialect =='postgresql' else ""
