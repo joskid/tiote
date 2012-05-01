@@ -38,8 +38,29 @@ window.addEvent('domready', function() {
 });
 
 
+/*
+ * make UI images accessible by the DOM before they are required
+ * 
+ * notice: to make sure this list is accurate and doesn't generate funny 404 errors: 
+ * to update the images collection below use a list generated from reading the contents
+ * of the directory containing the images (python was used here)
+ */
+function preloadImages() {
+	var images = ['functions.png', 'schemas.png', 'window-close.png', 'sequences.png', 
+		'sortdesc.gif', 'table.png', 'sequence.png', 'tables.png', 'databases.png', 'views.png', 
+		'domains.png', 'spinner.gif', 'database.png', 'goto.png', 'schema.png', 'sortasc.gif'
+	];
+	
+	var pre;
+	for (var i=0; i<images.length; i++) {
+		pre = new Image();
+		pre.src = "/static/img/" + images[i];
+	}	
+}
+
 // A single tiote page
 function Page(obj, oldObj){
+	preloadImages();
 	this.options = new Hash({navObj: obj, oldNavObj: oldObj});
 	this.tbls = [];
 	// unset all window resize events
