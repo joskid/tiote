@@ -121,6 +121,10 @@ def get_conn_params(request):
     return data    
 
 def qd(query_dict):
+    '''
+    ugly function
+    returns an object instead of a list as the norms of QuerySets
+    '''
     return dict((key, query_dict.get(key)) for key in query_dict)
 
 def table_options(opt_type, with_keys=True, select_actions=False):
@@ -259,12 +263,16 @@ def generate_sidebar(request):
         # 3. a h6.placeholder element shouting 'object types:'
         # 4. a ul having li > a each saying the specific 'object type' and linking to its appropriate view
         # ret_string = '<h6>quick nav:</h6><div><a class="james pull-right" href="">overview</a></div><br />\
-        ret_string = '<h6><a class="icon-back" href="#sctn=db&v=overview&db={5}">back to overview</a></h6>\
+        bck_lnk = '<h6><a class="icon-back" href="#sctn=db&v=overview&db={0}{1}">back to overview</a>'.format(
+            request.GET.get('db'),
+            '&schm=%s' % request.GET.get('schm') if request.GET.get('schm') else ''
+            )
+        ret_string = bck_lnk + '</h6>\
 <h6>quick nav:</h6><div class="sidebar-item"><img src="{4}/img/databases.png" /> {0}</div>{1}{2}{3}'.format( 
             db_selection_form, s, # 0 & 1
             '<h6 class="placeholder">%ss:</h6>' % ABBREVS[request.GET.get('sctn')], # 2
             "<ul>{0}</ul>".format( ''.join(sfx_list) ), # 3
-            static_addr, request.GET.get('db') # 4 & 5
+            static_addr # 4
         )
 
 #    return ret_string

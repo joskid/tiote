@@ -115,7 +115,7 @@ def home(request):
 
 
 def route(request):
-    if request.GET['v'] == 'home':
+    if request.GET.get('v') == 'home':
         return home(request)
     # elif request.GET['v'] == 'query':
     #     return query(request)
