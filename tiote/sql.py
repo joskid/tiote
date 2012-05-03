@@ -28,7 +28,8 @@ WHERE schema_name NOT LIKE '%pg_toast%' AND schema_name NOT LIKE '%pg_temp%'",
             'user_schema_list':
                 "SELECT schema_name, schema_owner FROM information_schema.schemata \
 WHERE schema_name NOT LIKE '%pg_toast%' AND schema_name NOT LIKE '%pg_temp%' \
-AND schema_name NOT IN ('pg_catalog', 'information_schema')"
+AND schema_name NOT IN ('pg_catalog', 'information_schema')" # manually filled, might need to be adjusted if new
+                                                             # - system catalogs are discovered
         },
 
         'mysql': {
@@ -57,6 +58,11 @@ AND schema_name NOT IN ('pg_catalog', 'information_schema')"
 
 
 def generate_query(query_type, dialect='postgresql', query_data=None):
+    '''
+    Generates queries of ``query_type`` with the given ``query_data``.
+
+    The generated queries are returned as a tuple of strings.
+    '''
     # init
     if query_data.has_key('schm'):
         prfx = "{schm}.".format(**query_data) if dialect =='postgresql' else ""
@@ -260,8 +266,8 @@ AND connamespace = (SELECT oid from pg_namespace WHERE nspname=\'{schm}\') \
             return tuple(queries)
         
         elif query_type == 'table_rpr':
-            q = "SELECT TABLE_NAME AS 'table', TABLE_ROWS AS 'rows', TABLE_TYPE AS 'type', ENGINE FROM \
-            `INFORMATION_SCHEMA`.`TABLES` WHERE TABLE_SCHEMA = '{db}'".format(**query_data)
+            q = "SELECT TABLE_NAME AS 'table', TABLE_ROWS AS 'rows', TABLE_TYPE AS 'type', ENGINE as 'engine' \
+            FROM `INFORMATION_SCHEMA`.`TABLES` WHERE TABLE_SCHEMA = '{db}'".format(**query_data)
             return (q,)
         
         elif query_type == 'indexes':

@@ -57,7 +57,7 @@ def structure(request):
     static_addr = utils.fns.render_template(request, '{{STATIC_URL}}')
     subv = request.GET.get('subv', 'cols')
     d = {}
-    _subnav = {'cols': 'columns', 'idxs':'indexes'}
+    _subnav = {'cols': utils.fns.ABBREVS['cols'], 'idxs':utils.fns.ABBREVS['idxs']}
     if subv == 'cols':
         d['title'] = _subnav[subv]
         tbl_struct_data = utils.db.rpr_query(conn_params, 'table_structure', utils.fns.qd(request.GET))
@@ -78,14 +78,14 @@ def structure(request):
             else '<div class="undefined">[Table contains no indexes]</div>'
     # generate arranged href
     dest_url = SortedDict(); _d = {'sctn':'tbl','v':'structure'}
-    for k in _d: dest_url[k] = _d[k]
+    for k in _d: dest_url[k] = _d[k] # init this way to maintain order
     for k in ('db', 'schm','tbl',): 
         if request.GET.get(k): dest_url[k] = request.GET.get(k)
     _l = []
     # generate navigation ul
     for k in ('cols', 'idxs',):
         _l.append('<li{0}><a href="{1}{2}">{3}<span>|</span></a></li>'.format(
-            ' class="active"' if _subnav[k] == d['title'] else '',
+            ' class="active"' if _subnav[k].lower() == d['title'].lower() else '',
             '#'+urlencode(dest_url)+'&subv=', k, _subnav[k])
         )
     ret_str = '<div style="margin-bottom:-5px;"><ul class="subnav">{0}</ul></div>{table}'.format(

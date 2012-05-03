@@ -7,6 +7,12 @@ import fns
 
 
 def rpr_query(conn_params, query_type, get_data={}, post_data={}):
+    '''
+    Run queries that have to be generated on the fly. Most queries depends on get_data, 
+    while some few depends on post_data
+
+    get_data and post_data are gotten from request.GET and request.POST or form.cleaned_data
+    '''
     # common queries that returns success state as a dict only
     no_return_queries = ('create_user', 'drop_user', 'create_db','create_table',
         'drop_table', 'empty_table', 'delete_row', 'create_column', 'delete_column',)
@@ -24,7 +30,7 @@ def rpr_query(conn_params, query_type, get_data={}, post_data={}):
         if conn_params['dialect'] == 'mysql':
             conn_params['db'] = 'mysql'
         r = sql.full_query(conn_params, 
-            sql.stored_query(request.GET.get('query'),conn_params['dialect']) )
+            sql.stored_query(get_data['query'],conn_params['dialect']) )
         if type(r) == dict:
             r
         else:
@@ -151,10 +157,15 @@ def rpr_query(conn_params, query_type, get_data={}, post_data={}):
         return fns.http_500('dialect not supported!')
 
 
-# reduces the growth rate of the rpr_query function above
-# it uses a mapping to know which function to call
-# all its queries are functions to be called not sections of stored logic like rpr_query
+
 def fn_query(conn_params, query_name, get_data={}, post_data={}):
+    '''
+    reduces the growth rate of the rpr_query function above
+    
+    it uses a mapping to know which function to call
+    
+    all its queries are functions to be called not sections of stored logic like rpr_query
+    '''
     query_map = {
         'get_row': get_row
     }
@@ -162,8 +173,13 @@ def fn_query(conn_params, query_name, get_data={}, post_data={}):
     return query_map[query_name](conn_params, get_data, post_data)
 
 
-def common_query(request, query_name):
-    conn_params = fns.get_conn_params(request)
+def common_query(conn_params, query_name, get_data={}):
+    '''
+    Run queries that needs no dynamic generation. Queries here are already stored and would
+    only need to be executed on the database selected
+
+    get_data is a django QueryDict structure
+    '''
     pgsql_redundant_queries = ('template_list', 'group_list', 'user_list', 'db_list', 'schema_list')
     mysql_redundant_queries = ('db_list','charset_list', 'supported_engines')
     
@@ -174,7 +190,7 @@ def common_query(request, query_name):
                     query_name = 'full_schema_list' if settings.TT_SHOW_SYSTEM_CATALOGS == True else "user_schema_list"
                 else: query_name = "user_schema_list" # default
             
-            conn_params['db'] == request.GET.get('db') if request.GET.get('db') else conn_params['db']
+            conn_params['db'] == get_data.get('db') if get_data.get('db') else conn_params['db']
             r = sql.full_query(conn_params,
                 sql.stored_query(query_name, conn_params['dialect']))
             return r['rows']

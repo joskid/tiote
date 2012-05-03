@@ -11,23 +11,22 @@ body {
     padding-right: 10px;
 }
 .tt-content {
-     float: none;
-     margin: 10px 0px 0px 200px;
-     max-width: 1180px;
-     min-width: 700px;
-     padding: 0pt 10px 0pt 15px;
+	float: none;
+	margin: 10px 0px 0px 200px;
+	max-width: 1180px;
+	min-width: 700px;
+	padding: 0pt 10px 0pt 15px;
 }
 
+a { color: steelblue; }
 
-div#sql-container {
-    padding-left: 20px;
-}
-div.table-options {
-    clear: right;
-}
-div.table-options span {
-    padding-left: 20px;
-}
+
+div#sql-container { padding-left: 20px; }
+
+div.table-options { clear: right; }
+
+div.table-options span { padding-left: 20px; }
+
 div.table-options a {
     cursor: pointer;
     padding-left: 5px;
@@ -80,44 +79,44 @@ h5.heading {
 }
 
 .subnav {
-     list-style: none outside none;
-     padding: 0pt;
+	list-style: none outside none;
+	padding: 0pt;
 }
 
 .subnav:before, .subnav:after {
-     content: "";
-     display: table;
+	content: "";
+	display: table;
 }
 
 .subnav:after {
-     clear: both;
+	clear: both;
 }
 
 .subnav > li {
-     float: left;
+	float: left;
 }
 
 .subnav > li > a {
-     display: block;
+	display: block;
 }
 
 .subnav a {
-     color: #0069D6;
-	 font-size: 14px;
+	color: #0069D6;
+	font-size: 14px;
 }
 
 .subnav a span {
-     padding-left: 10px;
-     padding-right: 10px;
-	 color: #404040;
+	padding-left: 10px;
+	padding-right: 10px;
+	color: #404040;
 }
 
 .subnav li:last-child span {
-     display: none;
+	display: none;
 }
 
 .subnav .active a {
-     color: #888;
+	color: #888;
 }
 
 .undefined {
@@ -139,39 +138,52 @@ div.white-bg, p.white-bg {
 	SIDEBAR
 */
 #sidebar {
-     background: none repeat scroll 0pt 0pt #EFEFEF;
-     border-right: 1px solid #DDDDDD;
-     margin: 40px 0px 0px -20px;
-     overflow: auto;
-     padding: 10px 0px 0px 10px;
-     position: fixed;
-     width: 200px;
+	background: none repeat scroll 0pt 0pt #EFEFEF;
+	border-right: 1px solid #DDDDDD;
+	margin: 40px 0px 0px -20px;
+	overflow: auto;
+	padding: 10px 0px 0px 10px;
+	position: fixed;
+	width: 200px;
 }
 #sidebar ul {
     margin-bottom: 0;
 }
 #sidebar h6 {
-     color: #AAAAAA;
-     font-size: 14px;
-     font-weight: normal;
-     line-height: 18px;
-     text-transform: lowercase;
+	color: #AAAAAA;
+	font-weight: normal;
+	line-height: 18px;
+	text-transform: lowercase;
+	padding-bottom: 0px;
+	margin: 5px 0px 5px 0px;
 }
-#sidebar h6 {
-padding-bottom: 0px;
-margin: 5px 0px 5px 0px;
+
+#sidebar h6 a {
+	padding-left: 15px;
+	color: #aaa;
 }
+
 #sidebar select {
-    width: 180px;
+    width: 160px;
+	margin-left: 5px;
 }
 #sidebar ul {
-     font-size: 11px;
-     list-style-type: none;
-     margin: 0pt 0pt 0pt 10px;
+	font-size: 11px;
+	list-style-type: none;
+	margin: 0pt 0pt 0pt 10px;
 }
 
 #sidebar ul a { color: #777777; }
+
 #sidebar ul li.active { font-weight: bold;}
+
+#sidebar ul a:hover, #sidebar h6 a:hover{
+	color: #999;
+}
+
+#sidebar .sidebar-item {
+	margin-bottom: 5px;
+}
 
 /*
 	ICONS
@@ -188,15 +200,26 @@ margin: 5px 0px 5px 0px;
 .icon-schemas {
     background: url("../img/schemas.png") no-repeat scroll 0 0 transparent;
 }
+
+.icon-schema {
+    background: url("../img/schema.png") no-repeat scroll 0 0 transparent;
+}
+
 .icon-go {
     background: url("../img/goto.png") no-repeat scroll 0 0 transparent;
     vertical-align: bottom;
     margin-left: 5px;
 }
-.icon-schemas, .icon-databases, .icon-table, .icon-database {
+
+.icon-back {
+    background: url("../img/goback.png") no-repeat scroll 0 0 transparent;	
+}
+
+.icon-schemas, .icon-databases, .icon-table, .icon-database, .icon-schema {
     padding: 0 0 10px 20px;
     vertical-align: middle;
 }
+
 a:hover {
     color: #404040;
     text-decoration: none;

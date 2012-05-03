@@ -151,7 +151,13 @@ def begin(request, page, **kwargs):
     h =  HttpResponse(t.render(context))
     return h
 
+
 def query(request):
+    '''
+    This view is shown on all sections and adapts according to the section.
+
+    It provides a form for running and returning SQL queries.
+    '''
     conn_params = utils.fns.get_conn_params(request)
     if request.method == 'POST':
         f = forms.QueryForm(request.POST)
@@ -171,7 +177,9 @@ def query(request):
                 results_table = utils.fns.HtmlTable(**r)
                 if results_table.has_body():
                     ret += results_table.to_element()
-            return HttpResponse(ret)
+            h = HttpResponse(ret)
+            h.set_cookie('TT_UPDATE_SIDEBAR', 'ye') # the sidebar must be updated (in case any database object has been changed or deleted)
+            return h
 
         else:
             ret = {'status': 'fail', 

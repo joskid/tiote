@@ -46,9 +46,9 @@ window.addEvent('domready', function() {
  * of the directory containing the images (python was used here)
  */
 function preloadImages() {
-	var images = ['functions.png', 'schemas.png', 'window-close.png', 'sequences.png', 
-		'sortdesc.gif', 'table.png', 'sequence.png', 'tables.png', 'databases.png', 'views.png', 
-		'domains.png', 'spinner.gif', 'database.png', 'goto.png', 'schema.png', 'sortasc.gif'
+	var images = ['schemas.png', 'sequences.png', 'sortdesc.gif', 'table.png', 'sequence.png',
+		'tables.png', 'databases.png', 'views.png', 'spinner.gif', 'database.png', 'goto.png',
+		'schema.png', 'sortasc.gif'
 	];
 	
 	var pre;
@@ -58,15 +58,16 @@ function preloadImages() {
 	}	
 }
 
+preloadImages(); // images are only preloaded when this file is first read
+
 // A single tiote page
 function Page(obj, oldObj){
-	preloadImages();
 	this.options = new Hash({navObj: obj, oldNavObj: oldObj});
 	this.tbls = [];
 	// unset all window resize events
 	window.removeEvents(['resize']);
 	this.clearPage();
-	this.loadPage(true)
+	this.loadPage(true);
 }
 
 Page.prototype.clearPage = function(clr_sidebar) {
@@ -83,8 +84,8 @@ Page.prototype.loadPage = function(clr_sidebar) {
 	this.setTitle();
 	this.generateTopMenu(obj);
 	disable_unimplemented_links();
-	this.generateView(obj, oldObj);
-	if (clr_sidebar) this.generateSidebar(obj, oldObj);
+	this.generateView(obj, oldObj); 
+	this.generateSidebar(clr_sidebar);
 	highlightActiveMenu();
 }
 
@@ -174,7 +175,7 @@ Page.prototype.generateView = function(navObj, oldNavObj){
 				// don't understand why but this cookie is usually appended with 
 				// - quotes at the beginning and at the end (not its representation)
 				var o = Cookie.read('TT_NEXT').parseQueryString(true, true);
-				o2 = {};
+				var o2 = {};
 				Object.keys(o).each(function(k){
 					o2[ k.replace("\"", "") ] = o[k].replace("\"",'');
 				});
@@ -196,17 +197,20 @@ Page.prototype.generateView = function(navObj, oldNavObj){
 }
 
 // decide if the sidebar needs to be refreshed
-function updateSidebar(navObj, oldNavObj) {
-	var clear_sidebar = true; // default action is to clear the sidebar
+function canUpdateSidebar(navObj, oldNavObj) {
+	var clear_sidebar = false; // default action is not to clear the sidebar
 	if (Cookie.read('TT_UPDATE_SIDEBAR')){
 		clear_sidebar = true;
 		Cookie.dispose('TT_UPDATE_SIDEBAR');
 	} else {
 		// other necessary conditions
+		// if the #sidebar element is empty reload the sidebar
 		if ($('sidebar') && $('sidebar').getChildren().length) {
 			if (oldNavObj == undefined || oldNavObj == null || oldNavObj == "")
 				return clear_sidebar; // short circuit the function
 			
+		// if there is no percievable change in the location.hash of the page
+		// - dont clear sidebar
 		if (oldNavObj['sctn'] == navObj['sctn'] && oldNavObj['tbl'] == navObj['tbl']
 			&& oldNavObj['db'] == navObj['db']
 		) {
@@ -224,7 +228,7 @@ function updateSidebar(navObj, oldNavObj) {
 	return clear_sidebar;
 }
 
-Page.prototype.generateSidebar = function(navObj, oldNavObj) {
+Page.prototype.generateSidebar = function(clear_sidebar) {
 	// autosize the sidebar to the available height after below the #topbar
 	var resize_sidebar = function() {
 		if ($('sidebar').getScrollSize().y > (getHeight() - 50) || 
@@ -233,7 +237,13 @@ Page.prototype.generateSidebar = function(navObj, oldNavObj) {
 		}
 	};
 	
-	var clear_sidebar = updateSidebar(navObj, oldNavObj);
+	// decide if there should be a sidebar update
+	// if clear_sidebar is already true then there must be a sidebar update
+	// - if it isn't decide from the context of the current view if there should be
+	clear_sidebar = clear_sidebar || false;
+	var navObj = this.options.navObj, oldNavObj = this.options.oldNavObj;
+	if (!clear_sidebar)
+		clear_sidebar = canUpdateSidebar(navObj, oldNavObj);
 	
 	if (clear_sidebar) {
 		var x = new XHR({
@@ -245,7 +255,7 @@ Page.prototype.generateSidebar = function(navObj, oldNavObj) {
 					$('sidebar').getChildren().destroy();
 				$('sidebar').set('html', text);
 				window.addEvent('resize', resize_sidebar);
-				window.fireEvent('resize');
+				window.fireEvent('resize'); // fire immediately to call resize handler
 				// handle events
 				if ($('db_select')) {
 					$('db_select').addEvent('change', function(e){
@@ -277,11 +287,11 @@ Page.prototype.generateSidebar = function(navObj, oldNavObj) {
 						});
 					});
 				}
-			}
+				}
 		}).send();
 	}
 	window.addEvent('resize', resize_sidebar);
-	window.fireEvent('resize');
+	window.fireEvent('resize'); // fire immediately to call resize handler
 }
 
 
@@ -349,9 +359,9 @@ Page.prototype.jsifyTable = function(syncHeightWithWindow) {
 			make_checkable(pg.tbls[tbl_in]);
 			// attach the variables passed down as javascript objects to the 
 			// table object
-			pg.tbls[tbl_in]['vars'] = {}; // container
+			pg.tbls[tbl_in]['vars'] = {}; var data;// containers
 			if ($(pg.tbls[tbl_in]).get('data')) {
-				var data = {}
+				data = {}
 				$(pg.tbls[tbl_in]).get('data').split(';').each(function(d){
 					var ar = d.split(':');
 					data[ar[0]] = ar[1];
@@ -359,7 +369,7 @@ Page.prototype.jsifyTable = function(syncHeightWithWindow) {
 				pg.tbls[tbl_in]['vars']['data'] = data; // schema: [key: value]
 			}
 			if ($(pg.tbls[tbl_in]).get('keys')) {
-				var data = []; // data[[1,2,3],...] indexes 1: name of column,
+				data = []; // data[[1,2,3],...] indexes 1: name of column,
 							   // 2 : index type
 						       // 3 : column position in tr
 				$(pg.tbls[tbl_in]).get('keys').split(';').each(function(d){
@@ -407,6 +417,7 @@ Page.prototype.addTableOpts = function() {
 	// .table-options processing : row selection
 	if ($$('.table-options') != null && Object.keys(pg.tbls).length) {
 		$$('.table-options').each(function(tbl_opt, opt_in){
+			htm_tbl = pg.tbls[opt_in]; // short and understandable alias
 			// enable selection of rows
 			$(tbl_opt).getElements('a.selector').each(function(a_sel) {
 				a_sel.addEvent('click', function() {
@@ -414,20 +425,22 @@ Page.prototype.addTableOpts = function() {
 					a_sel.get('class').split(' ').each(function(cl){
 						if (cl.contains('select_')) {
 							var option = cl.replace('select_', '').toLowerCase();
-							set_all_tr_state(pg.tbls[opt_in], (option == 'all') ? true : false);
+							set_all_tr_state(htm_tbl, (option == 'all') ? true : false);
 						}
 					});
 				});
 			});
 			
 			// table's needing pagination
-			if (Object.keys(pg.tbls[opt_in]['vars']).contains('data')) {
-				$(tbl_opt).adopt(tbl_pagination(
-					pg.tbls[opt_in]['vars']['data']['total_count'],
-					pg.tbls[opt_in]['vars']['data']['limit'], 
-					pg.tbls[opt_in]['vars']['data']['offset'])
+			if (Object.keys(htm_tbl['vars']).contains('data')) {
+				var pg_htm = tbl_pagination( // pagination html
+					htm_tbl['vars']['data']['total_count'],
+					htm_tbl['vars']['data']['limit'], 
+					htm_tbl['vars']['data']['offset']
 				);
+				$(tbl_opt).getElement('p').adopt(pg_htm);
 			}
+			
 			
 			// links that do something (edit, delete ...)
 			$ES('a.doer', tbl_opt).each(function(doer){
@@ -436,7 +449,7 @@ Page.prototype.addTableOpts = function() {
 						// action to be performed is a page refresh
 						pg.loadPage(false)
 					else 
-						do_action(pg.tbls[opt_in], e);
+						do_action(htm_tbl, e);
 				});
 
 			});
@@ -456,7 +469,7 @@ Page.prototype.addTableOpts = function() {
 				}
 			}
 			
-			pg.tbls[opt_in].addEvent('rowFocus', needy_doer_options).addEvent('rowUnfocus', needy_doer_options);
+			htm_tbl.addEvent('rowFocus', needy_doer_options).addEvent('rowUnfocus', needy_doer_options);
 			
 		});
 	}
