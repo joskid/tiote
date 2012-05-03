@@ -1,7 +1,7 @@
 ============
 Installation
 ============
-.. rubic:: Installation steps can be summarised as making tiote accessbile by your django project
+Installation steps can be summarised as making tiote and its associated static fles accessbile by your django project
 
 Requirements
 ------------
@@ -43,9 +43,7 @@ and run::
 
 .. note::
 
-	If you are running tiote outside the django's development server. You need to setup static files in your production server and the ``STATIC_ROOT`` (where static files would be collected to) of your settings.py. Then run this command::
-
-		python manage.py collectstatic
+	If you are running tiote outside the django's development server. You need to setup serving of static files. See `managing static files`_
 
 In the ``urls.py`` of your project, add a url mapping for the tiote application (any address you want)::
 
@@ -53,3 +51,5 @@ In the ``urls.py`` of your project, add a url mapping for the tiote application 
 
 Open link ``<your_project>/<custom_url_map>`` to begin using tiote. Where ``<your_project>`` is the top level of your django project and ``<custom_url_map>`` is the url mapping for the application
 
+
+.. _managing static files: https://docs.djangoproject.com/en/dev/howto/static-files.html
