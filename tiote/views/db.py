@@ -19,7 +19,6 @@ def overview(request):
     # elif
     if request.method == 'GET':
         _subnav = {'tbl': utils.fns.ABBREVS['tbl'], 'seq':utils.fns.ABBREVS['seq']}
-        _list = []
         # fill this list as per implementation
         implemented_dict = {
             'mysql': ('tbl',),
@@ -31,15 +30,18 @@ def overview(request):
         for k in ('db', 'schm','tbl',): 
             if request.GET.get(k): dest_url[k] = request.GET.get(k)
         # generate navigation ul
-        for k in implemented_dict[ conn_params['dialect'] ]:
-            _list.append('<li{0}><a href="{1}{2}">{3}<span>|</span></a></li>'.format(
-                ' class="active"' if _subnav[k] == _subnav[subv] else '',
-                '#'+urlencode(dest_url)+'&subv=', k, _subnav[k] +'s'
+        # if the number of default elements to show is just one then skip this whole process
+        if len(implemented_dict[ conn_params['dialect'] ]) > 1:
+            _list = []
+            for k in implemented_dict[ conn_params['dialect'] ]:
+                _list.append('<li{0}><a href="{1}{2}">{3}<span>|</span></a></li>'.format(
+                    ' class="active"' if _subnav[k] == _subnav[subv] else '',
+                    '#'+urlencode(dest_url)+'&subv=', k, _subnav[k] +'s'
+                    )
                 )
-            )
-        if len(_list):
-            subnav_str = '<div style="margin-bottom:-5px;"><ul class="subnav">{0}</ul></div>'.format(''.join(_list))
-            h.content = subnav_str + h.content
+            if len(_list):
+                subnav_str = '<div style="margin-bottom:-5px;"><ul class="subnav">{0}</ul></div>'.format(''.join(_list))
+                h.content = subnav_str + h.content
     return h
 
 

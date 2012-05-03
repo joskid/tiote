@@ -159,10 +159,8 @@ function tbl_pagination(total_count, limit, offset) {
 		var navObj = location.hash.parseQueryString(false, true);
 		navObj['offset'] = String(i*limit);
 		var request_url = location.protocol+'//'+location.host+location.pathname+Object.toQueryString(navObj);
-		pag_lnks.include( new Element('a',{
-			'href': request_url, 
-			'class':'pag_lnk', 
-			'text':(i+1)
+		pag_lnks.include( new Element('a',{ 'href': request_url, 
+			'class':'pag_lnk', 'text':(i+1)
 			})
 		);
 	}
@@ -193,7 +191,7 @@ function tbl_pagination(total_count, limit, offset) {
 	}
 	
 	return new Element('p', {'class':'paginatn pull-right'}).adopt(ancs,
-		// span to display no of pages created
+		// span to display no of pages available
 		new Element('span',{'style':'padding-left:20px;', 
 			'text': '[ {0} {1} | {2} {3} ]'.substitute( [ 
 					total_count, ((total_count > 1) ? 'entries' : 'entry'),

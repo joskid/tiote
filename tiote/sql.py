@@ -266,8 +266,8 @@ AND connamespace = (SELECT oid from pg_namespace WHERE nspname=\'{schm}\') \
             return tuple(queries)
         
         elif query_type == 'table_rpr':
-            q = "SELECT TABLE_NAME AS 'table', TABLE_ROWS AS 'rows', TABLE_TYPE AS 'type', ENGINE FROM \
-            `INFORMATION_SCHEMA`.`TABLES` WHERE TABLE_SCHEMA = '{db}'".format(**query_data)
+            q = "SELECT TABLE_NAME AS 'table', TABLE_ROWS AS 'rows', TABLE_TYPE AS 'type', ENGINE as 'engine' \
+            FROM `INFORMATION_SCHEMA`.`TABLES` WHERE TABLE_SCHEMA = '{db}'".format(**query_data)
             return (q,)
         
         elif query_type == 'indexes':

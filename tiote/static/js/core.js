@@ -46,9 +46,9 @@ window.addEvent('domready', function() {
  * of the directory containing the images (python was used here)
  */
 function preloadImages() {
-	var images = ['functions.png', 'schemas.png', 'window-close.png', 'sequences.png', 
-		'sortdesc.gif', 'table.png', 'sequence.png', 'tables.png', 'databases.png', 'views.png', 
-		'domains.png', 'spinner.gif', 'database.png', 'goto.png', 'schema.png', 'sortasc.gif'
+	var images = ['schemas.png', 'sequences.png', 'sortdesc.gif', 'table.png', 'sequence.png',
+		'tables.png', 'databases.png', 'views.png', 'spinner.gif', 'database.png', 'goto.png',
+		'schema.png', 'sortasc.gif'
 	];
 	
 	var pre;
@@ -60,13 +60,13 @@ function preloadImages() {
 
 // A single tiote page
 function Page(obj, oldObj){
-	preloadImages();
 	this.options = new Hash({navObj: obj, oldNavObj: oldObj});
 	this.tbls = [];
 	// unset all window resize events
 	window.removeEvents(['resize']);
 	this.clearPage();
 	this.loadPage(true);
+	preloadImages();
 }
 
 Page.prototype.clearPage = function(clr_sidebar) {
@@ -254,7 +254,7 @@ Page.prototype.generateSidebar = function(clear_sidebar) {
 					$('sidebar').getChildren().destroy();
 				$('sidebar').set('html', text);
 				window.addEvent('resize', resize_sidebar);
-				window.fireEvent('resize');
+				window.fireEvent('resize'); // fire immediately to call resize handler
 				// handle events
 				if ($('db_select')) {
 					$('db_select').addEvent('change', function(e){
@@ -286,11 +286,11 @@ Page.prototype.generateSidebar = function(clear_sidebar) {
 						});
 					});
 				}
-			}
+				}
 		}).send();
 	}
 	window.addEvent('resize', resize_sidebar);
-	window.fireEvent('resize');
+	window.fireEvent('resize'); // fire immediately to call resize handler
 }
 
 
@@ -416,6 +416,7 @@ Page.prototype.addTableOpts = function() {
 	// .table-options processing : row selection
 	if ($$('.table-options') != null && Object.keys(pg.tbls).length) {
 		$$('.table-options').each(function(tbl_opt, opt_in){
+			htm_tbl = pg.tbls[opt_in]; // short and understandable alias
 			// enable selection of rows
 			$(tbl_opt).getElements('a.selector').each(function(a_sel) {
 				a_sel.addEvent('click', function() {
@@ -423,20 +424,22 @@ Page.prototype.addTableOpts = function() {
 					a_sel.get('class').split(' ').each(function(cl){
 						if (cl.contains('select_')) {
 							var option = cl.replace('select_', '').toLowerCase();
-							set_all_tr_state(pg.tbls[opt_in], (option == 'all') ? true : false);
+							set_all_tr_state(htm_tbl, (option == 'all') ? true : false);
 						}
 					});
 				});
 			});
 			
 			// table's needing pagination
-			if (Object.keys(pg.tbls[opt_in]['vars']).contains('data')) {
-				$(tbl_opt).adopt(tbl_pagination(
-					pg.tbls[opt_in]['vars']['data']['total_count'],
-					pg.tbls[opt_in]['vars']['data']['limit'], 
-					pg.tbls[opt_in]['vars']['data']['offset'])
+			if (Object.keys(htm_tbl['vars']).contains('data')) {
+				var pg_htm = tbl_pagination( // pagination html
+					htm_tbl['vars']['data']['total_count'],
+					htm_tbl['vars']['data']['limit'], 
+					htm_tbl['vars']['data']['offset']
 				);
+				$(tbl_opt).getElement('p').adopt(pg_htm);
 			}
+			
 			
 			// links that do something (edit, delete ...)
 			$ES('a.doer', tbl_opt).each(function(doer){
@@ -445,7 +448,7 @@ Page.prototype.addTableOpts = function() {
 						// action to be performed is a page refresh
 						pg.loadPage(false)
 					else 
-						do_action(pg.tbls[opt_in], e);
+						do_action(htm_tbl, e);
 				});
 
 			});
@@ -465,7 +468,7 @@ Page.prototype.addTableOpts = function() {
 				}
 			}
 			
-			pg.tbls[opt_in].addEvent('rowFocus', needy_doer_options).addEvent('rowUnfocus', needy_doer_options);
+			htm_tbl.addEvent('rowFocus', needy_doer_options).addEvent('rowUnfocus', needy_doer_options);
 			
 		});
 	}
