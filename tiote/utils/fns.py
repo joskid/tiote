@@ -221,9 +221,8 @@ def generate_sidebar(request):
         placeholder = '<h6 class="placeholder">%ss:</h6>' % ABBREVS['schm']
         sfx = "<ul>{0}</ul>".format( ''.join(_list) )
 
-        # ret_string = '<h6>quick nav:</h6><div><a class="james pull-right" href="">overview</a></div><br />\
-        ret_string = '<h6>quick nav:</h6>\
-        <div class="sidebar-item"><img src="{3}/img/databases.png" />{0}</div>{1}{2}'.format( 
+        ret_string = '<h6><a class="icon-back" href="#sctn=home&v=home">back home</a></h6>\
+<h6>quick nav:</h6><div class="sidebar-item"><img src="{3}/img/databases.png" />{0}</div>{1}{2}'.format( 
             db_selection_form, placeholder, sfx, static_addr
         )
 
@@ -260,12 +259,12 @@ def generate_sidebar(request):
         # 3. a h6.placeholder element shouting 'object types:'
         # 4. a ul having li > a each saying the specific 'object type' and linking to its appropriate view
         # ret_string = '<h6>quick nav:</h6><div><a class="james pull-right" href="">overview</a></div><br />\
-        ret_string = '<h6>quick nav:</h6>\
-        <div class="sidebar-item"><img src="{4}/img/databases.png" /> {0}</div>{1}{2}{3}'.format( 
-            db_selection_form, s,
-            '<h6 class="placeholder">%ss:</h6>' % ABBREVS[request.GET.get('sctn')],
-            "<ul>{0}</ul>".format( ''.join(sfx_list) ),
-            static_addr
+        ret_string = '<h6><a class="icon-back" href="#sctn=db&v=overview&db={5}">back to overview</a></h6>\
+<h6>quick nav:</h6><div class="sidebar-item"><img src="{4}/img/databases.png" /> {0}</div>{1}{2}{3}'.format( 
+            db_selection_form, s, # 0 & 1
+            '<h6 class="placeholder">%ss:</h6>' % ABBREVS[request.GET.get('sctn')], # 2
+            "<ul>{0}</ul>".format( ''.join(sfx_list) ), # 3
+            static_addr, request.GET.get('db') # 4 & 5
         )
 
 #    return ret_string

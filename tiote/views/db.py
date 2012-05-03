@@ -22,7 +22,7 @@ def overview(request):
         # fill this list as per implementation
         implemented_dict = {
             'mysql': ('tbl',),
-            'postgresql': ('tbl', 'seq')
+            'postgresql': ('tbl',)
         }
         # generate href with hash ordered as tiote needs
         dest_url = SortedDict(); _d = {'sctn':'db','v':'overview'}
