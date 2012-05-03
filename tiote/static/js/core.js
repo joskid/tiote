@@ -58,6 +58,8 @@ function preloadImages() {
 	}	
 }
 
+preloadImages(); // images are only preloaded when this file is first read
+
 // A single tiote page
 function Page(obj, oldObj){
 	this.options = new Hash({navObj: obj, oldNavObj: oldObj});
@@ -66,7 +68,6 @@ function Page(obj, oldObj){
 	window.removeEvents(['resize']);
 	this.clearPage();
 	this.loadPage(true);
-	preloadImages();
 }
 
 Page.prototype.clearPage = function(clr_sidebar) {
