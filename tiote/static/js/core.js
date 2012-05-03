@@ -21,6 +21,7 @@ function navigationChangedListener(navObject, oldNavObject){
 }
 
 window.addEvent('domready', function() {
+	preloadImages();
 	nav = new Navigation();	
 	nav.addEvent('navigationChanged', navigationChangedListener);
 	
@@ -54,11 +55,10 @@ function preloadImages() {
 	var pre;
 	for (var i=0; i<images.length; i++) {
 		pre = new Image();
-		pre.src = "/static/img/" + images[i];
+		pre.src = _staticUrl +"img/" + images[i];
 	}	
 }
 
-preloadImages(); // images are only preloaded when this file is first read
 
 // A single tiote page
 function Page(obj, oldObj){
@@ -660,7 +660,7 @@ var XHR = new Class({
 		options.chain = 'link';
 		
 		// append ajax validation key
-		options.url += '&ajaxKey=' + ajaxKey;
+		options.url += '&ajaxKey=' + _ajaxKey;
 		this.parent(options);
 		
 		if (options && options.showLoader != false) {

@@ -45,13 +45,6 @@ def ajax(request):
         return utils.fns.http_500('invalid ajax request!')
     # ajax request is okay
     
-        
-    if request.GET.get('check', False) and request.GET.get('check', False) == 'login':
-        bool_cd = utils.fns.check_login(request)
-        if bool_cd == 'true':
-            return HttpResponse('true')
-        else:
-            return HttpResponse('')
     
     # short GET request queries
     if request.GET.get('commonQuery'):

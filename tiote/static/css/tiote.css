@@ -233,6 +233,7 @@ table.sql {
     border: medium none;
     display: block;
     overflow: auto;
+	margin-bottom: 0px;
 }
 table.sql * {
     border: medium none;
@@ -256,7 +257,7 @@ table.sql thead th.table-th-sort {
     font-weight: bold;
 }
 table.sql tbody td, .tbl-body tbody td {
-    border-bottom: 1px solid #DDDDDD;
+    border-bottom: 1px solid #eee;
     border-right: 1px solid #DDDDDD;
     padding: 3px 3px 2px;
 }
@@ -291,6 +292,9 @@ table.sql tr.table-tr-selected td {
     background: none repeat scroll 0 0 #EFEFEF;
 }
 
+table.sql tr:last-child {
+	border-bottom: none;
+}
 .jsifyTable .tbl-header * {
 	margin: 0;
 	padding: 0;
@@ -298,6 +302,7 @@ table.sql tr.table-tr-selected td {
 
 .jsifyTable {
 	margin-right: -10px;
+	border-bottom: 1px solid #ddd;
 }
 .jsifyTable .tbl-header table {
 	overflow: hidden;

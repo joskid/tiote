@@ -13,7 +13,7 @@ function generate_ajax_url(withAjaxKey,extra_data) {
 			request_url += '&' + key + '=' + item;
 		}
 	})
-	if (withAjaxKey) request_url += '&ajaxKey=' + ajaxKey;
+	if (withAjaxKey) request_url += '&ajaxKey=' + _ajaxKey;
 	return request_url
 }
 
@@ -74,7 +74,7 @@ function runXHRJavascript(){
 	var scripts = $ES("script", 'rightside');
 	for (var i=0; i<scripts.length; i++) {
 		// basic xss prevention
-		if (scripts[i].get("ajaxKey") == ajaxKey) {
+		if (scripts[i].get("ajaxKey") == _ajaxKey) {
 			var toRun = scripts[i].get('html');
 			var newScript = new Element("script");
 			newScript.set("type", "text/javascript");
