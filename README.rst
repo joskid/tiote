@@ -21,9 +21,9 @@ editing table data
 Tiote is more than an app
 =========================
 
-Besides using tiote as an app in your django setup you can also use it as a standalone server to manage, monitor and your django databases.
+Besides using tiote as an app in your django setup you can also use it as a standalone server to manage, monitor and your databases no matter they way they were created and are maintained.
 
-Though a django app it can also be used by other stacks though its primary implementation uses django and python. 
+Though a django app it can also be used by other stacks and setups though its primary implementation uses django and python. 
 
 Resources
 =========
