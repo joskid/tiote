@@ -4,7 +4,8 @@ Installation
 Installation steps can be summarised as making tiote and its associated static fles accessbile by your django project
 
 Requirements
-------------
+============
+
 Please make sure the following requirements as highlighted below has being met
 
 * sqlalchemy >= 0.6.8
@@ -17,25 +18,35 @@ Please make sure the following requirements as highlighted below has being met
 
 
 Installation Methods
---------------------
-#. using pypi
+====================
 
-	Install from pypi with the handle ``tiote``. i.e.:: 
+using pypi
+----------
 
-			pip install tiote
+Install from pypi with the handle ``tiote``. i.e.:: 
 
-#. checkout repository
+		pip install tiote
 
-	Grab a copy of this repository ``git clone git://github.com/dumb906/tiote``. Switch your directory into the root folder of the directory and run::
+checkout repository
+-------------------
 
-			python setup.py install
+Grab a copy of this repository::
 
-	This makes tiote accessible globally on your python path. 
+		git clone git://github.com/dumb906/tiote 
 
-	You can also just make the ``tiote`` folder accessible by django ``manage.py``
+Switch your directory into the root folder of the directory and run::
+
+		python setup.py install
+
+This makes tiote accessible globally on your python path. 
+
+manual setup
+------------
+You can also just make the ``tiote`` folder from the project repository be accessible by django's ``manage.py``
 
 Configuration
--------------
+=============
+
 In the ``settings.py`` of your django project add 'tiote' to the ``INSTALLED_APPS`` settings and ``django.contrib.sessions`` if it is not already there.
 and run::
 
